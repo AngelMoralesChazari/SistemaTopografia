@@ -1,0 +1,13 @@
+{
+  "extends": "../../node_modules/expo/tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@lab-topo/config": ["../../packages/config/src"],
+      "@lab-topo/domain": ["../../packages/domain/src"],
+      "@lab-topo/services": ["../../packages/services/src"],
+      "@lab-topo/ui": ["../../packages/ui/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

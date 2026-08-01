@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Lab Topografía Web",
+    "slug": "lab-topografia-web",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    }
+  }
+}
