@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+
+    function hasRole(role) {
+      return signedIn() && userDoc().role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isLabManager() {
+      return hasRole('lab_manager') || isAdmin();
+    }
+
+    function isTeacher() {
+      return hasRole('teacher') || isLabManager();
+    }
+
+    function sameLab(data) {
+      return data.labId == userDoc().labId;
+    }
+
+    // Perfiles
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        uid() == userId ||
+        isLabManager() ||
+        (hasRole('teacher') && sameLab(resource.data))
+      );
+      // Escritura solo Admin SDK / Functions por ahora
+      allow write: if false;
+    }
+
+    // Catálogo
+    match /equipment/{equipmentId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Préstamos: lectura según rol; mutaciones vía Functions después
+    match /loans/{loanId} {
+      allow read: if signedIn() && (
+        isLabManager() ||
+        resource.data.studentId == uid() ||
+        resource.data.teacherId == uid()
+      );
+      allow write: if false;
+
+      match /events/{eventId} {
+        allow read: if signedIn() && (
+          isLabManager() ||
+          get(/databases/$(database)/documents/loans/$(loanId)).data.studentId == uid() ||
+          get(/databases/$(database)/documents/loans/$(loanId)).data.teacherId == uid()
+        );
+        allow write: if false;
+      }
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isLabManager();
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == uid();
+      allow write: if false;
+    }
+
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /stats/{docId} {
+      allow read: if isLabManager();
+      allow write: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+  }
+}
