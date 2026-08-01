@@ -1,0 +1,30 @@
+{
+  "name": "sistema-topografia",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sistema de inventario y préstamo — Laboratorio de Topografía UAGro",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace=@lab-topo/mobile",
+    "mobile:android": "npm run android --workspace=@lab-topo/mobile",
+    "mobile:ios": "npm run ios --workspace=@lab-topo/mobile",
+    "web": "npm run start --workspace=@lab-topo/web",
+    "web:browser": "npm run web --workspace=@lab-topo/web",
+    "seed:users": "node scripts/seed-users.mjs",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "firebase-admin": "^13.4.0"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
