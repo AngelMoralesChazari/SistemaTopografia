@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.npm
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+google-services.json
+GoogleService-Info.plist
+secrets/**
+!secrets/.gitkeep
+serviceAccount.json
+*-firebase-adminsdk-*.json
+
+# Expo / Metro
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs / cache
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
