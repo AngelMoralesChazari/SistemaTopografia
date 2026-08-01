@@ -1,0 +1,37 @@
+[
+  {
+    "email": "admin1@labtopo.uagro.edu.mx",
+    "password": "LabTopo2026!",
+    "displayName": "Administrador Uno",
+    "role": "admin",
+    "employeeId": "ADM-001"
+  },
+  {
+    "email": "admin2@labtopo.uagro.edu.mx",
+    "password": "LabTopo2026!",
+    "displayName": "Administrador Dos",
+    "role": "admin",
+    "employeeId": "ADM-002"
+  },
+  {
+    "email": "encargado@labtopo.uagro.edu.mx",
+    "password": "LabTopo2026!",
+    "displayName": "Ing. Supervisor",
+    "role": "lab_manager",
+    "employeeId": "LAB-001"
+  },
+  {
+    "email": "maestro@labtopo.uagro.edu.mx",
+    "password": "LabTopo2026!",
+    "displayName": "Dr. Carlos Ríos",
+    "role": "teacher",
+    "employeeId": "DOC-001"
+  },
+  {
+    "email": "alumno@labtopo.uagro.edu.mx",
+    "password": "LabTopo2026!",
+    "displayName": "Mariana López",
+    "role": "student",
+    "studentId": "A01782"
+  }
+]
