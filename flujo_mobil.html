@@ -1,0 +1,441 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe UI Kit · App Móvil de Topografía</title>
+<style>
+:root{
+  --navy:#0B2545;
+  --navy-2:#163b68;
+  --red:#D90429;
+  --red-soft:#fff0f2;
+  --blue-soft:#e9f1fb;
+  --green:#18865d;
+  --green-soft:#e8f7ef;
+  --amber:#a76a00;
+  --amber-soft:#fff5d6;
+  --ink:#1d2935;
+  --muted:#748292;
+  --line:#d7dee6;
+  --canvas:#f3f5f7;
+  --surface:#fff;
+  --grey:#dfe4e9;
+  --grey-dark:#b8c1ca;
+  --shadow:0 12px 30px rgba(11,37,69,.1);
+  --font:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-width:1100px;
+  color:var(--ink);
+  background:
+    linear-gradient(rgba(11,37,69,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(11,37,69,.035) 1px,transparent 1px),
+    var(--canvas);
+  background-size:24px 24px;
+  font-family:var(--font);
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.topbar{
+  height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 42px;
+  background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:34px;height:34px;display:grid;place-items:center;
+  color:#fff;background:var(--navy);border-radius:9px;
+  font-size:11px;font-weight:900;letter-spacing:-.08em;
+}
+.eyebrow{
+  margin-bottom:4px;color:var(--red);font:700 10px var(--mono);
+  letter-spacing:.1em;text-transform:uppercase
+}
+.topbar h1{margin:0;color:var(--navy);font-size:19px;letter-spacing:-.04em}
+.meta{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px}
+.live{display:flex;align-items:center;gap:6px;padding:8px 11px;background:#fff;border:1px solid var(--line);border-radius:20px}
+.live i{width:7px;height:7px;background:var(--green);border-radius:50%}
+.workspace{width:1360px;margin:auto;padding:36px 25px 55px}
+.heading{display:flex;justify-content:space-between;align-items:end;margin-bottom:33px}
+.heading h2{margin:0 0 7px;color:var(--navy);font-size:29px;letter-spacing:-.055em}
+.heading p{margin:0;color:var(--muted);font-size:12px}
+.legend{display:flex;gap:17px;color:var(--muted);font-size:10px}
+.legend span{display:flex;align-items:center;gap:7px}
+.legend b{width:17px;height:12px;background:var(--grey);border:1px solid var(--grey-dark)}
+.legend i{width:20px;border-top:2px dashed var(--red)}
+
+.flow{
+  display:grid;
+  grid-template-columns:290px 65px 290px 65px 290px;
+  justify-content:center;
+  align-items:start;
+}
+.step{position:relative;min-height:730px}
+.sticky{
+  position:absolute;z-index:3;top:-19px;left:17px;width:172px;min-height:70px;
+  padding:12px 13px;background:#fff2a6;border:1px solid #d4b93f;
+  box-shadow:4px 5px 0 rgba(11,37,69,.1);transform:rotate(-2deg);
+  color:#4c4728;font-size:10px;line-height:1.4
+}
+.step:nth-of-type(3) .sticky{transform:rotate(2deg)}
+.step:nth-of-type(5) .sticky{transform:rotate(-1deg)}
+.sticky strong{display:block;margin-bottom:4px;color:#6b5d00;font:800 10px var(--mono);text-transform:uppercase}
+.step-no{
+  position:absolute;top:2px;right:20px;z-index:5;width:34px;height:34px;
+  display:grid;place-items:center;color:#fff;background:var(--red);
+  border:4px solid var(--canvas);border-radius:50%;font-size:12px;font-weight:800
+}
+.phone-wrap{padding-top:68px;text-align:center}
+.screen-title{margin:0 0 12px;color:var(--navy);font-size:13px;font-weight:800}
+.screen-title small{display:block;margin-top:4px;color:var(--muted);font:9px var(--mono);font-weight:400}
+.phone{
+  position:relative;width:238px;height:515px;margin:auto;padding:9px;
+  background:#1b2027;border:1px solid #0e1217;border-radius:31px;
+  box-shadow:0 16px 30px rgba(11,37,69,.2);transition:.2s
+}
+.phone:hover{transform:translateY(-5px);box-shadow:0 21px 36px rgba(11,37,69,.23)}
+.phone:before{
+  content:"";position:absolute;z-index:2;top:9px;left:50%;width:75px;height:18px;
+  background:#1b2027;border-radius:0 0 13px 13px;transform:translateX(-50%)
+}
+.screen{height:100%;overflow:hidden;position:relative;background:#fbfcfd;border-radius:23px;text-align:left}
+.iosbar{display:flex;justify-content:space-between;padding:15px 13px 4px;color:#73808d;font:8px var(--mono)}
+.content{padding:10px 14px 58px}
+.mobile-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 16px}
+.mobile-head h3{margin:0;color:var(--navy);font-size:18px;letter-spacing:-.05em}
+.mobile-head p{margin:4px 0 0;color:var(--muted);font-size:9px}
+.profile-dot{width:26px;height:26px;display:grid;place-items:center;color:var(--navy);background:#e4edf8;border-radius:50%;font-size:9px;font-weight:800}
+.search{
+  height:32px;display:flex;align-items:center;gap:7px;padding:0 9px;margin-bottom:15px;
+  color:var(--muted);background:#f3f5f7;border:1px solid var(--line);border-radius:6px;font-size:9px
+}
+.search b{font-size:14px;font-weight:400}
+.label{display:block;margin:0 0 6px;color:var(--navy);font-size:9px;font-weight:800}
+.field,.select{
+  width:100%;height:35px;margin-bottom:13px;padding:0 9px;color:#536273;
+  background:#fff;border:1px solid var(--line);border-radius:6px;outline:none;font-size:9px
+}
+.select{display:flex;align-items:center;justify-content:space-between}
+.material{
+  display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:8px;
+  padding:8px;margin-bottom:8px;background:#fff;border:1px solid var(--line);border-radius:7px
+}
+.thumb{width:42px;height:37px;display:grid;place-items:center;color:#84909c;background:var(--grey);border-radius:4px;font:9px var(--mono)}
+.material strong{display:block;color:var(--ink);font-size:9px}
+.material small{display:block;margin-top:4px;color:var(--muted);font-size:8px}
+.count{padding:4px 5px;color:var(--green);background:var(--green-soft);border-radius:4px;font-size:8px;font-weight:800;text-align:center}
+.primary,.secondary,.danger{
+  width:100%;height:35px;border-radius:6px;font-size:9px;font-weight:800
+}
+.primary{color:#fff;background:var(--navy);border:1px solid var(--navy)}
+.primary:hover{background:var(--navy-2)}
+.danger{color:#fff;background:var(--red);border:1px solid var(--red)}
+.danger:hover{background:#b80323}
+.secondary{color:var(--navy);background:#fff;border:1px solid var(--navy)}
+.helper{margin:7px 0 14px;color:var(--muted);font-size:8px;line-height:1.35}
+.section-label{display:flex;justify-content:space-between;margin:16px 0 8px;color:var(--navy);font-size:9px;font-weight:800}
+.section-label span{color:var(--blue,#2266d8);font-size:8px}
+.mobile-nav{
+  position:absolute;right:0;bottom:0;left:0;height:45px;display:flex;
+  justify-content:space-around;align-items:center;background:#fff;border-top:1px solid var(--line)
+}
+.mobile-nav div{color:#8a96a2;text-align:center;font-size:7px}
+.mobile-nav div:first-child{color:var(--navy);font-weight:800}
+.mobile-nav b{display:block;margin-bottom:3px;font-size:12px}
+.connector{position:relative;min-height:730px}
+.connector .line{position:absolute;top:390px;left:0;width:65px;border-top:2px dashed var(--red)}
+.connector .line:after{
+  content:"";position:absolute;right:0;top:-5px;border-top:4px solid transparent;
+  border-bottom:4px solid transparent;border-left:7px solid var(--red)
+}
+.connector .tag{
+  position:absolute;top:352px;left:10px;width:42px;color:var(--red);
+  text-align:center;font:700 8px var(--mono);line-height:1.2
+}
+.connector .tag b{
+  width:20px;height:20px;display:grid;place-items:center;margin:0 auto 4px;
+  color:white;background:var(--red);border-radius:50%;font-size:9px
+}
+.notice{
+  padding:10px;margin:12px 0;background:var(--blue-soft);border:1px solid #cbdcf1;border-radius:7px
+}
+.notice strong{display:block;color:var(--navy);font-size:9px}
+.notice span{display:block;margin-top:4px;color:#647488;font-size:8px;line-height:1.35}
+.request{
+  padding:11px;background:#fff;border:1px solid var(--line);border-radius:7px
+}
+.request-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.request h4{margin:0;color:var(--navy);font-size:10px}
+.badge{padding:4px 6px;border-radius:12px;font-size:8px;font-weight:800}
+.badge.pending{color:#2266d8;background:var(--blue-soft)}
+.badge.late{color:var(--red);background:var(--red-soft)}
+.badge.ok{color:var(--green);background:var(--green-soft)}
+.data-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #edf0f3;color:var(--muted);font-size:8px}
+.data-row:last-child{border-bottom:0}
+.data-row b{color:var(--ink);font-weight:700}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.dual button{height:32px;border-radius:6px;font-size:8px;font-weight:800}
+.dual .primary{background:var(--navy)}
+.dual .danger{background:var(--red)}
+.student-row{padding:9px 0;border-bottom:1px solid var(--line)}
+.student-row:last-child{border-bottom:0}
+.student-top{display:flex;justify-content:space-between;align-items:center;gap:7px}
+.student-name{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:9px;font-weight:800}
+.mini-avatar{width:22px;height:22px;display:grid;place-items:center;color:#456b91;background:#e6f0fb;border-radius:50%;font-size:7px;font-weight:800}
+.student-meta{display:flex;justify-content:space-between;margin:7px 0 0 29px;color:var(--muted);font-size:8px}
+.alert-row{
+  display:flex;gap:6px;margin:7px 0 0 29px;padding:6px;color:var(--red);
+  background:var(--red-soft);border-radius:5px;font-size:8px;line-height:1.25
+}
+.kit{
+  margin-top:28px;padding:17px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-soft)
+}
+.kit h3{margin:0 0 13px;color:var(--navy);font-size:13px}
+.kit-grid{display:flex;gap:8px;flex-wrap:wrap}
+.kit-item{display:flex;align-items:center;gap:6px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:9px}
+.kit-item .sample{width:20px;height:14px;background:var(--grey);border:1px solid var(--grey-dark);border-radius:3px}
+.kit-item .sample.navy{background:var(--navy);border-color:var(--navy)}
+.kit-item .sample.red{background:var(--red);border-color:var(--red)}
+.kit-item .sample.green{background:var(--green);border-color:var(--green)}
+.annotation{
+  display:flex;align-items:center;gap:12px;margin-top:27px;padding:14px 17px;
+  background:rgba(255,255,255,.82);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:7px
+}
+.annotation strong{color:var(--red);font:700 9px var(--mono);text-transform:uppercase}
+.annotation span{color:var(--muted);font-size:10px}
+.toast{
+  position:fixed;right:24px;bottom:22px;z-index:10;padding:12px 15px;color:#fff;
+  background:var(--navy);border-radius:8px;box-shadow:var(--shadow);font-size:11px;
+  opacity:0;transform:translateY(10px);pointer-events:none;transition:.25s
+}
+.toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:1150px){
+  body{min-width:0}.workspace{width:100%}.flow{justify-content:start;overflow-x:auto;padding:0 20px 18px}
+}
+@media(max-width:700px){
+  .topbar{height:auto;padding:17px 18px;gap:15px;align-items:flex-start}
+  .meta{display:none}.workspace{padding:25px 14px 40px}.heading{display:block}
+  .heading h2{font-size:25px}.legend{margin-top:16px}
+  .flow{grid-template-columns:290px 65px 290px 65px 290px;padding:0 4px 15px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">AB</div>
+    <div>
+      <div class="eyebrow">Wireframe · UI Kit</div>
+      <h1>App Móvil del Laboratorio de Topografía</h1>
+    </div>
+  </div>
+  <div class="meta"><span class="live"><i></i> Flujo activo</span><span>v0.8 · 22 mayo</span></div>
+</header>
+
+<main class="workspace">
+  <div class="heading">
+    <div>
+      <div class="eyebrow">User flow principal</div>
+      <h2>Solicitar, entregar y validar material</h2>
+      <p>Tres roles conectados en un recorrido operativo del laboratorio.</p>
+    </div>
+    <div class="legend">
+      <span><b></b> Greybox / componente</span>
+      <span><i></i> Transición del flujo</span>
+    </div>
+  </div>
+
+  <section class="flow" aria-label="Flujo de la aplicación móvil">
+    <article class="step">
+      <div class="step-no">01</div>
+      <div class="sticky"><strong>Perfil alumno</strong>Busca el equipo, selecciona a su profesor y envía la solicitud.</div>
+      <div class="phone-wrap">
+        <h3 class="screen-title">Catálogo y solicitud<small>/ vista estudiante</small></h3>
+        <div class="phone">
+          <div class="screen">
+            <div class="iosbar"><span>9:41</span><span>▮▮▮ ᯤ ▰</span></div>
+            <div class="content">
+              <div class="mobile-head">
+                <div><p>Buenos días,</p><h3>Mariana López</h3></div>
+                <span class="profile-dot">ML</span>
+              </div>
+              <div class="search"><b>⌕</b> Buscar estación, nivel...</div>
+              <label class="label">Material disponible</label>
+              <div class="material">
+                <div class="thumb">[foto]</div>
+                <div><strong>Teodolito T-06</strong><small>Topografía · En buen estado</small></div>
+                <div class="count">3<br>disp.</div>
+              </div>
+              <div class="material">
+                <div class="thumb">[foto]</div>
+                <div><strong>Nivel automático</strong><small>Topografía · En buen estado</small></div>
+                <div class="count">5<br>disp.</div>
+              </div>
+              <div class="material">
+                <div class="thumb">[foto]</div>
+                <div><strong>Estación Total</strong><small>Topografía · Revisar</small></div>
+                <div class="count">1<br>disp.</div>
+              </div>
+              <div class="section-label">Nueva solicitud</div>
+              <label class="label">Equipo seleccionado</label>
+              <div class="select"><span>Teodolito T-06</span><b>⌄</b></div>
+              <label class="label">Profesor Responsable</label>
+              <select class="field" id="professorSelect">
+                <option>Seleccionar profesor...</option>
+                <option>Dr. Carlos Ríos</option>
+                <option>Mtra. Elena Soto</option>
+                <option>Ing. Roberto Peña</option>
+              </select>
+              <button class="primary" id="requestBtn">Solicitar material</button>
+            </div>
+            <nav class="mobile-nav"><div><b>⌂</b>Catálogo</div><div><b>◷</b>Solicitudes</div><div><b>◯</b>Perfil</div></nav>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="connector">
+      <div class="tag"><b>1</b>Solicitar</div><div class="line"></div>
+    </div>
+
+    <article class="step">
+      <div class="step-no">02</div>
+      <div class="sticky"><strong>Perfil supervisor</strong>Valida la solicitud entrante y define la fecha límite de devolución.</div>
+      <div class="phone-wrap">
+        <h3 class="screen-title">Gestión de entrada / salida<small>/ vista encargado</small></h3>
+        <div class="phone">
+          <div class="screen">
+            <div class="iosbar"><span>9:41</span><span>▮▮▮ ᯤ ▰</span></div>
+            <div class="content">
+              <div class="mobile-head">
+                <div><p>Panel operativo</p><h3>Solicitudes</h3></div>
+                <span class="profile-dot">IS</span>
+              </div>
+              <div class="notice">
+                <strong>● Nueva solicitud entrante</strong>
+                <span>Revisa los datos antes de entregar el equipo al alumno.</span>
+              </div>
+              <div class="request">
+                <div class="request-head"><h4>Solicitud #SOL-284</h4><span class="badge pending">Pendiente</span></div>
+                <div class="data-row"><span>Alumno</span><b>Mariana López</b></div>
+                <div class="data-row"><span>Matrícula</span><b>A01782</b></div>
+                <div class="data-row"><span>Profesor</span><b>Dr. Carlos Ríos</b></div>
+                <div class="data-row"><span>Equipo</span><b>Teodolito T-06</b></div>
+                <div class="data-row"><span>Existencia</span><b style="color:var(--green)">3 disponibles</b></div>
+              </div>
+              <div class="section-label">Fecha límite de devolución</div>
+              <input class="field" id="dueDate" type="date" value="2025-05-27">
+              <div class="dual">
+                <button class="primary" id="deliverBtn">Entregar equipo</button>
+                <button class="danger" id="rejectBtn">Rechazar</button>
+              </div>
+            </div>
+            <nav class="mobile-nav"><div><b>◷</b>Solicitudes</div><div><b>▣</b>Inventario</div><div><b>◯</b>Perfil</div></nav>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="connector">
+      <div class="tag"><b>2</b>Validar</div><div class="line"></div>
+    </div>
+
+    <article class="step">
+      <div class="step-no">03</div>
+      <div class="sticky"><strong>Perfil profesor</strong>Supervisa a sus alumnos, consulta préstamos y detecta retrasos.</div>
+      <div class="phone-wrap">
+        <h3 class="screen-title">Validación y control<small>/ vista profesor</small></h3>
+        <div class="phone">
+          <div class="screen">
+            <div class="iosbar"><span>9:41</span><span>▮▮▮ ᯤ ▰</span></div>
+            <div class="content">
+              <div class="mobile-head">
+                <div><p>Grupo de Topografía II</p><h3>Mis alumnos</h3></div>
+                <span class="profile-dot">CR</span>
+              </div>
+              <div class="search"><b>⌕</b> Buscar alumno o matrícula...</div>
+              <div class="notice" style="background:var(--red-soft);border-color:#f3c9d0">
+                <strong style="color:var(--red)">! 1 préstamo requiere atención</strong>
+                <span>Consulta el material retrasado de tu grupo.</span>
+              </div>
+              <div class="section-label">Préstamos vigentes <span>3 alumnos</span></div>
+              <div class="student-row">
+                <div class="student-top"><div class="student-name"><span class="mini-avatar">ML</span>Mariana López</div><span class="badge ok">En curso</span></div>
+                <div class="student-meta"><span>Teodolito T-06</span><b>Devuelve 27 mayo</b></div>
+              </div>
+              <div class="student-row">
+                <div class="student-top"><div class="student-name"><span class="mini-avatar">JR</span>Jorge Ramírez</div><span class="badge late">Retrasado</span></div>
+                <div class="student-meta"><span>Nivel automático</span><b>Venció 20 mayo</b></div>
+                <div class="alert-row">! Contactar al alumno para coordinar devolución.</div>
+              </div>
+              <div class="student-row">
+                <div class="student-top"><div class="student-name"><span class="mini-avatar">SC</span>Sofía Castillo</div><span class="badge ok">En curso</span></div>
+                <div class="student-meta"><span>Estación Total</span><b>Devuelve 29 mayo</b></div>
+              </div>
+            </div>
+            <nav class="mobile-nav"><div><b>⌂</b>Resumen</div><div><b>▣</b>Alumnos</div><div><b>◯</b>Perfil</div></nav>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="kit">
+    <h3>UI Kit · Componentes base del flujo</h3>
+    <div class="kit-grid">
+      <div class="kit-item"><span class="sample navy"></span> Acción primaria</div>
+      <div class="kit-item"><span class="sample red"></span> Acción crítica</div>
+      <div class="kit-item"><span class="sample"></span> Greybox / imagen</div>
+      <div class="kit-item"><span class="sample green"></span> Disponible / activo</div>
+      <div class="kit-item">▣ Card de solicitud</div>
+      <div class="kit-item">⌄ Selector desplegable</div>
+      <div class="kit-item">● Badge de estado</div>
+    </div>
+  </section>
+
+  <div class="annotation">
+    <strong>Regla de flujo</strong>
+    <span>El alumno inicia la solicitud; el supervisor autoriza la salida; el profesor mantiene el control académico del préstamo y sus retrasos.</span>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const toast = document.getElementById('toast');
+let toastTimer;
+function showToast(message){
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove('show'),2800);
+}
+document.getElementById('requestBtn').addEventListener('click',()=>{
+  const professor = document.getElementById('professorSelect').value;
+  if(professor.includes('Seleccionar')){
+    showToast('Selecciona un Profesor Responsable antes de continuar.');
+    return;
+  }
+  showToast('Solicitud enviada al Supervisor. Estado: pendiente.');
+});
+document.getElementById('deliverBtn').addEventListener('click',()=>{
+  showToast('Equipo entregado. La solicitud ahora está activa.');
+});
+document.getElementById('rejectBtn').addEventListener('click',()=>{
+  showToast('Solicitud rechazada. Se notificará al alumno.');
+});
+document.querySelectorAll('.mobile-nav div').forEach(item=>{
+  item.addEventListener('click',()=>showToast('Sección "'+item.textContent.trim()+'" seleccionada.'));
+});
+</script>
+</body>
+</html>
