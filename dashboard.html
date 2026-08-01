@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventario · Laboratorio de Topografía</title>
+  <style>
+    :root {
+      --navy: #0B2545;
+      --navy-2: #12365f;
+      --red: #D90429;
+      --red-soft: #fff0f2;
+      --green: #16855b;
+      --green-soft: #eaf8f1;
+      --blue: #2266d8;
+      --blue-soft: #edf4ff;
+      --ink: #17212b;
+      --muted: #718092;
+      --line: #e5e9ef;
+      --canvas: #f8f9fa;
+      --surface: #ffffff;
+      --shadow: 0 12px 30px rgba(11, 37, 69, .08);
+      --shadow-soft: 0 5px 14px rgba(11, 37, 69, .06);
+      --radius: 14px;
+      --font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: var(--font);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgba(34, 102, 216, .22);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 25px 16px 18px;
+      color: #d9e3ef;
+      background: var(--navy);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 10px 28px;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--navy);
+      background: white;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: -.06em;
+    }
+
+    .logo strong {
+      display: block;
+      color: white;
+      font-size: 14px;
+      letter-spacing: -.02em;
+    }
+
+    .logo small {
+      display: block;
+      margin-top: 3px;
+      color: #9eb1c7;
+      font-size: 10px;
+    }
+
+    .profile-switcher {
+      position: relative;
+      margin-bottom: 29px;
+    }
+
+    .profile-button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      color: white;
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .profile-button .profile-meta {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .avatar {
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: var(--navy);
+      background: #dfeeff;
+      border-radius: 50%;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .profile-button b {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .profile-button span {
+      display: block;
+      margin-top: 2px;
+      color: #afc0d4;
+      font-size: 9px;
+    }
+
+    .chevron {
+      color: #9eb1c7;
+      font-size: 13px;
+    }
+
+    .profile-menu {
+      position: absolute;
+      z-index: 10;
+      top: calc(100% + 7px);
+      right: 0;
+      left: 0;
+      display: none;
+      padding: 6px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .profile-menu.open {
+      display: block;
+    }
+
+    .profile-menu button {
+      width: 100%;
+      padding: 9px 10px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    .profile-menu button:hover {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .nav-label {
+      padding: 0 11px 9px;
+      color: #7990a9;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .nav-list button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      color: #b7c7d9;
+      background: transparent;
+      border: 0;
+      border-radius: 9px;
+      text-align: left;
+      font-size: 12px;
+    }
+
+    .nav-list button:hover,
+    .nav-list button.active {
+      color: white;
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .nav-list button.active {
+      box-shadow: inset 3px 0 var(--red);
+    }
+
+    .nav-icon {
+      width: 18px;
+      color: currentColor;
+      font-size: 15px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 14px 11px 0;
+      color: #8197b0;
+      border-top: 1px solid rgba(255, 255, 255, .12);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .sidebar-footer b {
+      color: #c3d1df;
+    }
+
+    .main {
+      min-width: 0;
+      padding: 26px 30px 40px;
+    }
+
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 22px;
+      margin-bottom: 25px;
+    }
+
+    .heading h1 {
+      margin: 0;
+      color: var(--navy);
+      font-size: clamp(22px, 2.2vw, 30px);
+      letter-spacing: -.045em;
+    }
+
+    .heading p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .quick-search {
+      width: min(285px, 28vw);
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 12px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .quick-search span {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .quick-search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 11px;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 11px 4px 4px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .user-chip .avatar {
+      width: 30px;
+      height: 30px;
+      background: #e6edf6;
+    }
+
+    .user-chip b {
+      display: block;
+      color: var(--navy);
+      font-size: 11px;
+    }
+
+    .user-chip span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(610px, 1fr) 390px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .dashboard-column {
+      min-width: 0;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 21px;
+    }
+
+    .kpi {
+      min-height: 112px;
+      padding: 17px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .kpi.alert {
+      color: white;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    .kpi-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 31px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .kpi.alert .kpi-label {
+      color: #ffe2e7;
+    }
+
+    .kpi-icon {
+      font-size: 15px;
+      opacity: .7;
+    }
+
+    .kpi-value {
+      margin-top: 14px;
+      color: var(--navy);
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: -.06em;
+    }
+
+    .kpi.alert .kpi-value {
+      color: white;
+    }
+
+    .kpi-trend {
+      margin-top: 4px;
+      color: var(--green);
+      font-size: 9px;
+    }
+
+    .kpi.alert .kpi-trend {
+      color: #ffd5dc;
+    }
+
+    .section-card {
+      overflow: hidden;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 21px 17px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 15px;
+      letter-spacing: -.025em;
+    }
+
+    .section-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .table-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-select {
+      height: 31px;
+      padding: 0 8px;
+      color: var(--muted);
+      background: #fbfcfd;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      outline: 0;
+      font-size: 10px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 12px 16px;
+      color: #8793a1;
+      background: #fbfcfd;
+      border-bottom: 1px solid var(--line);
+      font-size: 9px;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    td {
+      padding: 15px 16px;
+      border-bottom: 1px solid #edf0f3;
+      color: #465464;
+      font-size: 11px;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tr:hover td {
+      background: #fbfdff;
+    }
+
+    .student {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .student .avatar {
+      width: 27px;
+      height: 27px;
+      color: #42698f;
+      background: #e8f1fb;
+      font-size: 9px;
+    }
+
+    .student small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 400;
+    }
+
+    .equipment {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .equipment-thumb {
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      color: #788592;
+      background: #e5e9ed;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 8px;
+      border-radius: 20px;
+      font-size: 9px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status:before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      display: inline-block;
+      background: currentColor;
+      border-radius: 50%;
+    }
+
+    .status.pending {
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .status.approved {
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .status.delivered {
+      color: #7463bd;
+      background: #f1effd;
+    }
+
+    .status.late {
+      color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--navy);
+      background: white;
+      font-size: 9px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      border-color: var(--navy);
+    }
+
+    .action-btn.approve {
+      color: white;
+      background: var(--navy);
+      border-color: var(--navy);
+    }
+
+    .action-btn.reject {
+      color: var(--red);
+      border-color: #f1c5cc;
+    }
+
+    .action-btn:disabled {
+      cursor: default;
+      opacity: .45;
+    }
+
+    .table-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 18px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 10px;
+    }
+
+    .view-all {
+      color: var(--blue);
+      background: transparent;
+      border: 0;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .mobile-column {
+      display: flex;
+      justify-content: center;
+      padding-top: 7px;
+    }
+
+    .mobile-panel {
+      width: 100%;
+      padding: 18px 15px 17px;
+      background: #edf1f5;
+      border: 1px solid #dce3eb;
+      border-radius: 19px;
+    }
+
+    .mobile-panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .mobile-panel-head h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 14px;
+      letter-spacing: -.03em;
+    }
+
+    .mobile-panel-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 8px;
+      color: var(--green);
+      background: var(--green-soft);
+      border-radius: 20px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .live-pill i {
+      width: 5px;
+      height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    .iphone {
+      position: relative;
+      width: 286px;
+      height: 583px;
+      margin: 0 auto;
+      padding: 9px;
+      background: #15181d;
+      border: 1px solid #080a0d;
+      border-radius: 39px;
+      box-shadow: 0 20px 35px rgba(11, 37, 69, .22);
+    }
+
+    .iphone:before {
+      content: "";
+      position: absolute;
+      z-index: 3;
+      top: 10px;
+      left: 50%;
+      width: 88px;
+      height: 21px;
+      background: #15181d;
+      border-radius: 0 0 16px 16px;
+      transform: translateX(-50%);
+    }
+
+    .iphone-screen {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+      background: #f9fafc;
+      border-radius: 30px;
+    }
+
+    .ios-status {
+      display: flex;
+      justify-content: space-between;
+      padding: 17px 16px 4px;
+      color: #687584;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .mobile-content {
+      padding: 12px 17px 70px;
+    }
+
+    .mobile-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 9px 0 18px;
+    }
+
+    .mobile-topline h3 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 19px;
+      letter-spacing: -.055em;
+    }
+
+    .mobile-topline span {
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      color: var(--navy);
+      background: #e7edf5;
+      border-radius: 50%;
+      font-size: 12px;
+    }
+
+    .mobile-label {
+      display: block;
+      margin: 0 0 7px;
+      color: var(--navy);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .mobile-select {
+      position: relative;
+      width: 100%;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding: 0 11px;
+      color: var(--ink);
+      background: white;
+      border: 1px solid #d7dee7;
+      border-radius: 9px;
+      box-shadow: 0 2px 5px rgba(11, 37, 69, .035);
+    }
+
+    .mobile-select span {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .mobile-select .select-icon {
+      width: 25px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      color: #718092;
+      background: #e5e9ed;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .mobile-select select {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .availability {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: -4px 0 17px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .availability:before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    .mobile-field {
+      width: 100%;
+      height: 43px;
+      margin-bottom: 16px;
+      padding: 0 11px;
+      color: #566577;
+      background: white;
+      border: 1px solid #d7dee7;
+      border-radius: 9px;
+      outline: 0;
+      font-size: 10px;
+    }
+
+    .mobile-primary {
+      width: 100%;
+      height: 44px;
+      margin-top: 2px;
+      color: white;
+      background: var(--navy);
+      border: 0;
+      border-radius: 9px;
+      box-shadow: 0 7px 14px rgba(11, 37, 69, .18);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .mobile-primary:hover {
+      background: var(--navy-2);
+    }
+
+    .mobile-primary:disabled {
+      background: #9aa7b5;
+      box-shadow: none;
+    }
+
+    .request-card {
+      margin-top: 22px;
+      padding: 13px;
+      background: white;
+      border: 1px solid #dfe5ec;
+      border-radius: 11px;
+      box-shadow: 0 3px 8px rgba(11, 37, 69, .04);
+    }
+
+    .request-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 9px;
+    }
+
+    .request-card h4 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 10px;
+    }
+
+    .pending-label {
+      padding: 4px 6px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-radius: 12px;
+      font-size: 8px;
+      font-weight: 700;
+    }
+
+    .request-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.45;
+    }
+
+    .mobile-nav {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 57px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: rgba(255, 255, 255, .96);
+      border-top: 1px solid #e0e5eb;
+    }
+
+    .mobile-nav div {
+      color: #8995a3;
+      text-align: center;
+      font-size: 8px;
+    }
+
+    .mobile-nav div:first-child {
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    .mobile-nav b {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 26px;
+      bottom: 24px;
+      z-index: 30;
+      max-width: 290px;
+      padding: 12px 15px;
+      color: white;
+      background: var(--navy);
+      border-radius: 9px;
+      box-shadow: var(--shadow);
+      font-size: 11px;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: .25s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1180px) {
+      .app-shell {
+        grid-template-columns: 205px minmax(0, 1fr);
+      }
+
+      .main {
+        padding: 22px 20px 35px;
+      }
+
+      .workspace {
+        grid-template-columns: minmax(560px, 1fr) 350px;
+        gap: 18px;
+      }
+
+      .kpis {
+        gap: 8px;
+      }
+
+      .kpi {
+        padding: 13px;
+      }
+
+      .kpi-value {
+        font-size: 23px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .mobile-column {
+        order: 2;
+      }
+
+      .mobile-panel {
+        max-width: 520px;
+      }
+
+      .iphone {
+        width: 310px;
+        height: 630px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .app-shell {
+        display: block;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+        padding: 15px;
+      }
+
+      .logo {
+        padding-bottom: 15px;
+      }
+
+      .profile-switcher {
+        margin-bottom: 15px;
+      }
+
+      .nav-label,
+      .sidebar-footer {
+        display: none;
+      }
+
+      .nav-list {
+        display: flex;
+        overflow-x: auto;
+      }
+
+      .nav-list button {
+        width: auto;
+        white-space: nowrap;
+      }
+
+      .main {
+        padding: 20px 14px 30px;
+      }
+
+      .top-header {
+        display: block;
+      }
+
+      .header-actions {
+        margin-top: 17px;
+      }
+
+      .quick-search {
+        width: 100%;
+      }
+
+      .user-chip {
+        flex: 0 0 auto;
+      }
+
+      .kpis {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .table-tools {
+        margin-top: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-mark">AB</div>
+        <div>
+          <strong>AB Software Group</strong>
+          <small>Laboratorio de Topografía</small>
+        </div>
+      </div>
+
+      <div class="profile-switcher">
+        <button class="profile-button" id="profileButton" aria-expanded="false">
+          <span class="profile-meta">
+            <span class="avatar">IS</span>
+            <span><b>Encargado activo</b><span>Vista Supervisor</span></span>
+          </span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="profile-menu" id="profileMenu">
+          <button data-role="Alumno">Alumno</button>
+          <button data-role="Docente Encargado">Docente Encargado</button>
+          <button data-role="Encargado de Laboratorio">Encargado de Laboratorio / Supervisor</button>
+          <button data-role="Administrador">Administrador</button>
+        </div>
+      </div>
+
+      <div class="nav-label">Gestión del laboratorio</div>
+      <nav class="nav-list">
+        <button class="active"><span class="nav-icon">▦</span> Catálogo de Equipos</button>
+        <button><span class="nav-icon">◷</span> Solicitudes Activas <span
+            style="margin-left:auto;color:#ffb6c1;font-size:9px;">12</span></button>
+        <button><span class="nav-icon">↺</span> Historial</button>
+        <button><span class="nav-icon">⌁</span> Métricas</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        Sesión iniciada como<br>
+        <b>Ing. Supervisor</b><br>
+        Última sincronización: hace 2 min.
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="top-header">
+        <div class="heading">
+          <h1>Inventario del laboratorio</h1>
+          <p>Control de equipos, préstamos y devoluciones · Miércoles, 22 de mayo</p>
+        </div>
+        <div class="header-actions">
+          <label class="quick-search">
+            <span>⌕</span>
+            <input id="searchInput" type="search" placeholder="Buscar equipo o alumno..."
+              aria-label="Buscar equipo o alumno">
+          </label>
+          <div class="user-chip">
+            <span class="avatar">IS</span>
+            <span><b>Ing. Supervisor</b><span>Encargado de laboratorio</span></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <section class="dashboard-column">
+          <div class="kpis">
+            <article class="kpi">
+              <div class="kpi-label">Solicitudes Pendientes <span class="kpi-icon">◷</span></div>
+              <div class="kpi-value" id="pendingKpi">12</div>
+              <div class="kpi-trend">+3 desde ayer</div>
+            </article>
+            <article class="kpi">
+              <div class="kpi-label">Equipos en Préstamo <span class="kpi-icon">▣</span></div>
+              <div class="kpi-value">28</div>
+              <div class="kpi-trend">84% del inventario</div>
+            </article>
+            <article class="kpi">
+              <div class="kpi-label">Devoluciones Hoy <span class="kpi-icon">↺</span></div>
+              <div class="kpi-value">09</div>
+              <div class="kpi-trend">4 completadas</div>
+            </article>
+            <article class="kpi alert">
+              <div class="kpi-label">Alertas por Retraso <span class="kpi-icon">!</span></div>
+              <div class="kpi-value">03</div>
+              <div class="kpi-trend">Requieren atención</div>
+            </article>
+          </div>
+
+          <section class="section-card">
+            <div class="section-head">
+              <div>
+                <h2>Solicitudes entrantes</h2>
+                <p>Revisa y autoriza los préstamos solicitados por los alumnos.</p>
+              </div>
+              <div class="table-tools">
+                <select class="filter-select" id="statusFilter" aria-label="Filtrar por estado">
+                  <option value="all">Todos los estados</option>
+                  <option value="Pendiente">Pendientes</option>
+                  <option value="Aprobado">Aprobados</option>
+                  <option value="Retrasado">Retrasados</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Profesor responsable</th>
+                    <th>Equipo solicitado</th>
+                    <th>Fecha préstamo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="requestsBody">
+                  <tr data-status="Pendiente">
+                    <td>
+                      <div class="student"><span class="avatar">LM</span><span>Lucía
+                          Martínez<small>A01742</small></span></div>
+                    </td>
+                    <td>Dr. Carlos Ríos</td>
+                    <td>
+                      <div class="equipment"><span class="equipment-thumb">⌁</span>Estación Total</div>
+                    </td>
+                    <td>22 mayo, 08:00</td>
+                    <td><span class="status pending">Pendiente</span></td>
+                    <td>
+                      <div class="actions"><button class="action-btn approve">Aprobar salida</button><button
+                          class="action-btn reject">Rechazar</button></div>
+                    </td>
+                  </tr>
+                  <tr data-status="Pendiente">
+                    <td>
+                      <div class="student"><span class="avatar">JR</span><span>Jorge Ramírez<small>A01608</small></span>
+                      </div>
+                    </td>
+                    <td>Mtra. Elena Soto</td>
+                    <td>
+                      <div class="equipment"><span class="equipment-thumb">△</span>Teodolito T-06</div>
+                    </td>
+                    <td>22 mayo, 09:30</td>
+                    <td><span class="status pending">Pendiente</span></td>
+                    <td>
+                      <div class="actions"><button class="action-btn approve">Aprobar salida</button><button
+                          class="action-btn reject">Rechazar</button></div>
+                    </td>
+                  </tr>
+                  <tr data-status="Aprobado">
+                    <td>
+                      <div class="student"><span class="avatar">SC</span><span>Sofía
+                          Castillo<small>A01589</small></span></div>
+                    </td>
+                    <td>Ing. Roberto Peña</td>
+                    <td>
+                      <div class="equipment"><span class="equipment-thumb">◫</span>Nivel automático</div>
+                    </td>
+                    <td>22 mayo, 07:45</td>
+                    <td><span class="status approved">Aprobado</span></td>
+                    <td>
+                      <div class="actions"><button class="action-btn" disabled>Salida aprobada</button></div>
+                    </td>
+                  </tr>
+                  <tr data-status="Retrasado">
+                    <td>
+                      <div class="student"><span class="avatar">DG</span><span>Diego García<small>A01471</small></span>
+                      </div>
+                    </td>
+                    <td>Dr. Carlos Ríos</td>
+                    <
