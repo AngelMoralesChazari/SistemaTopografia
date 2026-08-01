@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Lab Topografía",
+    "slug": "lab-topografia",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "labtopografia",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "mx.edu.uagro.labtopografia"
+    },
+    "android": {
+      "package": "mx.edu.uagro.labtopografia",
+      "adaptiveIcon": {
+        "backgroundColor": "#19315F",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
