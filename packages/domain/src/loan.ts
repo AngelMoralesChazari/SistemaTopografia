@@ -44,6 +44,8 @@ export type CreateLoanInput = {
   studentNumber?: string | null;
   teacherId: string;
   teacherName: string;
+  /** Fecha límite propuesta (ISO). Por defecto 24 h desde la solicitud. */
+  dueAt: string;
   loanType?: LoanType;
   notes?: string | null;
 };

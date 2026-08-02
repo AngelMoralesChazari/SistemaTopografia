@@ -39,7 +39,7 @@ service cloud.firestore {
         uid() == userId ||
         isLabManager() ||
         (hasRole('teacher') && sameLab(resource.data)) ||
-        // Alumno puede ver maestros de su laboratorio (selector de solicitud)
+        // Alumno puede ver maestros de su laboratorio
         (hasRole('student') && resource.data.role == 'teacher' && sameLab(resource.data))
       );
       // Escritura solo Admin SDK / Functions por ahora

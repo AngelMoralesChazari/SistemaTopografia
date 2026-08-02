@@ -72,10 +72,13 @@ async function upsertAuthUser(entry) {
 async function main() {
   console.log(`Sembrando ${users.length} usuarios en labId=${LAB_ID}...\n`);
 
+  /** email → { uid, displayName } */
+  const byEmail = new Map();
+
   for (const entry of users) {
     const uid = await upsertAuthUser(entry);
+    byEmail.set(entry.email.toLowerCase(), { uid, displayName: entry.displayName, role: entry.role });
 
-    // Custom claim (útil para Functions/reglas futuras)
     await auth.setCustomUserClaims(uid, { role: entry.role, labId: LAB_ID });
 
     const profile = {
@@ -85,6 +88,8 @@ async function main() {
       role: entry.role,
       studentId: entry.studentId ?? null,
       employeeId: entry.employeeId ?? null,
+      teacherId: null,
+      teacherName: null,
       groupIds: [],
       active: true,
       labId: LAB_ID,
@@ -95,6 +100,26 @@ async function main() {
 
     await db.collection('users').doc(uid).set(profile, { merge: true });
     console.log(`✓ ${entry.role.padEnd(12)} ${entry.email}  (${uid})`);
+  }
+
+  // Segunda pasada: asigna profesor al alumno desde teacherEmail
+  for (const entry of users) {
+    if (!entry.teacherEmail) continue;
+    const student = byEmail.get(entry.email.toLowerCase());
+    const teacher = byEmail.get(String(entry.teacherEmail).toLowerCase());
+    if (!student || !teacher) {
+      console.warn(`⚠ No se pudo vincular profesor para ${entry.email}`);
+      continue;
+    }
+    await db.collection('users').doc(student.uid).set(
+      {
+        teacherId: teacher.uid,
+        teacherName: teacher.displayName,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    console.log(`✓ vínculo alumno→maestro  ${entry.email} → ${entry.teacherEmail}`);
   }
 
   await db.collection('settings').doc('general').set(

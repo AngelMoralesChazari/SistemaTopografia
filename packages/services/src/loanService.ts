@@ -66,10 +66,13 @@ function mapLoan(id: string, data: Record<string, unknown>): Loan {
   };
 }
 
-export async function createLoanRequest(input: CreateLoanInput): Promise<string> {
+export async function createLoanRequest(
+  input: CreateLoanInput
+): Promise<{ id: string; folio: string }> {
   const db = getDb();
   const equipmentRef = doc(db, 'equipment', input.equipmentId);
   const loanRef = doc(collection(db, 'loans'));
+  const folio = generateLoanFolio();
 
   await runTransaction(db, async (tx) => {
     const equipmentSnap = await tx.get(equipmentRef);
@@ -82,8 +85,16 @@ export async function createLoanRequest(input: CreateLoanInput): Promise<string>
       throw new Error('El equipo no está disponible para préstamo.');
     }
 
+    const dueDate = new Date(input.dueAt);
+    if (Number.isNaN(dueDate.getTime())) {
+      throw new Error('Fecha de devolución inválida.');
+    }
+    if (dueDate.getTime() <= Date.now()) {
+      throw new Error('La fecha de devolución debe ser posterior a ahora.');
+    }
+
     tx.set(loanRef, {
-      folio: generateLoanFolio(),
+      folio,
       labId: input.labId || getLabId(),
       loanType: input.loanType ?? 'academic',
       status: 'pending',
@@ -100,7 +111,7 @@ export async function createLoanRequest(input: CreateLoanInput): Promise<string>
       approvedAt: null,
       rejectedAt: null,
       rejectionReason: null,
-      dueAt: null,
+      dueAt: dueDate,
       deliveredAt: null,
       returnedAt: null,
       paymentRequired: (input.loanType ?? 'academic') === 'rental',
@@ -117,7 +128,7 @@ export async function createLoanRequest(input: CreateLoanInput): Promise<string>
     });
   });
 
-  return loanRef.id;
+  return { id: loanRef.id, folio };
 }
 
 export function watchLoansForStudent(

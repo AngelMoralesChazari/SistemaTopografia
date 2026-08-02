@@ -8,6 +8,9 @@ export type AppUser = {
   role: UserRole;
   studentId?: string | null;
   employeeId?: string | null;
+  /** Profesor asignado al alumno (desde Firestore). */
+  teacherId?: string | null;
+  teacherName?: string | null;
   groupIds?: string[];
   active: boolean;
   labId: string;

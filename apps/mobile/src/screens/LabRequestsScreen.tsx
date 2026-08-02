@@ -128,6 +128,15 @@ export function LabRequestsScreen() {
     [loans, selectedId]
   );
 
+  useEffect(() => {
+    if (!selected?.dueAt) return;
+    const d = new Date(selected.dueAt);
+    if (Number.isNaN(d.getTime())) return;
+    const iso = d.toISOString().slice(0, 10);
+    setDueDate(iso);
+    setDueDisplay(isoToDisplay(iso));
+  }, [selected?.id, selected?.dueAt]);
+
   const syncDue = (iso: string) => {
     setDueDate(iso);
     setDueDisplay(isoToDisplay(iso));
