@@ -156,7 +156,7 @@ export function watchLabQueue(
   const q = query(
     collection(getDb(), 'loans'),
     where('labId', '==', labId),
-    where('status', 'in', ['pending', 'approved', 'delivered']),
+    where('status', 'in', ['pending', 'approved', 'delivered', 'rejected']),
     orderBy('requestedAt', 'desc')
   );
   return onSnapshot(
