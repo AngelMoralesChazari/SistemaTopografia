@@ -32,9 +32,12 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 const categories = [
-  { id: 'cat-topografia', name: 'Topografía', sortOrder: 1 },
-  { id: 'cat-gnss', name: 'GNSS', sortOrder: 2 },
-  { id: 'cat-accesorios', name: 'Accesorios', sortOrder: 3 },
+  { id: 'cat-medicion', name: 'Medición', sortOrder: 1, description: 'Cintas, estadales y ruedas' },
+  { id: 'cat-niveles', name: 'Niveles', sortOrder: 2, description: 'Niveles ópticos y digitales' },
+  { id: 'cat-angulos', name: 'Ángulos y estación', sortOrder: 3, description: 'Teodolitos y estaciones totales' },
+  { id: 'cat-gnss', name: 'GNSS', sortOrder: 4, description: 'Receptores y antenas GPS/GNSS' },
+  { id: 'cat-soporte', name: 'Soporte y accesorios', sortOrder: 5, description: 'Trípodes, jalones y prismas' },
+  { id: 'cat-gabinete', name: 'Dibujo y gabinete', sortOrder: 6, description: 'Escuadras, escalímetros y planímetros' },
 ];
 
 async function main() {
@@ -44,7 +47,7 @@ async function main() {
     await db.collection('categories').doc(cat.id).set(
       {
         name: cat.name,
-        description: null,
+        description: cat.description ?? null,
         sortOrder: cat.sortOrder,
         active: true,
         labId: LAB_ID,
@@ -85,6 +88,34 @@ async function main() {
       await existing.docs[0].ref.set(payload, { merge: true });
       console.log(`✓ equipo actualizado ${item.internalCode} — ${item.name}`);
     }
+  }
+
+  // Archiva códigos del seed anterior para no duplicar grupos viejos
+  const legacyCodes = [
+    'TOP-T06',
+    'TOP-T06B',
+    'TOP-NA01',
+    'TOP-NA02',
+    'TOP-ET01',
+    'TOP-GPS01',
+    'TOP-PR01',
+    'TOP-TR01',
+    'TOP-CN01',
+    'TOP-JL01',
+  ];
+  for (const code of legacyCodes) {
+    const snap = await db
+      .collection('equipment')
+      .where('labId', '==', LAB_ID)
+      .where('internalCode', '==', code)
+      .limit(1)
+      .get();
+    if (snap.empty) continue;
+    await snap.docs[0].ref.set(
+      { active: false, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    console.log(`✓ legado archivado ${code}`);
   }
 
   console.log(`
