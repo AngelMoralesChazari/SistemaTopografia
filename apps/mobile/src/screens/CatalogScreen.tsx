@@ -218,7 +218,7 @@ export function CatalogScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.head}>
           <View>
-            <Text style={styles.hello}>Buenos días,</Text>
+            <Text style={styles.hello}>Bienvenido</Text>
             <Text style={styles.name}>{user?.displayName ?? 'Alumno'}</Text>
           </View>
           <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={26} />
@@ -247,7 +247,7 @@ export function CatalogScreen() {
           <>
             <Text style={styles.label}>Grupos de material</Text>
             <Text style={styles.helperTop}>
-              Elige un grupo para ver solo el equipo de esa categoría.
+              Elige un grupo para ver el equipo.
             </Text>
 
             {filteredCategories.length === 0 ? (
