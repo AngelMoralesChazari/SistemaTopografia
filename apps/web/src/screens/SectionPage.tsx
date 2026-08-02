@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import type { WebSection } from '../layout/AppShell';
+import { EquipmentPage } from './EquipmentPage';
 
 type DashboardHomeProps = {
   section: WebSection;
@@ -39,6 +40,10 @@ const SECTION_COPY: Record<WebSection, { title: string; description: string }> =
 };
 
 export function SectionPage({ section }: DashboardHomeProps) {
+  if (section === 'equipment') {
+    return <EquipmentPage />;
+  }
+
   const copy = SECTION_COPY[section];
 
   return (
@@ -60,7 +65,7 @@ export function SectionPage({ section }: DashboardHomeProps) {
               <Text style={[styles.kpiLabel, kpi.alert && styles.kpiLabelAlert]}>{kpi.label}</Text>
               <Text style={[styles.kpiValue, kpi.alert && styles.kpiValueAlert]}>{kpi.value}</Text>
               <Text style={[styles.kpiTrend, kpi.alert && styles.kpiTrendAlert]}>
-                Conectado a Firebase · datos en Fase 7
+                Módulo de préstamos pendiente
               </Text>
             </View>
           ))}
@@ -70,8 +75,8 @@ export function SectionPage({ section }: DashboardHomeProps) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Módulo en construcción</Text>
         <Text style={styles.cardBody}>
-          El shell web y el Design System ya están listos. El contenido de esta sección se
-          implementará módulo por módulo a partir de la Fase 7.
+          Esta sección se implementará en el siguiente módulo. El catálogo de equipos ya está
+          disponible en el menú lateral.
         </Text>
       </View>
     </ScrollView>
