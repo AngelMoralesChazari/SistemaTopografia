@@ -14,3 +14,12 @@ export {
   setEquipmentStatus,
 } from './equipmentService';
 export { listTeachers } from './userService';
+export {
+  createLoanRequest,
+  watchLoansForStudent,
+  watchLabQueue,
+  watchLoansForTeacher,
+  rejectLoan,
+  deliverLoan,
+  returnLoan,
+} from './loanService';
