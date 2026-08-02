@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
 import type { UserRole } from '@lab-topo/domain';
@@ -33,26 +33,52 @@ const StudentTabs = createBottomTabNavigator<StudentTabParamList>();
 const LabTabs = createBottomTabNavigator<LabTabParamList>();
 const TeacherTabs = createBottomTabNavigator<TeacherTabParamList>();
 
-function TabIcon({ label }: { label: string }) {
-  return <Text style={{ fontSize: 14 }}>{label}</Text>;
+const TAB_ICON_SIZE = 24;
+
+type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
+
+function TabIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: MaterialIconName;
+  color: string;
+  focused: boolean;
+}) {
+  return (
+    <MaterialIcons
+      name={name}
+      size={TAB_ICON_SIZE}
+      color={color}
+      style={{ opacity: focused ? 1 : 0.92 }}
+    />
+  );
 }
 
 function useTabScreenOptions() {
   const insets = useSafeAreaInsets();
-  const bottom = Math.max(insets.bottom, 10);
+  const bottom = Math.max(insets.bottom, 12);
 
   return useMemo(
     () => ({
       headerShown: false,
       tabBarActiveTintColor: theme.color.navy,
       tabBarInactiveTintColor: '#8A96A2',
-      tabBarLabelStyle: { fontSize: 10, fontWeight: '700' as const },
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: '700' as const,
+        marginTop: 2,
+      },
+      tabBarIconStyle: {
+        marginTop: 2,
+      },
       tabBarStyle: {
         borderTopColor: theme.color.line,
         backgroundColor: '#fff',
-        height: 52 + bottom,
+        height: 58 + bottom,
         paddingBottom: bottom,
-        paddingTop: 6,
+        paddingTop: 8,
       },
       tabBarItemStyle: {
         paddingVertical: 2,
@@ -71,17 +97,32 @@ export function RoleTabs({ role }: { role: UserRole }) {
         <StudentTabs.Screen
           name="Catalog"
           component={CatalogScreen}
-          options={{ title: 'Catálogo', tabBarIcon: () => <TabIcon label="⌂" /> }}
+          options={{
+            title: 'Catálogo',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="home" color={color} focused={focused} />
+            ),
+          }}
         />
         <StudentTabs.Screen
           name="Requests"
           component={StudentRequestsScreen}
-          options={{ title: 'Solicitudes', tabBarIcon: () => <TabIcon label="◷" /> }}
+          options={{
+            title: 'Solicitudes',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="schedule" color={color} focused={focused} />
+            ),
+          }}
         />
         <StudentTabs.Screen
           name="Profile"
           component={ProfileScreen}
-          options={{ title: 'Perfil', tabBarIcon: () => <TabIcon label="◯" /> }}
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="person-outline" color={color} focused={focused} />
+            ),
+          }}
         />
       </StudentTabs.Navigator>
     );
@@ -93,17 +134,32 @@ export function RoleTabs({ role }: { role: UserRole }) {
         <TeacherTabs.Screen
           name="Summary"
           component={TeacherStudentsScreen}
-          options={{ title: 'Resumen', tabBarIcon: () => <TabIcon label="⌂" /> }}
+          options={{
+            title: 'Resumen',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="dashboard" color={color} focused={focused} />
+            ),
+          }}
         />
         <TeacherTabs.Screen
           name="Students"
           component={TeacherStudentsScreen}
-          options={{ title: 'Alumnos', tabBarIcon: () => <TabIcon label="▣" /> }}
+          options={{
+            title: 'Alumnos',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="groups" color={color} focused={focused} />
+            ),
+          }}
         />
         <TeacherTabs.Screen
           name="Profile"
           component={ProfileScreen}
-          options={{ title: 'Perfil', tabBarIcon: () => <TabIcon label="◯" /> }}
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="person-outline" color={color} focused={focused} />
+            ),
+          }}
         />
       </TeacherTabs.Navigator>
     );
@@ -114,17 +170,32 @@ export function RoleTabs({ role }: { role: UserRole }) {
       <LabTabs.Screen
         name="Requests"
         component={LabRequestsScreen}
-        options={{ title: 'Solicitudes', tabBarIcon: () => <TabIcon label="◷" /> }}
+        options={{
+          title: 'Solicitudes',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="schedule" color={color} focused={focused} />
+          ),
+        }}
       />
       <LabTabs.Screen
         name="Inventory"
         component={InventoryScreen}
-        options={{ title: 'Inventario', tabBarIcon: () => <TabIcon label="▣" /> }}
+        options={{
+          title: 'Inventario',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="inventory-2" color={color} focused={focused} />
+          ),
+        }}
       />
       <LabTabs.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Perfil', tabBarIcon: () => <TabIcon label="◯" /> }}
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="person-outline" color={color} focused={focused} />
+          ),
+        }}
       />
     </LabTabs.Navigator>
   );
