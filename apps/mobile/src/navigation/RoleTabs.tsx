@@ -3,7 +3,12 @@ import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { theme } from '@lab-topo/config';
 import type { UserRole } from '@lab-topo/domain';
-import { PlaceholderScreen, ProfileScreen } from '../screens/PlaceholderScreen';
+import { ProfileScreen } from '../screens/PlaceholderScreen';
+import { CatalogScreen } from '../screens/CatalogScreen';
+import { InventoryScreen } from '../screens/InventoryScreen';
+import { LabRequestsScreen } from '../screens/LabRequestsScreen';
+import { TeacherStudentsScreen } from '../screens/TeacherStudentsScreen';
+import { StudentRequestsScreen } from '../screens/StudentRequestsScreen';
 
 export type StudentTabParamList = {
   Catalog: undefined;
@@ -50,27 +55,14 @@ export function RoleTabs({ role }: { role: UserRole }) {
       <StudentTabs.Navigator screenOptions={tabOptions}>
         <StudentTabs.Screen
           name="Catalog"
+          component={CatalogScreen}
           options={{ title: 'Catálogo', tabBarIcon: () => <TabIcon label="⌂" /> }}
-        >
-          {() => (
-            <PlaceholderScreen
-              title="Catálogo"
-              subtitle="Aquí verás el material disponible y podrás solicitar préstamos. Módulo en construcción."
-            />
-          )}
-        </StudentTabs.Screen>
+        />
         <StudentTabs.Screen
           name="Requests"
+          component={StudentRequestsScreen}
           options={{ title: 'Solicitudes', tabBarIcon: () => <TabIcon label="◷" /> }}
-        >
-          {() => (
-            <PlaceholderScreen
-              title="Mis solicitudes"
-              subtitle="Consulta el estado de tus préstamos."
-            />
-          )}
-        </StudentTabs.Screen>
-        <StudentTabs.Screen
+        />        <StudentTabs.Screen
           name="Profile"
           component={ProfileScreen}
           options={{ title: 'Perfil', tabBarIcon: () => <TabIcon label="◯" /> }}
@@ -84,26 +76,14 @@ export function RoleTabs({ role }: { role: UserRole }) {
       <TeacherTabs.Navigator screenOptions={tabOptions}>
         <TeacherTabs.Screen
           name="Summary"
+          component={TeacherStudentsScreen}
           options={{ title: 'Resumen', tabBarIcon: () => <TabIcon label="⌂" /> }}
-        >
-          {() => (
-            <PlaceholderScreen
-              title="Resumen"
-              subtitle="Alertas y préstamos vigentes de tus grupos."
-            />
-          )}
-        </TeacherTabs.Screen>
+        />
         <TeacherTabs.Screen
           name="Students"
+          component={TeacherStudentsScreen}
           options={{ title: 'Alumnos', tabBarIcon: () => <TabIcon label="▣" /> }}
-        >
-          {() => (
-            <PlaceholderScreen
-              title="Mis alumnos"
-              subtitle="Supervisión de préstamos por alumno."
-            />
-          )}
-        </TeacherTabs.Screen>
+        />
         <TeacherTabs.Screen
           name="Profile"
           component={ProfileScreen}
@@ -113,31 +93,18 @@ export function RoleTabs({ role }: { role: UserRole }) {
     );
   }
 
-  // admin y lab_manager comparten shell operativo del encargado
   return (
     <LabTabs.Navigator screenOptions={tabOptions}>
       <LabTabs.Screen
         name="Requests"
+        component={LabRequestsScreen}
         options={{ title: 'Solicitudes', tabBarIcon: () => <TabIcon label="◷" /> }}
-      >
-        {() => (
-          <PlaceholderScreen
-            title="Solicitudes"
-            subtitle="Cola de entrada: aprobar, entregar y devolver material."
-          />
-        )}
-      </LabTabs.Screen>
+      />
       <LabTabs.Screen
         name="Inventory"
+        component={InventoryScreen}
         options={{ title: 'Inventario', tabBarIcon: () => <TabIcon label="▣" /> }}
-      >
-        {() => (
-          <PlaceholderScreen
-            title="Inventario"
-            subtitle="Consulta y gestión del material del laboratorio."
-          />
-        )}
-      </LabTabs.Screen>
+      />
       <LabTabs.Screen
         name="Profile"
         component={ProfileScreen}
