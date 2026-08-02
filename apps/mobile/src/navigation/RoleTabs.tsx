@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
 import type { UserRole } from '@lab-topo/domain';
-import { ProfileScreen } from '../screens/PlaceholderScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
 import { InventoryScreen } from '../screens/InventoryScreen';
 import { LabRequestsScreen } from '../screens/LabRequestsScreen';
