@@ -91,6 +91,9 @@ function mapAuthError(raw: string): string {
   if (raw.includes('auth/too-many-requests')) {
     return 'Demasiados intentos. Intenta más tarde.';
   }
+  if (raw.includes('auth/user-token-expired') || raw.includes('auth/id-token-expired') || raw.includes('sesión expiró')) {
+    return 'Tu sesión expiró. Vuelve a iniciar sesión.';
+  }
   if (raw.includes('Firebase no está configurado') || raw.includes('EXPO_PUBLIC_FIREBASE')) {
     return 'Firebase no está configurado. Revisa tu archivo .env.';
   }

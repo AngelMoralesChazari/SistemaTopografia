@@ -1,7 +1,14 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+  type Auth,
+} from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirebaseConfig, isFirebaseConfigured } from '@lab-topo/config';
 
 let app: FirebaseApp | null = null;
@@ -22,7 +29,24 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  if (!auth) auth = getAuth(getFirebaseApp());
+  if (auth) return auth;
+
+  const firebaseApp = getFirebaseApp();
+
+  // En móvil sin AsyncStorage el token caduca y no se refresca (auth/user-token-expired).
+  if (Platform.OS !== 'web') {
+    try {
+      auth = initializeAuth(firebaseApp, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
+    } catch {
+      // Ya inicializado (Fast Refresh / segundo import)
+      auth = getAuth(firebaseApp);
+    }
+  } else {
+    auth = getAuth(firebaseApp);
+  }
+
   return auth;
 }
 

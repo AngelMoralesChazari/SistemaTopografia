@@ -18,7 +18,18 @@ function mapRole(value: unknown): UserRole | null {
 }
 
 async function loadUserProfile(user: User): Promise<AppUser> {
-  const token = await user.getIdTokenResult(true);
+  let token;
+  try {
+    // Fuerza refresco del ID token para evitar auth/user-token-expired
+    token = await user.getIdTokenResult(true);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('auth/user-token-expired') || message.includes('auth/id-token-expired')) {
+      throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+    }
+    throw error instanceof Error ? error : new Error(message);
+  }
+
   let data: Record<string, unknown> | undefined;
   let snapExists = false;
 
@@ -28,6 +39,9 @@ async function loadUserProfile(user: User): Promise<AppUser> {
     data = snap.data();
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error al leer perfil';
+    if (message.includes('auth/user-token-expired') || message.includes('auth/id-token-expired')) {
+      throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+    }
     throw new Error(
       `No se pudo leer el perfil en Firestore. ¿Publicaste las reglas? Detalle: ${message}`
     );
@@ -59,6 +73,8 @@ async function loadUserProfile(user: User): Promise<AppUser> {
     role,
     studentId: (data.studentId as string | null | undefined) ?? null,
     employeeId: (data.employeeId as string | null | undefined) ?? null,
+    teacherId: (data.teacherId as string | null | undefined) ?? null,
+    teacherName: (data.teacherName as string | null | undefined) ?? null,
     groupIds: (data.groupIds as string[] | undefined) ?? [],
     active: true,
     labId: (typeof data.labId === 'string' ? data.labId : undefined) ?? getLabId(),
