@@ -171,15 +171,21 @@ export function watchLoansForTeacher(
   onChange: (loans: Loan[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const q = query(
-    collection(getDb(), 'loans'),
-    where('teacherId', '==', teacherId),
-    where('status', 'in', ['pending', 'approved', 'delivered']),
-    orderBy('requestedAt', 'desc')
-  );
+  // Solo equality en teacherId: no exige índice compuesto.
+  const q = query(collection(getDb(), 'loans'), where('teacherId', '==', teacherId));
+
   return onSnapshot(
     q,
-    (snap) => onChange(snap.docs.map((d) => mapLoan(d.id, d.data()))),
+    (snap) => {
+      const loans = snap.docs
+        .map((d) => mapLoan(d.id, d.data()))
+        .sort((a, b) => {
+          const ta = a.requestedAt ? new Date(a.requestedAt).getTime() : 0;
+          const tb = b.requestedAt ? new Date(b.requestedAt).getTime() : 0;
+          return tb - ta;
+        });
+      onChange(loans);
+    },
     (error) => onError?.(error)
   );
 }

@@ -8,8 +8,9 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
 import { InventoryScreen } from '../screens/InventoryScreen';
 import { LabRequestsScreen } from '../screens/LabRequestsScreen';
-import { TeacherStudentsScreen } from '../screens/TeacherStudentsScreen';
+import { TeacherSummaryScreen } from '../screens/TeacherSummaryScreen';
 import { StudentRequestsScreen } from '../screens/StudentRequestsScreen';
+import { TeacherStudentsStack } from './TeacherStudentsStack';
 
 export type StudentTabParamList = {
   Catalog: undefined;
@@ -133,7 +134,7 @@ export function RoleTabs({ role }: { role: UserRole }) {
       <TeacherTabs.Navigator screenOptions={tabOptions}>
         <TeacherTabs.Screen
           name="Summary"
-          component={TeacherStudentsScreen}
+          component={TeacherSummaryScreen}
           options={{
             title: 'Resumen',
             tabBarIcon: ({ color, focused }) => (
@@ -143,7 +144,7 @@ export function RoleTabs({ role }: { role: UserRole }) {
         />
         <TeacherTabs.Screen
           name="Students"
-          component={TeacherStudentsScreen}
+          component={TeacherStudentsStack}
           options={{
             title: 'Alumnos',
             tabBarIcon: ({ color, focused }) => (
