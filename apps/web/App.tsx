@@ -9,7 +9,7 @@ import { SectionPage } from './src/screens/SectionPage';
 
 function WebRoot() {
   const { user, loading } = useAuth();
-  const [section, setSection] = useState<WebSection>('dashboard');
+  const [section, setSection] = useState<WebSection>('requests');
 
   if (loading) {
     return (

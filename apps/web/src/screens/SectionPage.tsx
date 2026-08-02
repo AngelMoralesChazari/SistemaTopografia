@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import type { WebSection } from '../layout/AppShell';
 import { EquipmentPage } from './EquipmentPage';
+import { RequestsPage } from './RequestsPage';
 
 type DashboardHomeProps = {
   section: WebSection;
@@ -42,6 +43,10 @@ const SECTION_COPY: Record<WebSection, { title: string; description: string }> =
 export function SectionPage({ section }: DashboardHomeProps) {
   if (section === 'equipment') {
     return <EquipmentPage />;
+  }
+
+  if (section === 'requests') {
+    return <RequestsPage />;
   }
 
   const copy = SECTION_COPY[section];
