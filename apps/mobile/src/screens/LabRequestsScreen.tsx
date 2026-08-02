@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   LayoutAnimation,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +13,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
 import {
@@ -27,7 +29,7 @@ import {
   watchEquipment,
   watchLabQueue,
 } from '@lab-topo/services';
-import { Avatar, Button, Notice, RequestCard, Toast, type BadgeTone } from '@lab-topo/ui';
+import { Avatar, Button, Notice, RequestCard, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 
 if (
@@ -237,8 +239,11 @@ export function LabRequestsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dueById, setDueById] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [toastVisible, setToastVisible] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successTitle, setSuccessTitle] = useState('');
+  const [successSubtitle, setSuccessSubtitle] = useState('');
+  const [successFolio, setSuccessFolio] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -286,10 +291,16 @@ export function LabRequestsScreen() {
     [loans, tab]
   );
 
-  const showToast = (message: string) => {
-    setToast(message);
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 2800);
+  const showSuccess = (title: string, subtitle: string, folio: string) => {
+    setSuccessTitle(title);
+    setSuccessSubtitle(subtitle);
+    setSuccessFolio(folio);
+    setSuccessOpen(true);
+  };
+
+  const closeSuccess = () => {
+    setSuccessOpen(false);
+    setSuccessFolio(null);
   };
 
   const changeTab = (next: LabTab) => {
@@ -331,13 +342,18 @@ export function LabRequestsScreen() {
     const display = dueById[loan.id] ?? isoToDisplay(dueIsoFromLoan(loan));
     const iso = displayToIso(display);
     setBusy(true);
+    setActionError(null);
     try {
       await deliverLoan(loan.id, user.uid, iso);
       setExpandedId(null);
       setTab('aceptados');
-      showToast('Equipo entregado. Movido a Aceptados.');
+      showSuccess(
+        'Equipo entregado',
+        'El préstamo quedó registrado en Aceptados.',
+        loan.folio
+      );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo entregar.');
+      setActionError(err instanceof Error ? err.message : 'No se pudo entregar.');
     } finally {
       setBusy(false);
     }
@@ -346,13 +362,18 @@ export function LabRequestsScreen() {
   const onReject = async (loan: Loan) => {
     if (!user) return;
     setBusy(true);
+    setActionError(null);
     try {
       await rejectLoan(loan.id, user.uid, 'Rechazada por el encargado');
       setExpandedId(null);
       setTab('rechazados');
-      showToast('Solicitud rechazada. Movida a Rechazados.');
+      showSuccess(
+        'Solicitud rechazada',
+        'El alumno verá el rechazo en sus solicitudes.',
+        loan.folio
+      );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo rechazar.');
+      setActionError(err instanceof Error ? err.message : 'No se pudo rechazar.');
     } finally {
       setBusy(false);
     }
@@ -361,14 +382,19 @@ export function LabRequestsScreen() {
   const onReturn = async (loan: Loan) => {
     if (!user) return;
     setBusy(true);
+    setActionError(null);
     try {
       const due = loan.dueAt ? new Date(loan.dueAt) : null;
       const late = due ? due.getTime() < Date.now() : false;
       await returnLoan(loan.id, user.uid, { late });
       setExpandedId(null);
-      showToast(late ? 'Devolución registrada con retraso.' : 'Devolución registrada.');
+      showSuccess(
+        late ? 'Devolución con retraso' : 'Devolución registrada',
+        'El material volvió al inventario del laboratorio.',
+        loan.folio
+      );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo devolver.');
+      setActionError(err instanceof Error ? err.message : 'No se pudo devolver.');
     } finally {
       setBusy(false);
     }
@@ -431,6 +457,10 @@ export function LabRequestsScreen() {
           <Notice tone="danger" title="Error al cargar solicitudes" description={error} />
         ) : null}
 
+        {actionError ? (
+          <Notice tone="danger" title="No se completó la acción" description={actionError} />
+        ) : null}
+
         {loading ? <ActivityIndicator color={theme.color.navy} style={{ marginTop: 24 }} /> : null}
 
         {!loading && filtered.length === 0 ? (
@@ -466,7 +496,25 @@ export function LabRequestsScreen() {
           );
         })}
       </ScrollView>
-      <Toast message={toast} visible={toastVisible} />
+
+      <Modal visible={successOpen} transparent animationType="fade" onRequestClose={closeSuccess}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <MaterialIcons name="check-circle" size={42} color={theme.color.success} />
+            </View>
+            <Text style={styles.successTitle}>{successTitle}</Text>
+            <Text style={styles.successSubtitle}>{successSubtitle}</Text>
+
+            <View style={styles.folioBox}>
+              <Text style={styles.folioLabel}>Número de pedido</Text>
+              <Text style={styles.folioValue}>{successFolio ?? '—'}</Text>
+            </View>
+
+            <Button title="Entendido" onPress={closeSuccess} style={{ marginTop: 16 }} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -604,5 +652,61 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(23, 33, 43, 0.45)',
+    justifyContent: 'center',
+  },
+  successCard: {
+    marginHorizontal: 22,
+    backgroundColor: theme.color.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    padding: 20,
+    alignItems: 'center',
+  },
+  successIconWrap: {
+    marginBottom: 10,
+  },
+  successTitle: {
+    color: theme.color.navy,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    marginTop: 6,
+    color: theme.color.muted,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  folioBox: {
+    marginTop: 16,
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: theme.color.infoSoft,
+    borderWidth: 1,
+    borderColor: '#CBDCF1',
+    alignItems: 'center',
+  },
+  folioLabel: {
+    color: theme.color.muted,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  folioValue: {
+    marginTop: 6,
+    color: theme.color.navy,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
 });
