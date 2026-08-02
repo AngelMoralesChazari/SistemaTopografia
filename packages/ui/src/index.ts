@@ -6,3 +6,7 @@ export type { BadgeTone } from './Badge';
 export { Avatar } from './Avatar';
 export { Notice } from './Notice';
 export { Toast } from './Toast';
+export { MaterialCard } from './MaterialCard';
+export { RequestCard } from './RequestCard';
+export type { RequestDataRow } from './RequestCard';
+export { StudentLoanRow } from './StudentLoanRow';
