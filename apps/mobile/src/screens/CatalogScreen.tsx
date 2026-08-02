@@ -20,38 +20,13 @@ import { getInitials, type Equipment } from '@lab-topo/domain';
 import { watchEquipment, createLoanRequest } from '@lab-topo/services';
 import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
-
-type CategoryGroup = {
-  id: string;
-  name: string;
-  availableCount: number;
-  totalItems: number;
-  mark: string;
-  hint: string;
-};
-
-const CATEGORY_META: Record<string, { mark: string; hint: string; order: number }> = {
-  'cat-medicion': { mark: 'ME', hint: 'Cintas, estadales y ruedas', order: 1 },
-  'cat-niveles': { mark: 'NV', hint: 'Niveles ópticos y digitales', order: 2 },
-  'cat-angulos': { mark: 'AE', hint: 'Teodolitos y estaciones', order: 3 },
-  'cat-gnss': { mark: 'GN', hint: 'Receptores GPS / GNSS', order: 4 },
-  'cat-soporte': { mark: 'SA', hint: 'Trípodes, jalones y prismas', order: 5 },
-  'cat-gabinete': { mark: 'DG', hint: 'Escuadras y planímetros', order: 6 },
-  'cat-topografia': { mark: 'TO', hint: 'Equipos de topografía', order: 7 },
-  'cat-accesorios': { mark: 'AC', hint: 'Accesorios diversos', order: 8 },
-};
+import {
+  buildCategoryGroups,
+  categoryIdOf,
+  type CategoryGroup,
+} from '../lib/equipmentGroups';
 
 const MS_24H = 24 * 60 * 60 * 1000;
-
-function metaFor(categoryId: string, categoryName: string) {
-  return (
-    CATEGORY_META[categoryId] ?? {
-      mark: categoryName.slice(0, 2).toUpperCase(),
-      hint: 'Material del laboratorio',
-      order: 99,
-    }
-  );
-}
 
 function formatDateTime(date: Date): string {
   return date.toLocaleString('es-MX', {
@@ -140,32 +115,10 @@ export function CatalogScreen() {
     [items]
   );
 
-  const categories = useMemo((): CategoryGroup[] => {
-    const map = new Map<string, CategoryGroup>();
-    for (const item of availableItems) {
-      const id = item.categoryId || `cat-${item.categoryName.toLowerCase()}`;
-      const meta = metaFor(id, item.categoryName);
-      const current = map.get(id);
-      if (current) {
-        current.totalItems += 1;
-        current.availableCount += item.qtyAvailable;
-      } else {
-        map.set(id, {
-          id,
-          name: item.categoryName,
-          availableCount: item.qtyAvailable,
-          totalItems: 1,
-          mark: meta.mark,
-          hint: meta.hint,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => {
-      const oa = metaFor(a.id, a.name).order;
-      const ob = metaFor(b.id, b.name).order;
-      return oa - ob || a.name.localeCompare(b.name, 'es');
-    });
-  }, [availableItems]);
+  const categories = useMemo(
+    (): CategoryGroup[] => buildCategoryGroups(availableItems),
+    [availableItems]
+  );
 
   const filteredCategories = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -178,10 +131,7 @@ export function CatalogScreen() {
 
   const categoryItems = useMemo(() => {
     if (!selectedCategoryId) return [];
-    const base = availableItems.filter((e) => {
-      const id = e.categoryId || `cat-${e.categoryName.toLowerCase()}`;
-      return id === selectedCategoryId;
-    });
+    const base = availableItems.filter((e) => categoryIdOf(e) === selectedCategoryId);
     const q = search.trim().toLowerCase();
     if (!q) return base;
     return base.filter((e) => {
