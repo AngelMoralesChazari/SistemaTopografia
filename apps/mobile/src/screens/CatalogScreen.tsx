@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
 import { getInitials, type Equipment } from '@lab-topo/domain';
-import { listTeachers, watchEquipment } from '@lab-topo/services';
+import { listTeachers, watchEquipment, createLoanRequest } from '@lab-topo/services';
 import type { AppUser } from '@lab-topo/domain';
 import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -22,6 +22,7 @@ export function CatalogScreen() {
   const [items, setItems] = useState<Equipment[]>([]);
   const [teachers, setTeachers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function CatalogScreen() {
   }, [items, search]);
 
   const selectedEquipment = items.find((e) => e.id === selectedEquipmentId) ?? null;
+  const selectedTeacher = teachers.find((t) => t.uid === selectedTeacherId) ?? null;
 
   const showToast = (message: string) => {
     setToast(message);
@@ -82,16 +84,36 @@ export function CatalogScreen() {
     setTimeout(() => setToastVisible(false), 2800);
   };
 
-  const onRequest = () => {
+  const onRequest = async () => {
+    if (!user) return;
     if (!selectedEquipment) {
       showToast('Selecciona un equipo antes de continuar.');
       return;
     }
-    if (!selectedTeacherId) {
+    if (!selectedTeacher) {
       showToast('Selecciona un Profesor Responsable antes de continuar.');
       return;
     }
-    showToast('Solicitud lista. El módulo de préstamos se activará en el siguiente paso.');
+    setSubmitting(true);
+    try {
+      await createLoanRequest({
+        labId: user.labId,
+        equipmentId: selectedEquipment.id,
+        equipmentName: selectedEquipment.name,
+        equipmentCode: selectedEquipment.internalCode,
+        studentId: user.uid,
+        studentName: user.displayName,
+        studentNumber: user.studentId ?? null,
+        teacherId: selectedTeacher.uid,
+        teacherName: selectedTeacher.displayName,
+        loanType: 'academic',
+      });
+      showToast('Solicitud enviada al Supervisor. Estado: pendiente.');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo enviar la solicitud.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -172,9 +194,9 @@ export function CatalogScreen() {
           )}
         </View>
 
-        <Button title="Solicitar material" onPress={onRequest} />
+        <Button title="Solicitar material" loading={submitting} onPress={onRequest} />
         <Text style={styles.helper}>
-          El envío real de la solicitud se conectará en el módulo de préstamos.
+          El encargado recibirá tu solicitud y confirmará la entrega en el laboratorio.
         </Text>
       </ScrollView>
 

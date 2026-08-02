@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
 import type { UserRole } from '@lab-topo/domain';
 import { ProfileScreen } from '../screens/PlaceholderScreen';
@@ -32,24 +33,38 @@ const StudentTabs = createBottomTabNavigator<StudentTabParamList>();
 const LabTabs = createBottomTabNavigator<LabTabParamList>();
 const TeacherTabs = createBottomTabNavigator<TeacherTabParamList>();
 
-const tabOptions = {
-  headerShown: false,
-  tabBarActiveTintColor: theme.color.navy,
-  tabBarInactiveTintColor: '#8A96A2',
-  tabBarLabelStyle: { fontSize: 10, fontWeight: '700' as const },
-  tabBarStyle: {
-    borderTopColor: theme.color.line,
-    height: 58,
-    paddingBottom: 6,
-    paddingTop: 6,
-  },
-};
-
 function TabIcon({ label }: { label: string }) {
   return <Text style={{ fontSize: 14 }}>{label}</Text>;
 }
 
+function useTabScreenOptions() {
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, 10);
+
+  return useMemo(
+    () => ({
+      headerShown: false,
+      tabBarActiveTintColor: theme.color.navy,
+      tabBarInactiveTintColor: '#8A96A2',
+      tabBarLabelStyle: { fontSize: 10, fontWeight: '700' as const },
+      tabBarStyle: {
+        borderTopColor: theme.color.line,
+        backgroundColor: '#fff',
+        height: 52 + bottom,
+        paddingBottom: bottom,
+        paddingTop: 6,
+      },
+      tabBarItemStyle: {
+        paddingVertical: 2,
+      },
+    }),
+    [bottom]
+  );
+}
+
 export function RoleTabs({ role }: { role: UserRole }) {
+  const tabOptions = useTabScreenOptions();
+
   if (role === 'student') {
     return (
       <StudentTabs.Navigator screenOptions={tabOptions}>
@@ -62,7 +77,8 @@ export function RoleTabs({ role }: { role: UserRole }) {
           name="Requests"
           component={StudentRequestsScreen}
           options={{ title: 'Solicitudes', tabBarIcon: () => <TabIcon label="◷" /> }}
-        />        <StudentTabs.Screen
+        />
+        <StudentTabs.Screen
           name="Profile"
           component={ProfileScreen}
           options={{ title: 'Perfil', tabBarIcon: () => <TabIcon label="◯" /> }}
