@@ -47,42 +47,47 @@ export function RequestCard({
 
 const styles = StyleSheet.create({
   card: {
-    padding: 11,
+    padding: 14,
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
-    borderRadius: 7,
+    borderRadius: 10,
   },
   head: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 9,
+    marginBottom: 10,
+    gap: 8,
   },
   folio: {
+    flex: 1,
     color: theme.color.navy,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    alignItems: 'center',
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#EDF0F3',
   },
   rowLast: {
     borderBottomWidth: 0,
+    paddingBottom: 2,
   },
   label: {
     color: theme.color.muted,
-    fontSize: 11,
+    fontSize: 12,
   },
   value: {
     color: theme.color.ink,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    maxWidth: '58%',
+    maxWidth: '62%',
     textAlign: 'right',
   },
 });

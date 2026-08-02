@@ -64,17 +64,17 @@ export function StudentRequestsScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.head}>
           <View>
             <Text style={styles.hello}>Mis movimientos</Text>
             <Text style={styles.title}>Solicitudes</Text>
           </View>
-          <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={26} />
+          <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={28} />
         </View>
 
         {error ? <Notice tone="danger" title="Error al cargar" description={error} /> : null}
-        {loading ? <ActivityIndicator color={theme.color.navy} /> : null}
+        {loading ? <ActivityIndicator color={theme.color.navy} style={{ marginTop: 20 }} /> : null}
 
         {!loading && loans.length === 0 ? (
           <Notice
@@ -99,6 +99,8 @@ export function StudentRequestsScreen() {
                     loan.status === 'delivered'
                       ? formatDate(loan.dueAt)
                       : loanStatusLabel(loan.status),
+                  valueColor:
+                    loan.status === 'delivered' ? theme.color.navy : theme.color.ink,
                 },
               ]}
             />
@@ -115,21 +117,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.canvasMobile,
     paddingHorizontal: 14,
   },
+  scroll: {
+    paddingBottom: 32,
+  },
   head: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   hello: {
     color: theme.color.muted,
     fontSize: 11,
+    marginBottom: 2,
   },
   title: {
     color: theme.color.navy,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   cardWrap: {
     marginBottom: 12,
