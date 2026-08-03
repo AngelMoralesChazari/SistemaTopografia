@@ -51,7 +51,7 @@ export function LoginScreen({ onGoRegister }: LoginScreenProps) {
 
       <KeyboardFormShell backgroundColor="transparent">
         <View style={styles.card}>
-          <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
+          {/* <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text> */}
           <Text style={styles.title}>Iniciar sesión</Text>
 
           {!firebaseReady ? (

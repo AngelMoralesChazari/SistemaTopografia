@@ -58,7 +58,7 @@ export function LoginPage({ onGoRegister }: LoginPageProps) {
 
       <View style={styles.content}>
         <View style={[styles.card, { width: cardWidth }]}>
-          <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
+          {/* <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text> */}
           <Text style={styles.title}>Iniciar sesión</Text>
 
           {!firebaseReady ? (
