@@ -42,7 +42,7 @@ function WebRoot() {
 
   return (
     <AppShell section={section} onSectionChange={setSection}>
-      <SectionPage section={section} />
+      <SectionPage section={section} onSectionChange={setSection} />
     </AppShell>
   );
 }

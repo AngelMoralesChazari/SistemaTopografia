@@ -20,9 +20,10 @@ import { UsersPage } from './UsersPage';
 
 type DashboardHomeProps = {
   section: WebSection;
+  onSectionChange?: (section: WebSection) => void;
 };
 
-export function SectionPage({ section }: DashboardHomeProps) {
+export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
   const { user } = useAuth();
 
   if (section === 'equipment') return <EquipmentPage />;
@@ -40,7 +41,7 @@ export function SectionPage({ section }: DashboardHomeProps) {
     return <TeacherDashboardPage />;
   }
   if (section === 'dashboard' && user && isAdminRole(user.role)) {
-    return <AdminDashboardPage />;
+    return <AdminDashboardPage onNavigate={onSectionChange} />;
   }
   if (section === 'dashboard') {
     return (
