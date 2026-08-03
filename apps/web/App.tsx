@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '@lab-topo/config';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
-import { AppShell, type WebSection } from './src/layout/AppShell';
+import { AppShell, defaultSectionForRole, type WebSection } from './src/layout/AppShell';
 import { LoginPage } from './src/screens/LoginPage';
 import { SectionPage } from './src/screens/SectionPage';
 
 function WebRoot() {
   const { user, loading } = useAuth();
-  const [section, setSection] = useState<WebSection>('requests');
+  const [section, setSection] = useState<WebSection>('dashboard');
+
+  useEffect(() => {
+    if (user) {
+      setSection(defaultSectionForRole(user.role));
+    }
+  }, [user?.uid, user?.role]);
 
   if (loading) {
     return (

@@ -7,6 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import { formatRole, getInitials, type UserRole } from '@lab-topo/domain';
 import { Avatar, Button } from '@lab-topo/ui';
@@ -19,24 +20,65 @@ export type WebSection =
   | 'history'
   | 'users'
   | 'metrics'
-  | 'settings';
+  | 'settings'
+  | 'catalog'
+  | 'studentRequests'
+  | 'profile';
+
+type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
 type NavItem = {
   id: WebSection;
   label: string;
-  icon: string;
+  icon: MaterialIconName;
   roles: UserRole[];
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Inicio', icon: '▦', roles: ['admin', 'lab_manager', 'teacher'] },
-  { id: 'equipment', label: 'Catálogo de equipos', icon: '▣', roles: ['admin', 'lab_manager'] },
-  { id: 'requests', label: 'Solicitudes activas', icon: '◷', roles: ['admin', 'lab_manager'] },
-  { id: 'history', label: 'Historial', icon: '↺', roles: ['admin', 'lab_manager', 'teacher'] },
-  { id: 'metrics', label: 'Métricas', icon: '⌁', roles: ['admin', 'lab_manager'] },
-  { id: 'users', label: 'Usuarios', icon: '◯', roles: ['admin'] },
-  { id: 'settings', label: 'Configuración', icon: '⚙', roles: ['admin'] },
+  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager', 'teacher'] },
+  { id: 'catalog', label: 'Catálogo', icon: 'home', roles: ['student'] },
+  {
+    id: 'studentRequests',
+    label: 'Mis solicitudes',
+    icon: 'schedule',
+    roles: ['student'],
+  },
+  {
+    id: 'equipment',
+    label: 'Catálogo de equipos',
+    icon: 'inventory-2',
+    roles: ['admin', 'lab_manager'],
+  },
+  {
+    id: 'requests',
+    label: 'Solicitudes activas',
+    icon: 'assignment',
+    roles: ['admin', 'lab_manager'],
+  },
+  { id: 'history', label: 'Historial', icon: 'history', roles: ['admin', 'lab_manager', 'teacher'] },
+  { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: ['admin', 'lab_manager'] },
+  { id: 'users', label: 'Usuarios', icon: 'group', roles: ['admin'] },
+  { id: 'settings', label: 'Configuración', icon: 'settings', roles: ['admin'] },
+  {
+    id: 'profile',
+    label: 'Perfil',
+    icon: 'person-outline',
+    roles: ['student', 'admin', 'lab_manager', 'teacher'],
+  },
 ];
+
+export function defaultSectionForRole(role: UserRole): WebSection {
+  switch (role) {
+    case 'student':
+      return 'catalog';
+    case 'teacher':
+      return 'dashboard';
+    case 'lab_manager':
+      return 'requests';
+    default:
+      return 'dashboard';
+  }
+}
 
 type AppShellProps = {
   section: WebSection;
@@ -52,6 +94,8 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
   if (!user) return null;
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(user.role));
+  const navLabel =
+    user.role === 'student' ? 'Espacio del alumno' : 'Gestión del laboratorio';
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>
@@ -69,7 +113,7 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
         </View>
 
         <View style={styles.userBox}>
-          <Avatar initials={getInitials(user.displayName)} size={28} />
+          <Avatar initials={getInitials(user.displayName)} size={36} />
           {!compact ? (
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>
@@ -80,7 +124,7 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           ) : null}
         </View>
 
-        {!compact ? <Text style={styles.navLabel}>Gestión del laboratorio</Text> : null}
+        {!compact ? <Text style={styles.navLabel}>{navLabel}</Text> : null}
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.navList}>
           {items.map((item) => {
@@ -91,7 +135,11 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
                 onPress={() => onSectionChange(item.id)}
                 style={[styles.navItem, active && styles.navItemActive]}
               >
-                <Text style={[styles.navIcon, active && styles.navIconActive]}>{item.icon}</Text>
+                <MaterialIcons
+                  name={item.icon}
+                  size={22}
+                  color={active ? '#fff' : theme.color.sidebarText}
+                />
                 {!compact ? (
                   <Text style={[styles.navText, active && styles.navTextActive]}>{item.label}</Text>
                 ) : null}
@@ -126,27 +174,27 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   sidebar: {
-    width: 248,
+    width: 280,
     backgroundColor: theme.color.navy,
-    paddingTop: 25,
-    paddingHorizontal: 16,
-    paddingBottom: 18,
+    paddingTop: 28,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
   },
   sidebarCompact: {
     width: '100%',
-    maxHeight: 220,
+    maxHeight: 240,
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: 12,
     paddingHorizontal: 10,
     marginBottom: 22,
   },
   logoMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -154,23 +202,23 @@ const styles = StyleSheet.create({
   logoText: {
     color: theme.color.navy,
     fontWeight: '900',
-    fontSize: 12,
+    fontSize: theme.font.size.lg,
   },
   brand: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: theme.font.size.lg,
     fontWeight: '700',
   },
   brandSub: {
     marginTop: 3,
     color: '#9EB1C7',
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
   },
   userBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    padding: 11,
+    gap: 10,
+    padding: 12,
     marginBottom: 20,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
@@ -179,21 +227,21 @@ const styles = StyleSheet.create({
   },
   userName: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: theme.font.size.md,
     fontWeight: '700',
   },
   userRole: {
-    marginTop: 2,
+    marginTop: 3,
     color: '#AFC0D4',
-    fontSize: 9,
+    fontSize: theme.font.size.sm,
   },
   navLabel: {
     paddingHorizontal: 11,
-    marginBottom: 9,
+    marginBottom: 10,
     color: theme.color.sidebarMuted,
-    fontSize: 9,
+    fontSize: theme.font.size.xs,
     fontWeight: '800',
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: 'uppercase',
   },
   navList: {
@@ -204,7 +252,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 11,
+    paddingVertical: 13,
     paddingHorizontal: 12,
     borderRadius: 9,
   },
@@ -213,18 +261,9 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: theme.color.red,
   },
-  navIcon: {
-    width: 18,
-    color: theme.color.sidebarText,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  navIconActive: {
-    color: '#fff',
-  },
   navText: {
     color: theme.color.sidebarText,
-    fontSize: 12,
+    fontSize: theme.font.size.md,
   },
   navTextActive: {
     color: '#fff',
@@ -239,7 +278,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#8197B0',
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
     marginBottom: 4,
   },
   footerBold: {

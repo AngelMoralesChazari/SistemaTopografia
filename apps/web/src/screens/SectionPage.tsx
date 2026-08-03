@@ -3,24 +3,22 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import type { WebSection } from '../layout/AppShell';
 import { EquipmentPage } from './EquipmentPage';
+import { ProfilePage } from './ProfilePage';
 import { RequestsPage } from './RequestsPage';
+import { StudentCatalogPage } from './StudentCatalogPage';
+import { StudentRequestsPage } from './StudentRequestsPage';
 
 type DashboardHomeProps = {
   section: WebSection;
 };
 
-const SECTION_COPY: Record<WebSection, { title: string; description: string }> = {
+const SECTION_COPY: Record<
+  Exclude<WebSection, 'equipment' | 'requests' | 'catalog' | 'studentRequests' | 'profile'>,
+  { title: string; description: string }
+> = {
   dashboard: {
     title: 'Inventario del laboratorio',
     description: 'Control de equipos, préstamos y devoluciones.',
-  },
-  equipment: {
-    title: 'Catálogo de equipos',
-    description: 'Alta, edición y estados del inventario.',
-  },
-  requests: {
-    title: 'Solicitudes activas',
-    description: 'Revisa y autoriza los préstamos solicitados.',
   },
   history: {
     title: 'Historial',
@@ -41,13 +39,11 @@ const SECTION_COPY: Record<WebSection, { title: string; description: string }> =
 };
 
 export function SectionPage({ section }: DashboardHomeProps) {
-  if (section === 'equipment') {
-    return <EquipmentPage />;
-  }
-
-  if (section === 'requests') {
-    return <RequestsPage />;
-  }
+  if (section === 'equipment') return <EquipmentPage />;
+  if (section === 'requests') return <RequestsPage />;
+  if (section === 'catalog') return <StudentCatalogPage />;
+  if (section === 'studentRequests') return <StudentRequestsPage />;
+  if (section === 'profile') return <ProfilePage />;
 
   const copy = SECTION_COPY[section];
 
@@ -94,34 +90,34 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.canvas,
   },
   content: {
-    padding: 30,
+    padding: 32,
     paddingBottom: 48,
   },
   header: {
-    marginBottom: 25,
+    marginBottom: 24,
   },
   title: {
     color: theme.color.navy,
-    fontSize: 28,
+    fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
   },
   subtitle: {
-    marginTop: 7,
+    marginTop: 8,
     color: theme.color.muted,
-    fontSize: 12,
+    fontSize: theme.font.size.md,
   },
   kpis: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 21,
+    gap: 14,
+    marginBottom: 24,
   },
   kpi: {
     flexGrow: 1,
-    flexBasis: 160,
-    minHeight: 112,
-    padding: 17,
+    flexBasis: 180,
+    minHeight: 120,
+    padding: 18,
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
@@ -134,7 +130,7 @@ const styles = StyleSheet.create({
   },
   kpiLabel: {
     color: theme.color.muted,
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
   },
   kpiLabelAlert: {
     color: '#FFE2E7',
@@ -142,7 +138,7 @@ const styles = StyleSheet.create({
   kpiValue: {
     marginTop: 14,
     color: theme.color.navy,
-    fontSize: 27,
+    fontSize: 30,
     fontWeight: '800',
     letterSpacing: -1,
   },
@@ -150,9 +146,9 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   kpiTrend: {
-    marginTop: 4,
+    marginTop: 6,
     color: theme.color.success,
-    fontSize: 9,
+    fontSize: theme.font.size.sm,
   },
   kpiTrendAlert: {
     color: '#FFD5DC',
@@ -162,18 +158,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
-    padding: 21,
+    padding: 22,
     ...theme.shadow.soft,
   },
   cardTitle: {
     color: theme.color.navy,
-    fontSize: 15,
+    fontSize: theme.font.size.lg,
     fontWeight: '700',
     marginBottom: 8,
   },
   cardBody: {
     color: theme.color.muted,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: theme.font.size.md,
+    lineHeight: 22,
   },
 });

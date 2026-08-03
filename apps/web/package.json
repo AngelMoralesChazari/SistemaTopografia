@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@expo/vector-icons": "^15.1.1",
     "@lab-topo/config": "*",
     "@lab-topo/domain": "*",
     "@lab-topo/services": "*",

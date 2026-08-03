@@ -28,9 +28,9 @@ export function LoginPage() {
           <Text style={styles.logoMark}>LT</Text>
         </View>
         <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
-        <Text style={styles.title}>Panel administrativo</Text>
+        <Text style={styles.title}>Iniciar sesión</Text>
         <Text style={styles.subtitle}>
-          Inventario, solicitudes y supervisión del laboratorio.
+          Accede al laboratorio según tu perfil: alumno, encargado, maestro o administrador.
         </Text>
 
         {!firebaseReady ? (
@@ -83,42 +83,42 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.color.line,
-    padding: 28,
+    padding: 32,
     ...theme.shadow.md,
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: theme.color.navy,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   logoMark: {
     color: '#fff',
     fontWeight: '900',
-    fontSize: 13,
+    fontSize: theme.font.size.lg,
   },
   eyebrow: {
     color: theme.color.red,
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   title: {
     color: theme.color.navy,
-    fontSize: 26,
+    fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.7,
   },
   subtitle: {
-    marginTop: 6,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 22,
     color: theme.color.muted,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: theme.font.size.md,
+    lineHeight: 22,
   },
 });

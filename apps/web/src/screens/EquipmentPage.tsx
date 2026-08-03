@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme, getLabId } from '@lab-topo/config';
 import {
   EQUIPMENT_STATUS_LABELS,
@@ -185,7 +186,7 @@ export function EquipmentPage() {
             <Text style={styles.cardSub}>{filtered.length} resultados</Text>
           </View>
           <View style={styles.search}>
-            <Text style={styles.searchIcon}>⌕</Text>
+            <MaterialIcons name="search" size={18} color={theme.color.muted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
@@ -232,7 +233,7 @@ export function EquipmentPage() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.canvas },
-  content: { padding: 30, paddingBottom: 48 },
+  content: { padding: 32, paddingBottom: 48 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -242,24 +243,24 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.color.navy,
-    fontSize: 28,
+    fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
   },
   subtitle: {
-    marginTop: 7,
+    marginTop: 8,
     color: theme.color.muted,
-    fontSize: 12,
+    fontSize: theme.font.size.md,
   },
   primaryBtn: {
     backgroundColor: theme.color.navy,
     borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   primaryBtnText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: theme.font.size.md,
     fontWeight: '800',
   },
   kpis: {
@@ -271,18 +272,18 @@ const styles = StyleSheet.create({
   kpi: {
     flexGrow: 1,
     flexBasis: 140,
-    minHeight: 90,
+    minHeight: 100,
     padding: 16,
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
   },
-  kpiLabel: { color: theme.color.muted, fontSize: 10 },
+  kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
   kpiValue: {
     marginTop: 12,
     color: theme.color.navy,
-    fontSize: 24,
+    fontSize: theme.font.size.xxl,
     fontWeight: '800',
   },
   card: {
@@ -303,25 +304,25 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: theme.color.navy,
-    fontSize: 15,
+    fontSize: theme.font.size.lg,
     fontWeight: '700',
     marginBottom: 4,
   },
-  cardSub: { color: theme.color.muted, fontSize: 11 },
+  cardSub: { color: theme.color.muted, fontSize: theme.font.size.sm },
   search: {
-    minWidth: 220,
-    height: 36,
+    minWidth: 240,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: 8,
     backgroundColor: '#FBFCFD',
   },
-  searchIcon: { color: theme.color.muted },
-  searchInput: { flex: 1, fontSize: 12, color: theme.color.ink },
+  searchIcon: { color: theme.color.muted, fontSize: theme.font.size.md },
+  searchInput: { flex: 1, fontSize: theme.font.size.md, color: theme.color.ink },
   formGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -335,17 +336,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: '#EDF0F3',
   },
   rowMain: { flex: 1, minWidth: 0 },
-  rowCode: { color: theme.color.muted, fontSize: 10, fontWeight: '700' },
-  rowName: { color: theme.color.ink, fontSize: 13, fontWeight: '700', marginTop: 2 },
-  rowMeta: { color: theme.color.muted, fontSize: 11, marginTop: 2 },
+  rowCode: { color: theme.color.muted, fontSize: theme.font.size.sm, fontWeight: '700' },
+  rowName: { color: theme.color.ink, fontSize: theme.font.size.lg, fontWeight: '700', marginTop: 2 },
+  rowMeta: { color: theme.color.muted, fontSize: theme.font.size.md, marginTop: 2 },
   rowQty: {
     color: theme.color.navy,
-    fontSize: 12,
+    fontSize: theme.font.size.md,
     fontWeight: '800',
     minWidth: 48,
     textAlign: 'right',
