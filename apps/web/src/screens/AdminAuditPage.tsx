@@ -5,6 +5,8 @@ import { formatRole, isSuperAdminRole, type UserRole } from '@lab-topo/domain';
 import { watchAuditLogs, type AuditLogEntry } from '@lab-topo/services';
 import { Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { ListPagination } from '../components/ListPagination';
+import { paginate } from '../lib/pagination';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -25,6 +27,7 @@ export function AdminAuditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onlyOtherAdmins, setOnlyOtherAdmins] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!user || !isSuperAdminRole(user.role)) return;
@@ -52,6 +55,16 @@ export function AdminAuditPage() {
       return true;
     });
   }, [entries, onlyOtherAdmins, user]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [onlyOtherAdmins]);
+
+  const paging = useMemo(() => paginate(visible, page), [visible, page]);
+
+  useEffect(() => {
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
 
   if (!user || !isSuperAdminRole(user.role)) {
     return (
@@ -88,22 +101,33 @@ export function AdminAuditPage() {
           description="Cuando un administrador cambie una decisión o gestione préstamos, aparecerán aquí."
         />
       ) : (
-        visible.map((entry) => (
-          <View key={entry.id} style={styles.card}>
-            <Text style={styles.when}>{formatDate(entry.createdAt)}</Text>
-            <Text style={styles.summary}>{entry.summary}</Text>
-            <Text style={styles.meta}>
-              {entry.actorName} · {entry.actorEmail} ·{' '}
-              {formatRole(entry.actorRole as UserRole)}
-            </Text>
-            <Text style={styles.meta}>
-              {entry.action} · {entry.targetType}/{entry.targetId}
-              {entry.before || entry.after
-                ? ` · ${entry.before ?? '—'} → ${entry.after ?? '—'}`
-                : ''}
-            </Text>
-          </View>
-        ))
+        <>
+          {paging.pageItems.map((entry) => (
+            <View key={entry.id} style={styles.card}>
+              <Text style={styles.when}>{formatDate(entry.createdAt)}</Text>
+              <Text style={styles.summary}>{entry.summary}</Text>
+              <Text style={styles.meta}>
+                {entry.actorName} · {entry.actorEmail} ·{' '}
+                {formatRole(entry.actorRole as UserRole)}
+              </Text>
+              <Text style={styles.meta}>
+                {entry.action} · {entry.targetType}/{entry.targetId}
+                {entry.before || entry.after
+                  ? ` · ${entry.before ?? '—'} → ${entry.after ?? '—'}`
+                  : ''}
+              </Text>
+            </View>
+          ))}
+          <ListPagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            from={paging.from}
+            to={paging.to}
+            total={paging.total}
+            pageNumbers={paging.pageNumbers}
+            onChange={setPage}
+          />
+        </>
       )}
     </ScrollView>
   );
