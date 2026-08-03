@@ -10,6 +10,8 @@ import {
 import { watchLabUsers } from '@lab-topo/services';
 import { Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { ListPagination } from '../components/ListPagination';
+import { paginate } from '../lib/pagination';
 
 type RoleFilter = 'all' | UserRole;
 
@@ -29,6 +31,7 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!user || !isAdminRole(user.role)) return;
@@ -56,6 +59,16 @@ export function UsersPage() {
       return a.displayName.localeCompare(b.displayName, 'es');
     });
   }, [users, roleFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter]);
+
+  const paging = useMemo(() => paginate(filtered, page), [filtered, page]);
+
+  useEffect(() => {
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
 
   const teachers = useMemo(() => users.filter((u) => u.role === 'teacher'), [users]);
   const studentsOfTeacher = useMemo(() => {
@@ -97,7 +110,7 @@ export function UsersPage() {
         <ActivityIndicator color={theme.color.navy} style={{ marginTop: 24 }} />
       ) : (
         <>
-          {filtered.map((u) => (
+          {paging.pageItems.map((u) => (
             <View key={u.uid} style={styles.card}>
               <View style={styles.cardTop}>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -117,6 +130,16 @@ export function UsersPage() {
               </Text>
             </View>
           ))}
+
+          <ListPagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            from={paging.from}
+            to={paging.to}
+            total={paging.total}
+            pageNumbers={paging.pageNumbers}
+            onChange={setPage}
+          />
 
           <Text style={styles.sectionTitle}>Maestros y sus alumnos</Text>
           <Text style={styles.subtitle}>Selecciona un maestro para ver su grupo.</Text>
