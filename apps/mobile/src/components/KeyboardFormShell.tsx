@@ -36,13 +36,19 @@ export function useKeyboardForm() {
 type Props = {
   children: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Fondo del shell; usa transparente si hay un degradado detrás. */
+  backgroundColor?: string;
 };
 
 /**
  * Formularios de auth: al enfocar un campo (RFC, dirección, etc.) hace scroll
  * para dejarlo visible por encima del teclado.
  */
-export function KeyboardFormShell({ children, contentStyle }: Props) {
+export function KeyboardFormShell({
+  children,
+  contentStyle,
+  backgroundColor = theme.color.canvasMobile,
+}: Props) {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
@@ -129,7 +135,7 @@ export function KeyboardFormShell({ children, contentStyle }: Props) {
   return (
     <KeyboardFormContext.Provider value={{ onFieldFocus }}>
       <KeyboardAvoidingView
-        style={styles.root}
+        style={[styles.root, { backgroundColor }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
@@ -163,7 +169,6 @@ export function KeyboardFormShell({ children, contentStyle }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: theme.color.canvasMobile,
   },
   scrollContent: {
     flexGrow: 1,
