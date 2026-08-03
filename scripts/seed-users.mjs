@@ -163,7 +163,7 @@ async function main() {
 Listo.
 
 Cuentas de prueba (contraseña: LabTopo2026!):
-  admin1@labtopo.uagro.edu.mx     → Administrador
+  admin1@labtopo.uagro.edu.mx     → Superadministrador
   admin2@labtopo.uagro.edu.mx     → Administrador
   encargado@labtopo.uagro.edu.mx  → Encargado
   maestro@labtopo.uagro.edu.mx    → Maestro

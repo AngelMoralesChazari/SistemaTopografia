@@ -12,14 +12,18 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import {
+  canAdminOverrideLoan,
   canTransitionLoan,
   generateLoanFolio,
+  loanStatusLabel,
   type CreateLoanInput,
   type Loan,
   type LoanStatus,
+  type UserRole,
 } from '@lab-topo/domain';
 import { getLabId } from '@lab-topo/config';
 import { getDb } from './firebase';
+import { writeAuditLog } from './auditService';
 
 function toIso(value: unknown): string | null {
   if (!value) return null;
@@ -164,6 +168,99 @@ export function watchLabQueue(
     (snap) => onChange(snap.docs.map((d) => mapLoan(d.id, d.data()))),
     (error) => onError?.(error)
   );
+}
+
+/** Historial completo del laboratorio (todos los estados). */
+export function watchLabLoans(
+  labId: string,
+  onChange: (loans: Loan[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = query(collection(getDb(), 'loans'), where('labId', '==', labId));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const loans = snap.docs
+        .map((d) => mapLoan(d.id, d.data()))
+        .sort((a, b) => {
+          const ta = a.requestedAt ? new Date(a.requestedAt).getTime() : 0;
+          const tb = b.requestedAt ? new Date(b.requestedAt).getTime() : 0;
+          return tb - ta;
+        });
+      onChange(loans);
+    },
+    (error) => onError?.(error)
+  );
+}
+
+export type AdminActor = {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  labId: string;
+};
+
+/**
+ * Permite a administradores corregir decisiones del encargado
+ * (pending / approved / rejected).
+ */
+export async function adminOverrideLoanStatus(
+  loanId: string,
+  nextStatus: LoanStatus,
+  actor: AdminActor,
+  note?: string
+): Promise<void> {
+  const ref = doc(getDb(), 'loans', loanId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Solicitud no encontrada.');
+  const current = mapLoan(snap.id, snap.data());
+
+  if (!canAdminOverrideLoan(current.status, nextStatus)) {
+    throw new Error(
+      `No se puede cambiar de “${loanStatusLabel(current.status)}” a “${loanStatusLabel(nextStatus)}”.`
+    );
+  }
+
+  const patch: Record<string, unknown> = {
+    status: nextStatus,
+    updatedAt: serverTimestamp(),
+    notes: note?.trim()
+      ? `${current.notes ? `${current.notes}\n` : ''}[Admin] ${note.trim()}`
+      : current.notes,
+  };
+
+  if (nextStatus === 'pending') {
+    patch.approvedAt = null;
+    patch.rejectedAt = null;
+    patch.rejectionReason = null;
+    patch.approvedBy = null;
+  } else if (nextStatus === 'approved') {
+    patch.approvedAt = serverTimestamp();
+    patch.approvedBy = actor.uid;
+    patch.rejectedAt = null;
+    patch.rejectionReason = null;
+  } else if (nextStatus === 'rejected') {
+    patch.rejectedAt = serverTimestamp();
+    patch.rejectionReason = note?.trim() || 'Modificado por administrador';
+    patch.approvedBy = actor.uid;
+  }
+
+  await updateDoc(ref, patch);
+
+  await writeAuditLog({
+    labId: actor.labId,
+    actorId: actor.uid,
+    actorEmail: actor.email,
+    actorName: actor.displayName,
+    actorRole: actor.role,
+    action: 'loan.override',
+    targetType: 'loan',
+    targetId: loanId,
+    summary: `Override ${loanStatusLabel(current.status)} → ${loanStatusLabel(nextStatus)} (#${current.folio})`,
+    before: current.status,
+    after: nextStatus,
+  });
 }
 
 export function watchLoansForTeacher(

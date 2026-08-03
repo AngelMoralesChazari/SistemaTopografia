@@ -3,7 +3,7 @@
     "email": "admin1@labtopo.uagro.edu.mx",
     "password": "LabTopo2026!",
     "displayName": "Administrador Uno",
-    "role": "admin",
+    "role": "super_admin",
     "employeeId": "ADM-001"
   },
   {

@@ -9,8 +9,8 @@ LabTopo2026!
 
 | Correo                           | Rol                      | Uso sugerido                          |
 | -------------------------------- | ------------------------ | ------------------------------------- |
-| `admin1@labtopo.uagro.edu.mx`    | Administrador            | Web (acceso total)                    |
-| `admin2@labtopo.uagro.edu.mx`    | Administrador            | Web (segundo admin)                   |
+| `admin1@labtopo.uagro.edu.mx`    | Superadministrador       | Web: ve todo + audita al otro admin   |
+| `admin2@labtopo.uagro.edu.mx`    | Administrador            | Web: ve todo y puede corregir decisiones |
 | `encargado@labtopo.uagro.edu.mx` | Encargado de laboratorio | Web / móvil (inventario, solicitudes) |
 | `maestro@labtopo.uagro.edu.mx`   | Maestro                  | Móvil (supervisión)                   |
 | `alumno@labtopo.uagro.edu.mx`    | Alumno                   | Móvil / web (catálogo y préstamos)    |

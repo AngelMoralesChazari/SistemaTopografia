@@ -12,6 +12,7 @@ import { getDb, getFirebaseAuth } from './firebase';
 
 function mapRole(value: unknown): UserRole | null {
   if (
+    value === 'super_admin' ||
     value === 'admin' ||
     value === 'lab_manager' ||
     value === 'teacher' ||

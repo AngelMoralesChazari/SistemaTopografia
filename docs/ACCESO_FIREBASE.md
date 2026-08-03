@@ -55,7 +55,7 @@ Se crean 5 cuentas:
 
 | Correo | Rol | Contraseña |
 |--------|-----|------------|
-| `admin1@labtopo.uagro.edu.mx` | Administrador | `LabTopo2026!` |
+| `admin1@labtopo.uagro.edu.mx` | Superadministrador | `LabTopo2026!` |
 | `admin2@labtopo.uagro.edu.mx` | Administrador | `LabTopo2026!` |
 | `encargado@labtopo.uagro.edu.mx` | Encargado | `LabTopo2026!` |
 | `maestro@labtopo.uagro.edu.mx` | Maestro | `LabTopo2026!` |
@@ -112,6 +112,6 @@ Tras el login verás el shell según el rol (tabs móvil / sidebar web).
 }
 ```
 
-Roles válidos: `admin` | `lab_manager` | `teacher` | `student` | `renter`
+Roles válidos: `super_admin` | `admin` | `lab_manager` | `teacher` | `student` | `renter`
 
 Para `renter` (particular), el documento también incluye: `renterStatus` (`pending` | `approved` | `rejected`), `phone`, `company`, `ine`, `rfc`, `address`. Los particulares se crean por registro en la app (no por seed).

@@ -1,4 +1,10 @@
-export type UserRole = 'admin' | 'lab_manager' | 'teacher' | 'student' | 'renter';
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'lab_manager'
+  | 'teacher'
+  | 'student'
+  | 'renter';
 
 /** Estado de aprobación para particulares (renta a terceros). */
 export type RenterStatus = 'pending' | 'approved' | 'rejected';
@@ -50,6 +56,7 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: 'Superadministrador',
   admin: 'Administrador',
   lab_manager: 'Encargado de laboratorio',
   teacher: 'Maestro',

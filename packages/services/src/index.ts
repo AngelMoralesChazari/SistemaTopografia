@@ -13,7 +13,7 @@ export {
   updateEquipment,
   setEquipmentStatus,
 } from './equipmentService';
-export { listTeachers } from './userService';
+export { listTeachers, watchLabUsers } from './userService';
 export {
   registerRenter,
   watchPendingRenters,
@@ -21,12 +21,17 @@ export {
   setRenterStatus,
 } from './renterService';
 export type { RegisterRenterInput } from './renterService';
+export { writeAuditLog, watchAuditLogs } from './auditService';
+export type { AuditLogEntry, WriteAuditInput } from './auditService';
 export {
   createLoanRequest,
   watchLoansForStudent,
   watchLabQueue,
+  watchLabLoans,
   watchLoansForTeacher,
   rejectLoan,
   deliverLoan,
   returnLoan,
+  adminOverrideLoanStatus,
 } from './loanService';
+export type { AdminActor } from './loanService';

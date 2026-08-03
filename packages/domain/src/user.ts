@@ -35,3 +35,12 @@ export function getInitials(name: string): string {
 export function formatRole(role: UserRole): string {
   return ROLE_LABELS[role];
 }
+
+/** Admin operativo o superadministrador. */
+export function isAdminRole(role: UserRole): boolean {
+  return role === 'admin' || role === 'super_admin';
+}
+
+export function isSuperAdminRole(role: UserRole): boolean {
+  return role === 'super_admin';
+}
