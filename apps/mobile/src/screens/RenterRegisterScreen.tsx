@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import { registerRenter } from '@lab-topo/services';
-import { Button, Notice, TextField } from '@lab-topo/ui';
+import { Button, Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { FormTextField } from '../components/FormTextField';
+import { KeyboardFormShell } from '../components/KeyboardFormShell';
 
 type Props = { onBack: () => void };
 
 export function RenterRegisterScreen({ onBack }: Props) {
   const { setSessionUser, firebaseReady, firebaseMessage } = useAuth();
-  const insets = useSafeAreaInsets();
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -75,73 +67,69 @@ export function RenterRegisterScreen({ onBack }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingTop: Math.max(insets.top, 16) + 8,
-            paddingBottom: Math.max(insets.bottom, 16) + 24,
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.card}>
-          <Text style={styles.eyebrow}>Renta a particulares</Text>
-          <Text style={styles.title}>Registro de renta</Text>
-          <Text style={styles.subtitle}>
-            Completa tus datos..
-          </Text>
+    <KeyboardFormShell>
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>Renta a particulares</Text>
+        <Text style={styles.title}>Registro de renta</Text>
+        <Text style={styles.subtitle}>Completa tus datos..</Text>
 
-          {!firebaseReady ? (
-            <Notice tone="danger" title="Firebase pendiente" description={firebaseMessage} />
-          ) : null}
-          {error ? <Notice tone="danger" title={error} /> : null}
+        {!firebaseReady ? (
+          <Notice tone="danger" title="Firebase pendiente" description={firebaseMessage} />
+        ) : null}
 
-          <TextField label="Nombre completo" value={displayName} onChangeText={setDisplayName} />
-          <TextField
-            label="Correo"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextField
-            label="Contraseña"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Mínimo 6 caracteres"
-          />
-          <TextField label="Teléfono" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-          <TextField label="Empresa / institución" value={company} onChangeText={setCompany} />
-          <TextField label="INE / identificación" value={ine} onChangeText={setIne} />
-          <TextField
-            label="RFC"
-            autoCapitalize="characters"
-            value={rfc}
-            onChangeText={setRfc}
-          />
-          <TextField label="Dirección" value={address} onChangeText={setAddress} />
+        <FormTextField label="Nombre completo" value={displayName} onChangeText={setDisplayName} />
+        <FormTextField
+          label="Correo"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <FormTextField
+          label="Contraseña"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Mínimo 6 caracteres"
+        />
+        <FormTextField
+          label="Teléfono"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+        <FormTextField
+          label="Empresa / institución"
+          value={company}
+          onChangeText={setCompany}
+        />
+        <FormTextField label="INE / identificación" value={ine} onChangeText={setIne} />
+        <FormTextField
+          label="RFC"
+          autoCapitalize="characters"
+          value={rfc}
+          onChangeText={setRfc}
+        />
+        <FormTextField label="Dirección" value={address} onChangeText={setAddress} />
 
-          <Button title="Enviar registro" loading={loading} disabled={!canSubmit || loading} onPress={onSubmit} />
+        {error ? <Notice tone="danger" title={error} /> : null}
 
-          <Pressable onPress={onBack} style={styles.backLink} disabled={loading}>
-            <Text style={styles.backText}>Ya tengo cuenta · Iniciar sesión</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Button
+          title="Enviar registro"
+          loading={loading}
+          disabled={!canSubmit || loading}
+          onPress={onSubmit}
+        />
+
+        <Pressable onPress={onBack} style={styles.backLink} disabled={loading}>
+          <Text style={styles.backText}>Ya tengo cuenta · Iniciar sesión</Text>
+        </Pressable>
+      </View>
+    </KeyboardFormShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.canvasMobile },
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: theme.space.xxl },
   card: {
     backgroundColor: theme.color.surface,
     borderRadius: theme.radius.lg,
