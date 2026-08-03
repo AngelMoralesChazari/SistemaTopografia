@@ -16,15 +16,16 @@ import DateTimePicker, {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@lab-topo/config';
-import { getInitials, type Equipment } from '@lab-topo/domain';
-import { watchEquipment, createLoanRequest } from '@lab-topo/services';
-import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
-import { useAuth } from '../auth/AuthContext';
 import {
   buildCategoryGroups,
   categoryIdOf,
+  getInitials,
   type CategoryGroup,
-} from '../lib/equipmentGroups';
+  type Equipment,
+} from '@lab-topo/domain';
+import { watchEquipment, createLoanRequest } from '@lab-topo/services';
+import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
+import { useAuth } from '../auth/AuthContext';
 
 const MS_24H = 24 * 60 * 60 * 1000;
 

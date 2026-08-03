@@ -32,19 +32,19 @@ export function Notice({ title, description, tone = 'info', style }: NoticeProps
 
 const styles = StyleSheet.create({
   base: {
-    padding: 10,
+    padding: 14,
     marginVertical: 12,
     borderWidth: 1,
-    borderRadius: 7,
+    borderRadius: 8,
   },
   title: {
-    fontSize: 11,
+    fontSize: theme.font.size.md,
     fontWeight: '700',
   },
   description: {
     marginTop: 4,
     color: '#647488',
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: theme.font.size.sm,
+    lineHeight: 20,
   },
 });

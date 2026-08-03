@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, getLabId } from '@lab-topo/config';
 import {
   EQUIPMENT_STATUS_LABELS,
+  buildCategoryGroups,
+  categoryIdOf,
   getInitials,
   type Equipment,
   type EquipmentStatus,
@@ -21,10 +23,6 @@ import {
 import { createEquipment, watchEquipment } from '@lab-topo/services';
 import { Avatar, Button, MaterialCard, Notice, TextField } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
-import {
-  buildCategoryGroups,
-  categoryIdOf,
-} from '../lib/equipmentGroups';
 
 const STATUS_OPTIONS: EquipmentStatus[] = [
   'available',

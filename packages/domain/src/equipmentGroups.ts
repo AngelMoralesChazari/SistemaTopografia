@@ -1,4 +1,4 @@
-import type { Equipment } from '@lab-topo/domain';
+import type { Equipment } from './equipment';
 
 export type CategoryGroup = {
   id: string;

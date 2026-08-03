@@ -116,33 +116,33 @@ const styles = StyleSheet.create({
   },
   name: {
     color: theme.color.ink,
-    fontSize: 12,
+    fontSize: theme.font.size.md,
     fontWeight: '700',
   },
   sub: {
     marginTop: 4,
     color: theme.color.muted,
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
   },
   badgeWrap: {
     marginTop: 6,
   },
   countBox: {
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderRadius: 4,
     backgroundColor: theme.color.successSoft,
     alignItems: 'center',
-    minWidth: 40,
+    minWidth: 44,
   },
   countValue: {
     color: theme.color.success,
-    fontSize: 11,
+    fontSize: theme.font.size.md,
     fontWeight: '800',
   },
   countLabel: {
     color: theme.color.success,
-    fontSize: 8,
+    fontSize: theme.font.size.xs,
     fontWeight: '800',
   },
 });

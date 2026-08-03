@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   label: {
-    fontSize: 9,
+    fontSize: theme.font.size.xs,
     fontWeight: '700',
   },
 });

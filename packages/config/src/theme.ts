@@ -43,15 +43,16 @@ export const theme = {
   font: {
     sans: 'System',
     size: {
-      xs: 10,
-      sm: 11,
-      md: 12,
-      lg: 14,
-      xl: 18,
-      xxl: 22,
-      display: 28,
+      xs: 12,
+      sm: 13,
+      md: 14,
+      lg: 16,
+      xl: 20,
+      xxl: 24,
+      display: 32,
     },
   },
+
   shadow: {
     soft: {
       shadowColor: 'rgba(25, 49, 95, 0.06)',

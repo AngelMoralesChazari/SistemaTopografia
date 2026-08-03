@@ -46,18 +46,18 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 6,
     color: theme.color.navy,
-    fontSize: theme.font.size.xs,
+    fontSize: theme.font.size.sm,
     fontWeight: '800',
   },
   input: {
-    height: 44,
-    paddingHorizontal: 11,
+    height: 48,
+    paddingHorizontal: 12,
     color: theme.color.ink,
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.md,
-    fontSize: theme.font.size.sm,
+    fontSize: theme.font.size.md,
   },
   inputError: {
     borderColor: theme.color.red,
@@ -65,11 +65,11 @@ const styles = StyleSheet.create({
   helper: {
     marginTop: 6,
     color: theme.color.muted,
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
   },
   error: {
     marginTop: 6,
     color: theme.color.red,
-    fontSize: 10,
+    fontSize: theme.font.size.sm,
   },
 });
