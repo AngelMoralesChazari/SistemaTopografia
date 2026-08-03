@@ -21,6 +21,7 @@ import {
 import { createLoanRequest, watchEquipment } from '@lab-topo/services';
 import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { AppDatePicker } from '../components/AppDatePicker';
 
 const MS_24H = 24 * 60 * 60 * 1000;
 
@@ -202,6 +203,10 @@ export function StudentCatalogPage() {
   const closeConfirm = () => {
     if (submitting) return;
     setConfirmOpen(false);
+  };
+
+  const onPickCustomDate = (date: Date) => {
+    setCustomDueDisplay(toDisplayDate(date));
   };
 
   const resolveTeacher = () => {
@@ -454,12 +459,11 @@ export function StudentCatalogPage() {
             {extendTime ? (
               <View style={styles.extendBlock}>
                 <Text style={styles.fieldLabel}>Nueva fecha de devolución</Text>
-                <TextInput
-                  value={customDueDisplay}
-                  onChangeText={setCustomDueDisplay}
-                  placeholder="DD/MM/AAAA"
-                  placeholderTextColor={theme.color.muted}
-                  style={styles.dateInput}
+                <AppDatePicker
+                  value={resolvedDueAt ?? defaultDueAt}
+                  minimumDate={defaultDueAt}
+                  displayValue={customDueDisplay}
+                  onChange={onPickCustomDate}
                 />
               </View>
             ) : null}
@@ -751,16 +755,6 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.sm,
     fontWeight: '800',
     marginBottom: 6,
-  },
-  dateInput: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: theme.font.size.md,
-    color: theme.color.ink,
-    backgroundColor: '#fff',
   },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   modalBtn: { flex: 1 },
