@@ -33,9 +33,6 @@ export function LoginPage({ onGoRegister }: LoginPageProps) {
         </View>
         <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
         <Text style={styles.title}>Iniciar sesión</Text>
-        <Text style={styles.subtitle}>
-          Accede con tu correo y contraseña.
-        </Text>
 
         {!firebaseReady ? (
           <Notice
@@ -44,8 +41,6 @@ export function LoginPage({ onGoRegister }: LoginPageProps) {
             description={`${firebaseMessage}. Copia .env.example a apps/web/.env`}
           />
         ) : null}
-
-        {error ? <Notice tone="danger" title={error} /> : null}
 
         <TextField
           label="Correo"
@@ -62,6 +57,9 @@ export function LoginPage({ onGoRegister }: LoginPageProps) {
           onChangeText={setPassword}
           placeholder="••••••••"
         />
+
+        {error ? <Notice tone="danger" title={error} /> : null}
+
         <Button
           title="Entrar"
           loading={loading}
@@ -129,13 +127,7 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.7,
-  },
-  subtitle: {
-    marginTop: 8,
-    marginBottom: 22,
-    color: theme.color.muted,
-    fontSize: theme.font.size.md,
-    lineHeight: 22,
+    marginBottom: 14,
   },
   registerLink: {
     marginTop: 18,
