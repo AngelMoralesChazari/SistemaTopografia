@@ -5,6 +5,8 @@ import { theme } from '@lab-topo/config';
 import { RENTER_STATUS_LABELS, type AppUser, type RenterStatus } from '@lab-topo/domain';
 import { setRenterStatus, watchRenters } from '@lab-topo/services';
 import { Button, Notice, Toast } from '@lab-topo/ui';
+import { ListPagination } from '../components/ListPagination';
+import { paginate } from '../lib/pagination';
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all';
 
@@ -13,6 +15,7 @@ export function RentersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('pending');
+  const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -35,6 +38,16 @@ export function RentersPage() {
     if (filter === 'all') return items;
     return items.filter((u) => u.renterStatus === filter);
   }, [items, filter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  const paging = useMemo(() => paginate(filtered, page), [filtered, page]);
+
+  useEffect(() => {
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -93,68 +106,79 @@ export function RentersPage() {
             }
           />
         ) : (
-          filtered.map((renter) => (
-            <View key={renter.uid} style={styles.card}>
-              <View style={styles.cardHead}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.name}>{renter.displayName}</Text>
-                  <Text style={styles.email}>{renter.email}</Text>
-                </View>
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>
-                    {RENTER_STATUS_LABELS[renter.renterStatus ?? 'pending']}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.grid}>
-                {[
-                  ['Teléfono', renter.phone],
-                  ['Empresa', renter.company],
-                  ['INE', renter.ine],
-                  ['RFC', renter.rfc],
-                  ['Dirección', renter.address],
-                ].map(([label, value]) => (
-                  <View key={label} style={styles.field}>
-                    <Text style={styles.fieldLabel}>{label}</Text>
-                    <Text style={styles.fieldValue}>{value || '—'}</Text>
+          <>
+            {paging.pageItems.map((renter) => (
+              <View key={renter.uid} style={styles.card}>
+                <View style={styles.cardHead}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.name}>{renter.displayName}</Text>
+                    <Text style={styles.email}>{renter.email}</Text>
                   </View>
-                ))}
-              </View>
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusText}>
+                      {RENTER_STATUS_LABELS[renter.renterStatus ?? 'pending']}
+                    </Text>
+                  </View>
+                </View>
 
-              {renter.renterStatus === 'pending' ? (
-                <View style={styles.actions}>
-                  <Button
-                    title="Aprobar"
-                    fullWidth={false}
-                    style={styles.actionBtn}
-                    loading={busyId === renter.uid}
+                <View style={styles.grid}>
+                  {[
+                    ['Teléfono', renter.phone],
+                    ['Empresa', renter.company],
+                    ['INE', renter.ine],
+                    ['RFC', renter.rfc],
+                    ['Dirección', renter.address],
+                  ].map(([label, value]) => (
+                    <View key={label} style={styles.field}>
+                      <Text style={styles.fieldLabel}>{label}</Text>
+                      <Text style={styles.fieldValue}>{value || '—'}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {renter.renterStatus === 'pending' ? (
+                  <View style={styles.actions}>
+                    <Button
+                      title="Aprobar"
+                      fullWidth={false}
+                      style={styles.actionBtn}
+                      loading={busyId === renter.uid}
+                      disabled={busyId === renter.uid}
+                      onPress={() => onSetStatus(renter.uid, 'approved')}
+                    />
+                    <Button
+                      title="Rechazar"
+                      variant="secondary"
+                      fullWidth={false}
+                      style={styles.actionBtn}
+                      disabled={busyId === renter.uid}
+                      onPress={() => onSetStatus(renter.uid, 'rejected')}
+                    />
+                  </View>
+                ) : null}
+
+                {renter.renterStatus === 'rejected' ? (
+                  <Pressable
+                    style={styles.reopen}
                     disabled={busyId === renter.uid}
                     onPress={() => onSetStatus(renter.uid, 'approved')}
-                  />
-                  <Button
-                    title="Rechazar"
-                    variant="secondary"
-                    fullWidth={false}
-                    style={styles.actionBtn}
-                    disabled={busyId === renter.uid}
-                    onPress={() => onSetStatus(renter.uid, 'rejected')}
-                  />
-                </View>
-              ) : null}
-
-              {renter.renterStatus === 'rejected' ? (
-                <Pressable
-                  style={styles.reopen}
-                  disabled={busyId === renter.uid}
-                  onPress={() => onSetStatus(renter.uid, 'approved')}
-                >
-                  <MaterialIcons name="check-circle-outline" size={18} color={theme.color.navy} />
-                  <Text style={styles.reopenText}>Aprobar de todas formas</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ))
+                  >
+                    <MaterialIcons name="check-circle-outline" size={18} color={theme.color.navy} />
+                    <Text style={styles.reopenText}>Aprobar de todas formas</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
+            <ListPagination
+              page={paging.page}
+              totalPages={paging.totalPages}
+              from={paging.from}
+              to={paging.to}
+              total={paging.total}
+              pageNumbers={paging.pageNumbers}
+              onChange={setPage}
+            />
+          </>
         )}
       </ScrollView>
       {toast ? <Toast message={toast} visible={Boolean(toast)} /> : null}
