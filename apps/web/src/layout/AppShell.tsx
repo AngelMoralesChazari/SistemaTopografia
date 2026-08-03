@@ -23,6 +23,7 @@ export type WebSection =
   | 'settings'
   | 'catalog'
   | 'studentRequests'
+  | 'teacherStudents'
   | 'profile';
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -35,13 +36,20 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager', 'teacher'] },
+  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager'] },
+  { id: 'dashboard', label: 'Resumen', icon: 'dashboard', roles: ['teacher'] },
   { id: 'catalog', label: 'Catálogo', icon: 'home', roles: ['student'] },
   {
     id: 'studentRequests',
     label: 'Mis solicitudes',
     icon: 'schedule',
     roles: ['student'],
+  },
+  {
+    id: 'teacherStudents',
+    label: 'Alumnos',
+    icon: 'groups',
+    roles: ['teacher'],
   },
   {
     id: 'equipment',
@@ -55,7 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: 'assignment',
     roles: ['admin', 'lab_manager'],
   },
-  { id: 'history', label: 'Historial', icon: 'history', roles: ['admin', 'lab_manager', 'teacher'] },
+  { id: 'history', label: 'Historial', icon: 'history', roles: ['admin', 'lab_manager'] },
   { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: ['admin', 'lab_manager'] },
   { id: 'users', label: 'Usuarios', icon: 'group', roles: ['admin'] },
   { id: 'settings', label: 'Configuración', icon: 'settings', roles: ['admin'] },
@@ -95,7 +103,11 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(user.role));
   const navLabel =
-    user.role === 'student' ? 'Espacio del alumno' : 'Gestión del laboratorio';
+    user.role === 'student'
+      ? 'Espacio del alumno'
+      : user.role === 'teacher'
+        ? 'Supervisión académica'
+        : 'Gestión del laboratorio';
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>
@@ -131,7 +143,7 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
             const active = item.id === section;
             return (
               <Pressable
-                key={item.id}
+                key={`${item.id}-${item.label}`}
                 onPress={() => onSectionChange(item.id)}
                 style={[styles.navItem, active && styles.navItemActive]}
               >

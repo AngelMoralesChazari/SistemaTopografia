@@ -1,19 +1,30 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
+import { useAuth } from '../auth/AuthContext';
 import type { WebSection } from '../layout/AppShell';
 import { EquipmentPage } from './EquipmentPage';
 import { ProfilePage } from './ProfilePage';
 import { RequestsPage } from './RequestsPage';
 import { StudentCatalogPage } from './StudentCatalogPage';
 import { StudentRequestsPage } from './StudentRequestsPage';
+import { TeacherDashboardPage } from './TeacherDashboardPage';
+import { TeacherStudentsPage } from './TeacherStudentsPage';
 
 type DashboardHomeProps = {
   section: WebSection;
 };
 
 const SECTION_COPY: Record<
-  Exclude<WebSection, 'equipment' | 'requests' | 'catalog' | 'studentRequests' | 'profile'>,
+  Exclude<
+    WebSection,
+    | 'equipment'
+    | 'requests'
+    | 'catalog'
+    | 'studentRequests'
+    | 'teacherStudents'
+    | 'profile'
+  >,
   { title: string; description: string }
 > = {
   dashboard: {
@@ -39,11 +50,17 @@ const SECTION_COPY: Record<
 };
 
 export function SectionPage({ section }: DashboardHomeProps) {
+  const { user } = useAuth();
+
   if (section === 'equipment') return <EquipmentPage />;
   if (section === 'requests') return <RequestsPage />;
   if (section === 'catalog') return <StudentCatalogPage />;
   if (section === 'studentRequests') return <StudentRequestsPage />;
+  if (section === 'teacherStudents') return <TeacherStudentsPage />;
   if (section === 'profile') return <ProfilePage />;
+  if (section === 'dashboard' && user?.role === 'teacher') {
+    return <TeacherDashboardPage />;
+  }
 
   const copy = SECTION_COPY[section];
 
