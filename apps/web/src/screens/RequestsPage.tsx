@@ -25,6 +25,8 @@ import {
 } from '@lab-topo/services';
 import { Badge, Button, Notice, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { ListPagination } from '../components/ListPagination';
+import { paginate } from '../lib/pagination';
 
 function toneForStatus(status: LoanStatus): BadgeTone {
   switch (status) {
@@ -72,6 +74,7 @@ export function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [dueDate, setDueDate] = useState(defaultDueDate());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -96,6 +99,20 @@ export function RequestsPage() {
     );
     return unsub;
   }, [user]);
+
+  const paging = useMemo(() => paginate(loans, page), [loans, page]);
+
+  useEffect(() => {
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const visible = paging.pageItems.some((l) => l.id === selectedId);
+    if (!visible && paging.pageItems[0]) {
+      setSelectedId(paging.pageItems[0].id);
+    }
+  }, [paging.pageItems, selectedId]);
 
   const selected = useMemo(
     () => loans.find((l) => l.id === selectedId) ?? null,
@@ -193,7 +210,7 @@ export function RequestsPage() {
       <View style={styles.workspace}>
         <View style={styles.listCard}>
           <Text style={styles.cardTitle}>Cola operativa</Text>
-          {loans.map((loan) => {
+          {paging.pageItems.map((loan) => {
             const active = loan.id === selectedId;
             return (
               <Pressable
@@ -201,10 +218,12 @@ export function RequestsPage() {
                 onPress={() => setSelectedId(loan.id)}
                 style={[styles.row, active && styles.rowActive]}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowFolio}>{loan.folio}</Text>
-                  <Text style={styles.rowName}>{loan.studentName}</Text>
-                  <Text style={styles.rowMeta}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.rowFolio}>#{loan.folio}</Text>
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {loan.studentName}
+                  </Text>
+                  <Text style={styles.rowMeta} numberOfLines={1}>
                     {loan.equipmentName} · {formatDate(loan.requestedAt)}
                   </Text>
                 </View>
@@ -212,6 +231,15 @@ export function RequestsPage() {
               </Pressable>
             );
           })}
+          <ListPagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            from={paging.from}
+            to={paging.to}
+            total={paging.total}
+            pageNumbers={paging.pageNumbers}
+            onChange={setPage}
+          />
         </View>
 
         <View style={styles.detailCard}>
