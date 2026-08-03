@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +13,11 @@ import { theme } from '@lab-topo/config';
 import { Button, Notice, TextField } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 
-export function LoginScreen() {
+type LoginScreenProps = {
+  onGoRegister?: () => void;
+};
+
+export function LoginScreen({ onGoRegister }: LoginScreenProps) {
   const { login, loading, error, clearError, firebaseReady, firebaseMessage } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +58,7 @@ export function LoginScreen() {
           <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
           <Text style={styles.title}>Iniciar sesión</Text>
           <Text style={styles.subtitle}>
-            Control de inventario y préstamos del laboratorio.
+            Universidad o renta de equipo · correo y contraseña.
           </Text>
 
           {!firebaseReady ? (
@@ -67,7 +72,7 @@ export function LoginScreen() {
           {error ? <Notice tone="danger" title={error} /> : null}
 
           <TextField
-            label="Correo institucional"
+            label="Correo"
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
@@ -89,6 +94,18 @@ export function LoginScreen() {
             disabled={!firebaseReady || !email.trim() || !password}
             onPress={onSubmit}
           />
+
+          {onGoRegister ? (
+            <Pressable
+              onPress={onGoRegister}
+              style={styles.registerLink}
+              accessibilityRole="link"
+              accessibilityLabel="Registro para renta de equipo"
+            >
+              <Text style={styles.registerLabel}>Particulares</Text>
+              <Text style={styles.registerAnchor}>Registro para renta de equipo</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -148,5 +165,22 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     fontSize: 12,
     lineHeight: 18,
+  },
+  registerLink: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.color.line,
+  },
+  registerLabel: {
+    color: theme.color.navy,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  registerAnchor: {
+    marginTop: 4,
+    color: theme.color.muted,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

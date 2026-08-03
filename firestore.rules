@@ -33,17 +33,41 @@ service cloud.firestore {
       return data.labId == userDoc().labId;
     }
 
+    function isApprovedRenter() {
+      return hasRole('renter')
+        && userDoc().renterStatus == 'approved'
+        && userDoc().active == true;
+    }
+
     // Perfiles
     match /users/{userId} {
       allow read: if signedIn() && (
         uid() == userId ||
         isLabManager() ||
         (hasRole('teacher') && sameLab(resource.data)) ||
-        // Alumno puede ver maestros de su laboratorio
         (hasRole('student') && resource.data.role == 'teacher' && sameLab(resource.data))
       );
-      // Escritura solo Admin SDK / Functions por ahora
-      allow write: if false;
+
+      // Particular crea su propio perfil en estado pending
+      allow create: if signedIn()
+        && uid() == userId
+        && request.resource.data.role == 'renter'
+        && request.resource.data.renterStatus == 'pending'
+        && request.resource.data.active == false
+        && request.resource.data.keys().hasAll([
+          'email', 'displayName', 'role', 'labId', 'active', 'renterStatus',
+          'phone', 'company', 'ine', 'rfc', 'address'
+        ]);
+
+      // Encargado aprueba / rechaza particulares
+      allow update: if isLabManager()
+        && resource.data.labId == userDoc().labId
+        && resource.data.role == 'renter'
+        && request.resource.data.role == 'renter'
+        && request.resource.data.renterStatus in ['approved', 'rejected', 'pending']
+        && request.resource.data.labId == resource.data.labId;
+
+      allow delete: if false;
     }
 
     // Catálogo
@@ -85,10 +109,19 @@ service cloud.firestore {
           'folio', 'labId', 'status', 'equipmentId', 'studentId', 'teacherId'
         ])
         && (
-          hasRole('student')
+          (
+            hasRole('student')
+            && request.resource.data.loanType != 'rental'
+          )
           || (
             hasRole('teacher')
             && request.resource.data.teacherId == uid()
+            && request.resource.data.loanType != 'rental'
+          )
+          || (
+            isApprovedRenter()
+            && request.resource.data.loanType == 'rental'
+            && request.resource.data.teacherId == 'lab-rental'
           )
         );
 

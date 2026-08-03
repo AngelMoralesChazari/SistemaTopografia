@@ -15,6 +15,8 @@ import {
   buildCategoryGroups,
   categoryIdOf,
   getInitials,
+  RENTAL_TEACHER_ID,
+  RENTAL_TEACHER_NAME,
   type CategoryGroup,
   type Equipment,
 } from '@lab-topo/domain';
@@ -182,12 +184,16 @@ export function StudentCatalogPage() {
     const teacherReady =
       user?.role === 'teacher'
         ? Boolean(user.uid && user.displayName)
-        : Boolean(user?.teacherId && user.teacherName);
+        : user?.role === 'renter'
+          ? Boolean(user.uid && user.renterStatus === 'approved')
+          : Boolean(user?.teacherId && user.teacherName);
     if (!teacherReady) {
       showToast(
         user?.role === 'teacher'
           ? 'No se pudo identificar tu perfil de maestro.'
-          : 'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
+          : user?.role === 'renter'
+            ? 'Tu cuenta de renta aún no está aprobada.'
+            : 'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
       );
       return;
     }
@@ -211,6 +217,9 @@ export function StudentCatalogPage() {
 
   const resolveTeacher = () => {
     if (!user) return null;
+    if (user.role === 'renter') {
+      return { teacherId: RENTAL_TEACHER_ID, teacherName: RENTAL_TEACHER_NAME };
+    }
     if (user.role === 'teacher') {
       return { teacherId: user.uid, teacherName: user.displayName };
     }
@@ -225,7 +234,9 @@ export function StudentCatalogPage() {
       showToast(
         user.role === 'teacher'
           ? 'No se pudo identificar tu perfil de maestro.'
-          : 'Tu perfil no tiene profesor asignado.'
+          : user.role === 'renter'
+            ? 'Tu cuenta de renta aún no está aprobada.'
+            : 'Tu perfil no tiene profesor asignado.'
       );
       return;
     }
@@ -251,11 +262,11 @@ export function StudentCatalogPage() {
         equipmentCode: selectedEquipment.internalCode,
         studentId: user.uid,
         studentName: user.displayName,
-        studentNumber: user.studentId ?? user.employeeId ?? null,
+        studentNumber: user.studentId ?? user.employeeId ?? user.rfc ?? null,
         teacherId: teacher.teacherId,
         teacherName: teacher.teacherName,
         dueAt: resolvedDueAt.toISOString(),
-        loanType: 'academic',
+        loanType: user.role === 'renter' ? 'rental' : 'academic',
       });
       setConfirmOpen(false);
       setSuccessFolio(created.folio);
@@ -318,7 +329,9 @@ export function StudentCatalogPage() {
             <Text style={styles.sectionHint}>
               {user?.role === 'teacher'
                 ? 'Elige un grupo y solicita material para ti.'
-                : 'Elige un grupo para ver el equipo y solicitar un préstamo.'}
+                : user?.role === 'renter'
+                  ? 'Elige un grupo y solicita renta de equipo.'
+                  : 'Elige un grupo para ver el equipo y solicitar un préstamo.'}
             </Text>
             {filteredCategories.length === 0 ? (
               <Notice
@@ -420,7 +433,14 @@ export function StudentCatalogPage() {
               {[
                 ['Material', selectedEquipment?.name ?? '—'],
                 ['Código', selectedEquipment?.internalCode ?? '—'],
-                ['Profesor', user?.role === 'teacher' ? user.displayName : (user?.teacherName ?? '—')],
+                [
+                  user?.role === 'renter' ? 'Tipo' : 'Profesor',
+                  user?.role === 'renter'
+                    ? 'Renta particular'
+                    : user?.role === 'teacher'
+                      ? user.displayName
+                      : (user?.teacherName ?? '—'),
+                ],
                 ['Fecha de solicitud', formatDateTime(requestAt)],
                 [
                   'Fecha de devolución',

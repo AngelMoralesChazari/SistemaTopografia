@@ -10,6 +10,7 @@ import { InventoryScreen } from '../screens/InventoryScreen';
 import { LabRequestsScreen } from '../screens/LabRequestsScreen';
 import { TeacherSummaryScreen } from '../screens/TeacherSummaryScreen';
 import { StudentRequestsScreen } from '../screens/StudentRequestsScreen';
+import { RentersScreen } from '../screens/RentersScreen';
 import { TeacherStudentsStack } from './TeacherStudentsStack';
 
 export type StudentTabParamList = {
@@ -21,6 +22,7 @@ export type StudentTabParamList = {
 export type LabTabParamList = {
   Requests: undefined;
   Inventory: undefined;
+  Renters: undefined;
   Profile: undefined;
 };
 
@@ -92,14 +94,14 @@ function useTabScreenOptions() {
 export function RoleTabs({ role }: { role: UserRole }) {
   const tabOptions = useTabScreenOptions();
 
-  if (role === 'student') {
+  if (role === 'student' || role === 'renter') {
     return (
       <StudentTabs.Navigator screenOptions={tabOptions}>
         <StudentTabs.Screen
           name="Catalog"
           component={CatalogScreen}
           options={{
-            title: 'Catálogo',
+            title: role === 'renter' ? 'Renta' : 'Catálogo',
             tabBarIcon: ({ color, focused }) => (
               <TabIcon name="home" color={color} focused={focused} />
             ),
@@ -185,6 +187,16 @@ export function RoleTabs({ role }: { role: UserRole }) {
           title: 'Inventario',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="inventory-2" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <LabTabs.Screen
+        name="Renters"
+        component={RentersScreen}
+        options={{
+          title: 'Particulares',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="handshake" color={color} focused={focused} />
           ),
         }}
       />

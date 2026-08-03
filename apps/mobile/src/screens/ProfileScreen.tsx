@@ -79,6 +79,28 @@ export function ProfileScreen() {
             </View>
           </View>
         ) : null}
+
+        {user.role === 'renter' ? (
+          <>
+            {[
+              ['Teléfono', user.phone],
+              ['Empresa', user.company],
+              ['INE', user.ine],
+              ['RFC', user.rfc],
+              ['Dirección', user.address],
+            ].map(([label, value]) =>
+              value ? (
+                <View key={label} style={styles.infoRow}>
+                  <MaterialIcons name="info-outline" size={18} color={theme.color.muted} />
+                  <View style={styles.infoText}>
+                    <Text style={styles.infoLabel}>{label}</Text>
+                    <Text style={styles.infoValue}>{value}</Text>
+                  </View>
+                </View>
+              ) : null
+            )}
+          </>
+        ) : null}
       </View>
 
       <View style={styles.spacer} />

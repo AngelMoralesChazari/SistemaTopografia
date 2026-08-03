@@ -20,6 +20,8 @@ import {
   buildCategoryGroups,
   categoryIdOf,
   getInitials,
+  RENTAL_TEACHER_ID,
+  RENTAL_TEACHER_NAME,
   type CategoryGroup,
   type Equipment,
 } from '@lab-topo/domain';
@@ -185,9 +187,19 @@ export function CatalogScreen() {
       showToast('Selecciona un equipo de la lista antes de continuar.');
       return;
     }
-    if (!user?.teacherId || !user.teacherName) {
+    const ready =
+      user?.role === 'teacher'
+        ? Boolean(user.uid && user.displayName)
+        : user?.role === 'renter'
+          ? Boolean(user.uid && user.renterStatus === 'approved')
+          : Boolean(user?.teacherId && user.teacherName);
+    if (!ready) {
       showToast(
-        'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
+        user?.role === 'teacher'
+          ? 'No se pudo identificar tu perfil de maestro.'
+          : user?.role === 'renter'
+            ? 'Tu cuenta de renta aún no está aprobada.'
+            : 'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
       );
       return;
     }
@@ -205,10 +217,29 @@ export function CatalogScreen() {
     setConfirmOpen(false);
   };
 
+  const resolveTeacher = () => {
+    if (!user) return null;
+    if (user.role === 'renter') {
+      return { teacherId: RENTAL_TEACHER_ID, teacherName: RENTAL_TEACHER_NAME };
+    }
+    if (user.role === 'teacher') {
+      return { teacherId: user.uid, teacherName: user.displayName };
+    }
+    if (!user.teacherId || !user.teacherName) return null;
+    return { teacherId: user.teacherId, teacherName: user.teacherName };
+  };
+
   const onConfirmRequest = async () => {
     if (!user || !selectedEquipment) return;
-    if (!user.teacherId || !user.teacherName) {
-      showToast('Tu perfil no tiene profesor asignado.');
+    const teacher = resolveTeacher();
+    if (!teacher) {
+      showToast(
+        user.role === 'teacher'
+          ? 'No se pudo identificar tu perfil de maestro.'
+          : user.role === 'renter'
+            ? 'Tu cuenta de renta aún no está aprobada.'
+            : 'Tu perfil no tiene profesor asignado.'
+      );
       return;
     }
     if (!resolvedDueAt) {
@@ -233,11 +264,11 @@ export function CatalogScreen() {
         equipmentCode: selectedEquipment.internalCode,
         studentId: user.uid,
         studentName: user.displayName,
-        studentNumber: user.studentId ?? null,
-        teacherId: user.teacherId,
-        teacherName: user.teacherName,
+        studentNumber: user.studentId ?? user.employeeId ?? user.rfc ?? null,
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
         dueAt: resolvedDueAt.toISOString(),
-        loanType: 'academic',
+        loanType: user.role === 'renter' ? 'rental' : 'academic',
       });
       setConfirmOpen(false);
       setSuccessFolio(created.folio);

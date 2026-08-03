@@ -1,4 +1,4 @@
-import type { UserRole } from './types';
+import type { RenterStatus, UserRole } from './types';
 import { ROLE_LABELS } from './types';
 
 export type AppUser = {
@@ -14,6 +14,13 @@ export type AppUser = {
   groupIds?: string[];
   active: boolean;
   labId: string;
+  /** Solo particulares: pending | approved | rejected */
+  renterStatus?: RenterStatus | null;
+  phone?: string | null;
+  company?: string | null;
+  ine?: string | null;
+  rfc?: string | null;
+  address?: string | null;
 };
 
 export function getInitials(name: string): string {

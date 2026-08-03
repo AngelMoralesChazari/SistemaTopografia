@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { theme } from '@lab-topo/config';
 import { Button, Notice, TextField } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 
-export function LoginPage() {
+type LoginPageProps = {
+  onGoRegister?: () => void;
+};
+
+export function LoginPage({ onGoRegister }: LoginPageProps) {
   const { login, loading, error, clearError, firebaseReady, firebaseMessage } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +34,7 @@ export function LoginPage() {
         <Text style={styles.eyebrow}>UAGro · Laboratorio de Topografía</Text>
         <Text style={styles.title}>Iniciar sesión</Text>
         <Text style={styles.subtitle}>
-          Accede al laboratorio según tu perfil: alumno, encargado, maestro o administrador.
+          Accede con tu correo y contraseña.
         </Text>
 
         {!firebaseReady ? (
@@ -64,6 +68,18 @@ export function LoginPage() {
           disabled={!firebaseReady || !email.trim() || !password}
           onPress={onSubmit}
         />
+
+        {onGoRegister ? (
+          <Pressable
+            onPress={onGoRegister}
+            style={styles.registerLink}
+            accessibilityRole="link"
+            accessibilityLabel="Registro para renta de equipo"
+          >
+            <Text style={styles.registerLabel}>Particulares</Text>
+            <Text style={styles.registerAnchor}>Registro para renta de equipo</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -120,5 +136,22 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     fontSize: theme.font.size.md,
     lineHeight: 22,
+  },
+  registerLink: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.color.line,
+  },
+  registerLabel: {
+    color: theme.color.navy,
+    fontWeight: '800',
+    fontSize: theme.font.size.md,
+  },
+  registerAnchor: {
+    marginTop: 4,
+    color: theme.color.muted,
+    fontSize: theme.font.size.sm,
+    fontWeight: '600',
   },
 });

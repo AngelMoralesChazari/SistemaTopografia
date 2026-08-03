@@ -11,6 +11,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  setSessionUser: (user: AppUser | null) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       firebaseMessage: ready.message,
       error,
       clearError: () => setError(null),
+      setSessionUser: (next) => setUser(next),
       login: async (email, password) => {
         setError(null);
         setLoading(true);

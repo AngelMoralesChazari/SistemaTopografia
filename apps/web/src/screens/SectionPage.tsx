@@ -6,6 +6,7 @@ import type { WebSection } from '../layout/AppShell';
 import { EquipmentPage } from './EquipmentPage';
 import { ProfilePage } from './ProfilePage';
 import { RequestsPage } from './RequestsPage';
+import { RentersPage } from './RentersPage';
 import { StudentCatalogPage } from './StudentCatalogPage';
 import { StudentRequestsPage } from './StudentRequestsPage';
 import { TeacherDashboardPage } from './TeacherDashboardPage';
@@ -23,6 +24,7 @@ const SECTION_COPY: Record<
     | 'catalog'
     | 'studentRequests'
     | 'teacherStudents'
+    | 'renters'
     | 'profile'
   >,
   { title: string; description: string }
@@ -54,6 +56,7 @@ export function SectionPage({ section }: DashboardHomeProps) {
 
   if (section === 'equipment') return <EquipmentPage />;
   if (section === 'requests') return <RequestsPage />;
+  if (section === 'renters') return <RentersPage />;
   if (section === 'catalog') return <StudentCatalogPage />;
   if (section === 'studentRequests') return <StudentRequestsPage />;
   if (section === 'teacherStudents') return <TeacherStudentsPage />;

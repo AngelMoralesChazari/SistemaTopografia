@@ -5,15 +5,19 @@ import { theme } from '@lab-topo/config';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { AppShell, defaultSectionForRole, type WebSection } from './src/layout/AppShell';
 import { LoginPage } from './src/screens/LoginPage';
+import { RenterPendingPage } from './src/screens/RenterPendingPage';
+import { RenterRegisterPage } from './src/screens/RenterRegisterPage';
 import { SectionPage } from './src/screens/SectionPage';
 
 function WebRoot() {
   const { user, loading } = useAuth();
   const [section, setSection] = useState<WebSection>('dashboard');
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     if (user) {
       setSection(defaultSectionForRole(user.role));
+      setAuthView('login');
     }
   }, [user?.uid, user?.role]);
 
@@ -26,7 +30,14 @@ function WebRoot() {
   }
 
   if (!user) {
-    return <LoginPage />;
+    if (authView === 'register') {
+      return <RenterRegisterPage onBack={() => setAuthView('login')} />;
+    }
+    return <LoginPage onGoRegister={() => setAuthView('register')} />;
+  }
+
+  if (user.role === 'renter' && user.renterStatus !== 'approved') {
+    return <RenterPendingPage />;
   }
 
   return (

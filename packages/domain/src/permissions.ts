@@ -13,7 +13,8 @@ export type Permission =
   | 'loans.read_group'
   | 'loans.read_own'
   | 'reports.global'
-  | 'audit.read';
+  | 'audit.read'
+  | 'renters.approve';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
@@ -30,6 +31,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'loans.read_own',
     'reports.global',
     'audit.read',
+    'renters.approve',
   ],
   lab_manager: [
     'equipment.read',
@@ -39,11 +41,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'loans.return',
     'loans.read_all',
     'reports.global',
+    'renters.approve',
   ],
-  teacher: ['equipment.read', 'loans.read_group'],
+  teacher: ['equipment.read', 'loans.read_group', 'loans.create', 'loans.read_own'],
   student: ['equipment.read', 'loans.create', 'loans.read_own'],
+  renter: ['equipment.read', 'loans.create', 'loans.read_own'],
 };
-
 export function can(role: UserRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission);
 }

@@ -1,4 +1,7 @@
-export type UserRole = 'admin' | 'lab_manager' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'lab_manager' | 'teacher' | 'student' | 'renter';
+
+/** Estado de aprobación para particulares (renta a terceros). */
+export type RenterStatus = 'pending' | 'approved' | 'rejected';
 
 export type EquipmentStatus =
   | 'available'
@@ -51,4 +54,15 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   lab_manager: 'Encargado de laboratorio',
   teacher: 'Maestro',
   student: 'Alumno',
+  renter: 'Particular (renta)',
 };
+
+export const RENTER_STATUS_LABELS: Record<RenterStatus, string> = {
+  pending: 'Pendiente de aprobación',
+  approved: 'Aprobado',
+  rejected: 'Rechazado',
+};
+
+/** Marcadores en préstamos de renta (sin profesor académico). */
+export const RENTAL_TEACHER_ID = 'lab-rental';
+export const RENTAL_TEACHER_NAME = 'Laboratorio (renta)';

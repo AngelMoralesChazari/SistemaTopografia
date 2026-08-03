@@ -75,6 +75,7 @@ npm run web
 
 - **Web (encargado/admin):** `encargado@labtopo.uagro.edu.mx` / `LabTopo2026!`
 - **Móvil (alumno):** `alumno@labtopo.uagro.edu.mx` / `LabTopo2026!`
+- **Particular (renta):** no hay cuenta seed; usa **Registro para renta de equipo** en el login. El encargado aprueba en **Particulares**.
 
 Tras el login verás el shell según el rol (tabs móvil / sidebar web).
 
@@ -111,4 +112,6 @@ Tras el login verás el shell según el rol (tabs móvil / sidebar web).
 }
 ```
 
-Roles válidos: `admin` | `lab_manager` | `teacher` | `student`
+Roles válidos: `admin` | `lab_manager` | `teacher` | `student` | `renter`
+
+Para `renter` (particular), el documento también incluye: `renterStatus` (`pending` | `approved` | `rejected`), `phone`, `company`, `ine`, `rfc`, `address`. Los particulares se crean por registro en la app (no por seed).

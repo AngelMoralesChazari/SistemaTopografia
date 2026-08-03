@@ -5,7 +5,7 @@ export {
   getFirebaseStorage,
   checkFirebaseReady,
 } from './firebase';
-export { signIn, signOut, resetPassword, watchAuth } from './authService';
+export { signIn, signOut, resetPassword, watchAuth, refreshCurrentUser } from './authService';
 export {
   listEquipment,
   watchEquipment,
@@ -14,6 +14,13 @@ export {
   setEquipmentStatus,
 } from './equipmentService';
 export { listTeachers } from './userService';
+export {
+  registerRenter,
+  watchPendingRenters,
+  watchRenters,
+  setRenterStatus,
+} from './renterService';
+export type { RegisterRenterInput } from './renterService';
 export {
   createLoanRequest,
   watchLoansForStudent,

@@ -24,6 +24,7 @@ export type WebSection =
   | 'catalog'
   | 'studentRequests'
   | 'teacherStudents'
+  | 'renters'
   | 'profile';
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -38,12 +39,12 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager'] },
   { id: 'dashboard', label: 'Resumen', icon: 'dashboard', roles: ['teacher'] },
-  { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ['student', 'teacher'] },
+  { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ['student', 'teacher', 'renter'] },
   {
     id: 'studentRequests',
     label: 'Mis solicitudes',
     icon: 'schedule',
-    roles: ['student', 'teacher'],
+    roles: ['student', 'teacher', 'renter'],
   },
   {
     id: 'teacherStudents',
@@ -63,6 +64,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: 'assignment',
     roles: ['admin', 'lab_manager'],
   },
+  {
+    id: 'renters',
+    label: 'Particulares',
+    icon: 'handshake',
+    roles: ['admin', 'lab_manager'],
+  },
   { id: 'history', label: 'Historial', icon: 'history', roles: ['admin', 'lab_manager'] },
   { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: ['admin', 'lab_manager'] },
   { id: 'users', label: 'Usuarios', icon: 'group', roles: ['admin'] },
@@ -71,13 +78,14 @@ const NAV_ITEMS: NavItem[] = [
     id: 'profile',
     label: 'Perfil',
     icon: 'person-outline',
-    roles: ['student', 'admin', 'lab_manager', 'teacher'],
+    roles: ['student', 'admin', 'lab_manager', 'teacher', 'renter'],
   },
 ];
 
 export function defaultSectionForRole(role: UserRole): WebSection {
   switch (role) {
     case 'student':
+    case 'renter':
       return 'catalog';
     case 'teacher':
       return 'dashboard';
@@ -107,7 +115,9 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
       ? 'Espacio del alumno'
       : user.role === 'teacher'
         ? 'Supervisión académica'
-        : 'Gestión del laboratorio';
+        : user.role === 'renter'
+          ? 'Renta de equipo'
+          : 'Gestión del laboratorio';
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>
