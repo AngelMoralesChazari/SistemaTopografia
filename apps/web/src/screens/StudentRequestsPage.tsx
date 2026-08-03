@@ -22,6 +22,7 @@ import { useAuth } from '../auth/AuthContext';
 const PAGE_SIZE = 10;
 
 type RequestTab = 'pending' | 'delivered' | 'returned' | 'rejected';
+type TableColumn = 'folio' | 'equip' | 'teacher' | 'requested' | 'due' | 'status';
 
 const TABS: { id: RequestTab; label: string }[] = [
   { id: 'pending', label: 'Pendientes' },
@@ -29,6 +30,49 @@ const TABS: { id: RequestTab; label: string }[] = [
   { id: 'returned', label: 'Devuelto' },
   { id: 'rejected', label: 'Rechazado' },
 ];
+
+const COLUMNS: { id: TableColumn; label: string }[] = [
+  { id: 'folio', label: 'Folio' },
+  { id: 'equip', label: 'Equipo' },
+  { id: 'teacher', label: 'Profesor' },
+  { id: 'requested', label: 'Solicitada' },
+  { id: 'due', label: 'Devolver' },
+  { id: 'status', label: 'Estado' },
+];
+
+const TAB_COLORS: Record<
+  RequestTab,
+  { soft: string; mid: string; strong: string; text: string; border: string }
+> = {
+  pending: {
+    soft: 'rgba(34, 102, 216, 0.14)',
+    mid: 'rgba(34, 102, 216, 0.08)',
+    strong: 'rgba(34, 102, 216, 0.32)',
+    text: theme.color.info,
+    border: 'rgba(34, 102, 216, 0.28)',
+  },
+  delivered: {
+    soft: 'rgba(167, 106, 0, 0.16)',
+    mid: 'rgba(167, 106, 0, 0.08)',
+    strong: 'rgba(167, 106, 0, 0.34)',
+    text: theme.color.warning,
+    border: 'rgba(167, 106, 0, 0.28)',
+  },
+  returned: {
+    soft: 'rgba(22, 133, 91, 0.16)',
+    mid: 'rgba(22, 133, 91, 0.08)',
+    strong: 'rgba(22, 133, 91, 0.34)',
+    text: theme.color.success,
+    border: 'rgba(22, 133, 91, 0.28)',
+  },
+  rejected: {
+    soft: 'rgba(217, 4, 41, 0.14)',
+    mid: 'rgba(217, 4, 41, 0.08)',
+    strong: 'rgba(217, 4, 41, 0.34)',
+    text: theme.color.red,
+    border: 'rgba(217, 4, 41, 0.28)',
+  },
+};
 
 function matchesTab(status: LoanStatus, tab: RequestTab): boolean {
   switch (tab) {
@@ -97,6 +141,7 @@ export function StudentRequestsPage() {
   const [tab, setTab] = useState<RequestTab>('pending');
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeColumn, setActiveColumn] = useState<TableColumn | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -140,6 +185,7 @@ export function StudentRequestsPage() {
   useEffect(() => {
     setPage(1);
     setSelectedId(null);
+    setActiveColumn(null);
   }, [tab]);
 
   useEffect(() => {
@@ -153,6 +199,23 @@ export function StudentRequestsPage() {
 
   const selected = filtered.find((l) => l.id === selectedId) ?? null;
   const pageNumbers = buildPageWindow(page, totalPages);
+  const accent = TAB_COLORS[tab];
+
+  const colStyle = (id: TableColumn) => {
+    switch (id) {
+      case 'folio':
+        return styles.colFolio;
+      case 'equip':
+        return styles.colEquip;
+      case 'teacher':
+        return styles.colTeacher;
+      case 'requested':
+      case 'due':
+        return styles.colDate;
+      case 'status':
+        return styles.colStatus;
+    }
+  };
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -195,13 +258,30 @@ export function StudentRequestsPage() {
           </View>
 
           <View style={styles.tableCard}>
-            <View style={styles.tableHead}>
-              <Text style={[styles.th, styles.colFolio]}>Folio</Text>
-              <Text style={[styles.th, styles.colEquip]}>Equipo</Text>
-              <Text style={[styles.th, styles.colTeacher]}>Profesor</Text>
-              <Text style={[styles.th, styles.colDate]}>Solicitada</Text>
-              <Text style={[styles.th, styles.colDate]}>Devolver</Text>
-              <Text style={[styles.th, styles.colStatus]}>Estado</Text>
+            <View
+              style={[
+                styles.tableHead,
+                { backgroundColor: accent.soft, borderBottomColor: accent.border },
+              ]}
+            >
+              {COLUMNS.map((col) => {
+                const active = activeColumn === col.id;
+                return (
+                  <Pressable
+                    key={col.id}
+                    onPress={() =>
+                      setActiveColumn((current) => (current === col.id ? null : col.id))
+                    }
+                    style={[
+                      styles.thCell,
+                      colStyle(col.id),
+                      active && { backgroundColor: accent.strong },
+                    ]}
+                  >
+                    <Text style={[styles.th, { color: accent.text }]}>{col.label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             {pageItems.length === 0 ? (
@@ -225,22 +305,63 @@ export function StudentRequestsPage() {
                       active && styles.trActive,
                     ]}
                   >
-                    <Text style={[styles.td, styles.colFolio]} numberOfLines={1}>
-                      #{loan.folio}
-                    </Text>
-                    <Text style={[styles.td, styles.colEquip, styles.tdStrong]} numberOfLines={1}>
-                      {loan.equipmentName}
-                    </Text>
-                    <Text style={[styles.td, styles.colTeacher]} numberOfLines={1}>
-                      {loan.teacherName}
-                    </Text>
-                    <Text style={[styles.td, styles.colDate]} numberOfLines={1}>
-                      {formatDateTime(loan.requestedAt)}
-                    </Text>
-                    <Text style={[styles.td, styles.colDate]} numberOfLines={1}>
-                      {formatDateTime(loan.dueAt)}
-                    </Text>
-                    <View style={[styles.colStatus, styles.statusCell]}>
+                    <View
+                      style={[
+                        colStyle('folio'),
+                        activeColumn === 'folio' && { backgroundColor: accent.mid },
+                      ]}
+                    >
+                      <Text style={styles.td} numberOfLines={1}>
+                        #{loan.folio}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        colStyle('equip'),
+                        activeColumn === 'equip' && { backgroundColor: accent.mid },
+                      ]}
+                    >
+                      <Text style={[styles.td, styles.tdStrong]} numberOfLines={1}>
+                        {loan.equipmentName}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        colStyle('teacher'),
+                        activeColumn === 'teacher' && { backgroundColor: accent.mid },
+                      ]}
+                    >
+                      <Text style={styles.td} numberOfLines={1}>
+                        {loan.teacherName}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        colStyle('requested'),
+                        activeColumn === 'requested' && { backgroundColor: accent.mid },
+                      ]}
+                    >
+                      <Text style={styles.td} numberOfLines={1}>
+                        {formatDateTime(loan.requestedAt)}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        colStyle('due'),
+                        activeColumn === 'due' && { backgroundColor: accent.mid },
+                      ]}
+                    >
+                      <Text style={styles.td} numberOfLines={1}>
+                        {formatDateTime(loan.dueAt)}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        colStyle('status'),
+                        styles.statusCell,
+                        activeColumn === 'status' && { backgroundColor: accent.mid },
+                      ]}
+                    >
                       <Badge
                         label={loanStatusLabel(loan.status)}
                         tone={toneForStatus(loan.status)}
@@ -425,15 +546,16 @@ const styles = StyleSheet.create({
   },
   tableHead: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#F5F7FA',
+    alignItems: 'stretch',
     borderBottomWidth: 1,
-    borderBottomColor: theme.color.line,
+  },
+  thCell: {
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    backgroundColor: 'transparent',
   },
   th: {
-    color: theme.color.muted,
     fontSize: theme.font.size.sm,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -441,9 +563,7 @@ const styles = StyleSheet.create({
   },
   tr: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    alignItems: 'stretch',
     borderBottomWidth: 1,
     borderBottomColor: '#EDF0F3',
   },
@@ -452,17 +572,24 @@ const styles = StyleSheet.create({
   td: {
     color: theme.color.ink,
     fontSize: theme.font.size.md,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
   },
   tdStrong: {
     color: theme.color.navy,
     fontWeight: '700',
   },
-  colFolio: { width: '14%', paddingRight: 8 },
-  colEquip: { width: '24%', paddingRight: 8 },
-  colTeacher: { width: '18%', paddingRight: 8 },
-  colDate: { width: '14%', paddingRight: 8 },
+  colFolio: { width: '14%' },
+  colEquip: { width: '24%' },
+  colTeacher: { width: '18%' },
+  colDate: { width: '14%' },
   colStatus: { width: '16%' },
-  statusCell: { alignItems: 'flex-start' },
+  statusCell: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
   emptyBox: {
     padding: 28,
     alignItems: 'center',
