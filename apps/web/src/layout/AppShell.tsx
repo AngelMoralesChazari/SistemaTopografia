@@ -38,12 +38,12 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager'] },
   { id: 'dashboard', label: 'Resumen', icon: 'dashboard', roles: ['teacher'] },
-  { id: 'catalog', label: 'Catálogo', icon: 'home', roles: ['student'] },
+  { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ['student', 'teacher'] },
   {
     id: 'studentRequests',
     label: 'Mis solicitudes',
     icon: 'schedule',
-    roles: ['student'],
+    roles: ['student', 'teacher'],
   },
   {
     id: 'teacherStudents',

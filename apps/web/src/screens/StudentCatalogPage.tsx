@@ -34,19 +34,19 @@ function formatDateTime(date: Date): string {
   });
 }
 
-function toIsoDate(date: Date): string {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
+function toDisplayDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
-function parseIsoDateWithTime(value: string, timeSource: Date): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+function parseDisplayDateWithTime(value: string, timeSource: Date): Date | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
   if (!m) return null;
-  const year = Number(m[1]);
+  const day = Number(m[1]);
   const month = Number(m[2]) - 1;
-  const day = Number(m[3]);
+  const year = Number(m[3]);
   const d = new Date(
     year,
     month,
@@ -83,7 +83,7 @@ export function StudentCatalogPage() {
   const [requestAt, setRequestAt] = useState(() => new Date());
   const [defaultDueAt, setDefaultDueAt] = useState(() => new Date(Date.now() + MS_24H));
   const [extendTime, setExtendTime] = useState(false);
-  const [customDueIso, setCustomDueIso] = useState('');
+  const [customDueDisplay, setCustomDueDisplay] = useState('');
   const [successOpen, setSuccessOpen] = useState(false);
   const [successFolio, setSuccessFolio] = useState<string | null>(null);
 
@@ -97,14 +97,20 @@ export function StudentCatalogPage() {
       (err) => {
         setError(err.message);
         setLoading(false);
-      },
-      { onlyActive: true }
+      }
     );
     return unsub;
   }, []);
 
+  const kpis = useMemo(() => {
+    const available = items.filter((e) => e.status === 'available').length;
+    const loaned = items.filter((e) => e.status === 'loaned').length;
+    const maintenance = items.filter((e) => e.status === 'maintenance').length;
+    return { total: items.length, available, loaned, maintenance };
+  }, [items]);
+
   const availableItems = useMemo(
-    () => items.filter((e) => e.status === 'available' || e.qtyAvailable > 0),
+    () => items.filter((e) => e.active !== false && (e.status === 'available' || e.qtyAvailable > 0)),
     [items]
   );
 
@@ -147,8 +153,8 @@ export function StudentCatalogPage() {
 
   const resolvedDueAt = useMemo(() => {
     if (!extendTime) return defaultDueAt;
-    return parseIsoDateWithTime(customDueIso, defaultDueAt);
-  }, [extendTime, customDueIso, defaultDueAt]);
+    return parseDisplayDateWithTime(customDueDisplay, defaultDueAt);
+  }, [extendTime, customDueDisplay, defaultDueAt]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -172,9 +178,15 @@ export function StudentCatalogPage() {
       showToast('Selecciona un equipo de la lista antes de continuar.');
       return;
     }
-    if (!user?.teacherId || !user.teacherName) {
+    const teacherReady =
+      user?.role === 'teacher'
+        ? Boolean(user.uid && user.displayName)
+        : Boolean(user?.teacherId && user.teacherName);
+    if (!teacherReady) {
       showToast(
-        'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
+        user?.role === 'teacher'
+          ? 'No se pudo identificar tu perfil de maestro.'
+          : 'Tu perfil no tiene profesor asignado. Ejecuta npm run seed:users o contacta al administrador.'
       );
       return;
     }
@@ -183,7 +195,7 @@ export function StudentCatalogPage() {
     setRequestAt(now);
     setDefaultDueAt(due);
     setExtendTime(false);
-    setCustomDueIso(toIsoDate(due));
+    setCustomDueDisplay(toDisplayDate(due));
     setConfirmOpen(true);
   };
 
@@ -192,10 +204,24 @@ export function StudentCatalogPage() {
     setConfirmOpen(false);
   };
 
+  const resolveTeacher = () => {
+    if (!user) return null;
+    if (user.role === 'teacher') {
+      return { teacherId: user.uid, teacherName: user.displayName };
+    }
+    if (!user.teacherId || !user.teacherName) return null;
+    return { teacherId: user.teacherId, teacherName: user.teacherName };
+  };
+
   const onConfirmRequest = async () => {
     if (!user || !selectedEquipment) return;
-    if (!user.teacherId || !user.teacherName) {
-      showToast('Tu perfil no tiene profesor asignado.');
+    const teacher = resolveTeacher();
+    if (!teacher) {
+      showToast(
+        user.role === 'teacher'
+          ? 'No se pudo identificar tu perfil de maestro.'
+          : 'Tu perfil no tiene profesor asignado.'
+      );
       return;
     }
     if (!resolvedDueAt) {
@@ -220,9 +246,9 @@ export function StudentCatalogPage() {
         equipmentCode: selectedEquipment.internalCode,
         studentId: user.uid,
         studentName: user.displayName,
-        studentNumber: user.studentId ?? null,
-        teacherId: user.teacherId,
-        teacherName: user.teacherName,
+        studentNumber: user.studentId ?? user.employeeId ?? null,
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
         dueAt: resolvedDueAt.toISOString(),
         loanType: 'academic',
       });
@@ -239,13 +265,26 @@ export function StudentCatalogPage() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>Bienvenido</Text>
-            <Text style={styles.title}>{user?.displayName ?? 'Alumno'}</Text>
-            <Text style={styles.subtitle}>Consulta el material y solicita un préstamo.</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.title}>Catálogo de equipos</Text>
+            <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
           </View>
           <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={40} />
+        </View>
+
+        <View style={styles.kpis}>
+          {[
+            { label: 'Total equipos', value: String(kpis.total) },
+            { label: 'Disponibles', value: String(kpis.available) },
+            { label: 'En préstamo', value: String(kpis.loaned) },
+            { label: 'Mantenimiento', value: String(kpis.maintenance) },
+          ].map((kpi) => (
+            <View key={kpi.label} style={styles.kpi}>
+              <Text style={styles.kpiLabel}>{kpi.label}</Text>
+              <Text style={styles.kpiValue}>{kpi.value}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.search}>
@@ -271,6 +310,11 @@ export function StudentCatalogPage() {
         {!loading && !selectedCategoryId ? (
           <>
             <Text style={styles.sectionTitle}>Grupos de material</Text>
+            <Text style={styles.sectionHint}>
+              {user?.role === 'teacher'
+                ? 'Elige un grupo y solicita material para ti.'
+                : 'Elige un grupo para ver el equipo y solicitar un préstamo.'}
+            </Text>
             {filteredCategories.length === 0 ? (
               <Notice
                 title="Sin grupos"
@@ -371,7 +415,7 @@ export function StudentCatalogPage() {
               {[
                 ['Material', selectedEquipment?.name ?? '—'],
                 ['Código', selectedEquipment?.internalCode ?? '—'],
-                ['Profesor', user?.teacherName ?? '—'],
+                ['Profesor', user?.role === 'teacher' ? user.displayName : (user?.teacherName ?? '—')],
                 ['Fecha de solicitud', formatDateTime(requestAt)],
                 [
                   'Fecha de devolución',
@@ -411,13 +455,11 @@ export function StudentCatalogPage() {
               <View style={styles.extendBlock}>
                 <Text style={styles.fieldLabel}>Nueva fecha de devolución</Text>
                 <TextInput
-                  value={customDueIso}
-                  onChangeText={setCustomDueIso}
-                  placeholder="AAAA-MM-DD"
+                  value={customDueDisplay}
+                  onChangeText={setCustomDueDisplay}
+                  placeholder="DD/MM/AAAA"
                   placeholderTextColor={theme.color.muted}
                   style={styles.dateInput}
-                  // @ts-expect-error web supports type=date
-                  type="date"
                 />
               </View>
             ) : null}
@@ -473,14 +515,13 @@ export function StudentCatalogPage() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.canvas },
   content: { padding: 28, paddingBottom: 40 },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
     gap: 16,
   },
-  eyebrow: { color: theme.color.muted, fontSize: theme.font.size.sm, marginBottom: 4 },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
@@ -488,9 +529,33 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   subtitle: {
-    marginTop: 6,
+    marginTop: 8,
     color: theme.color.muted,
     fontSize: theme.font.size.md,
+  },
+  kpis: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 18,
+  },
+  kpi: {
+    flexGrow: 1,
+    flexBasis: 140,
+    minHeight: 100,
+    padding: 16,
+    backgroundColor: theme.color.surface,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: theme.radius.lg,
+    ...theme.shadow.soft,
+  },
+  kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
+  kpiValue: {
+    marginTop: 12,
+    color: theme.color.navy,
+    fontSize: theme.font.size.xxl,
+    fontWeight: '800',
   },
   search: {
     height: 48,
@@ -509,6 +574,11 @@ const styles = StyleSheet.create({
     color: theme.color.navy,
     fontSize: theme.font.size.lg,
     fontWeight: '800',
+    marginBottom: 4,
+  },
+  sectionHint: {
+    color: theme.color.muted,
+    fontSize: theme.font.size.sm,
     marginBottom: 12,
   },
   grid: {

@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
+    ...theme.shadow.soft,
   },
   kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
   kpiValue: {

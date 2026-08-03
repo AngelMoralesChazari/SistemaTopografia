@@ -71,7 +71,8 @@ export function TeacherDashboardPage() {
     const unsub = watchLoansForTeacher(
       user.uid,
       (next) => {
-        setLoans(next);
+        // Excluye préstamos propios del maestro (usa Catálogo / Mis solicitudes).
+        setLoans(next.filter((loan) => loan.studentId !== user.uid));
         setLoading(false);
         setError(null);
       },

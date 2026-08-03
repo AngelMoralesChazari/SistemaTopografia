@@ -78,13 +78,19 @@ service cloud.firestore {
       );
 
       allow create: if signedIn()
-        && hasRole('student')
         && request.resource.data.studentId == uid()
         && request.resource.data.status == 'pending'
         && request.resource.data.labId == userDoc().labId
         && request.resource.data.keys().hasAll([
           'folio', 'labId', 'status', 'equipmentId', 'studentId', 'teacherId'
-        ]);
+        ])
+        && (
+          hasRole('student')
+          || (
+            hasRole('teacher')
+            && request.resource.data.teacherId == uid()
+          )
+        );
 
       allow update: if isLabManager()
         && resource.data.labId == userDoc().labId;
