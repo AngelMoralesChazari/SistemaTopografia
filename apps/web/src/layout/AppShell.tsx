@@ -25,6 +25,7 @@ export type WebSection =
   | 'studentRequests'
   | 'teacherStudents'
   | 'renters'
+  | 'audit'
   | 'profile';
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -36,8 +37,11 @@ type NavItem = {
   roles: UserRole[];
 };
 
+const LAB_ADMIN: UserRole[] = ['lab_manager', 'admin', 'super_admin'];
+const STAFF_ADMIN: UserRole[] = ['admin', 'super_admin'];
+
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: ['admin', 'lab_manager'] },
+  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: LAB_ADMIN },
   { id: 'dashboard', label: 'Resumen', icon: 'dashboard', roles: ['teacher'] },
   { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ['student', 'teacher', 'renter'] },
   {
@@ -56,29 +60,30 @@ const NAV_ITEMS: NavItem[] = [
     id: 'equipment',
     label: 'Catálogo de equipos',
     icon: 'inventory-2',
-    roles: ['admin', 'lab_manager'],
+    roles: LAB_ADMIN,
   },
   {
     id: 'requests',
     label: 'Solicitudes activas',
     icon: 'assignment',
-    roles: ['admin', 'lab_manager'],
+    roles: LAB_ADMIN,
   },
   {
     id: 'renters',
     label: 'Particulares',
     icon: 'handshake',
-    roles: ['admin', 'lab_manager'],
+    roles: LAB_ADMIN,
   },
-  { id: 'history', label: 'Historial', icon: 'history', roles: ['admin', 'lab_manager'] },
-  { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: ['admin', 'lab_manager'] },
-  { id: 'users', label: 'Usuarios', icon: 'group', roles: ['admin'] },
-  { id: 'settings', label: 'Configuración', icon: 'settings', roles: ['admin'] },
+  { id: 'history', label: 'Historial', icon: 'history', roles: LAB_ADMIN },
+  { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: LAB_ADMIN },
+  { id: 'users', label: 'Usuarios', icon: 'group', roles: STAFF_ADMIN },
+  { id: 'audit', label: 'Auditoría admins', icon: 'policy', roles: ['super_admin'] },
+  { id: 'settings', label: 'Configuración', icon: 'settings', roles: STAFF_ADMIN },
   {
     id: 'profile',
     label: 'Perfil',
     icon: 'person-outline',
-    roles: ['student', 'admin', 'lab_manager', 'teacher', 'renter'],
+    roles: ['student', 'admin', 'super_admin', 'lab_manager', 'teacher', 'renter'],
   },
 ];
 
@@ -91,6 +96,9 @@ export function defaultSectionForRole(role: UserRole): WebSection {
       return 'dashboard';
     case 'lab_manager':
       return 'requests';
+    case 'admin':
+    case 'super_admin':
+      return 'dashboard';
     default:
       return 'dashboard';
   }
@@ -117,7 +125,11 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
         ? 'Supervisión académica'
         : user.role === 'renter'
           ? 'Renta de equipo'
-          : 'Gestión del laboratorio';
+          : user.role === 'super_admin'
+            ? 'Superadministración'
+            : user.role === 'admin'
+              ? 'Administración'
+              : 'Gestión del laboratorio';
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>

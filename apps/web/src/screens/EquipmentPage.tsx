@@ -36,7 +36,7 @@ function statusTone(status: EquipmentStatus): BadgeTone {
 
 export function EquipmentPage() {
   const { user } = useAuth();
-  const canWrite = user?.role === 'admin' || user?.role === 'lab_manager';
+  const canWrite = user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'lab_manager';
   const [items, setItems] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

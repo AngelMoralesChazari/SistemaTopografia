@@ -10,11 +10,19 @@ import {
 } from 'react-native';
 import { theme } from '@lab-topo/config';
 import {
+  isAdminRole,
   loanStatusLabel,
   type Loan,
   type LoanStatus,
 } from '@lab-topo/domain';
-import { deliverLoan, rejectLoan, returnLoan, watchLabQueue } from '@lab-topo/services';
+import {
+  adminOverrideLoanStatus,
+  deliverLoan,
+  rejectLoan,
+  returnLoan,
+  watchLabQueue,
+  writeAuditLog,
+} from '@lab-topo/services';
 import { Badge, Button, Notice, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 
@@ -57,7 +65,9 @@ function formatDate(value: string | null): string {
 
 export function RequestsPage() {
   const { user } = useAuth();
-  const canManage = user?.role === 'admin' || user?.role === 'lab_manager';
+  const canManage =
+    !!user && (isAdminRole(user.role) || user.role === 'lab_manager');
+  const canOverride = !!user && isAdminRole(user.role);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +123,35 @@ export function RequestsPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const runManagedAction = async (
+    action: () => Promise<void>,
+    okMessage: string,
+    audit?: { action: string; summary: string; before?: string; after?: string }
+  ) => {
+    await runAction(async () => {
+      await action();
+      if (user && isAdminRole(user.role) && audit) {
+        try {
+          await writeAuditLog({
+            labId: user.labId,
+            actorId: user.uid,
+            actorEmail: user.email,
+            actorName: user.displayName,
+            actorRole: user.role,
+            action: audit.action,
+            targetType: 'loan',
+            targetId: selected?.id ?? '',
+            summary: audit.summary,
+            before: audit.before ?? null,
+            after: audit.after ?? null,
+          });
+        } catch {
+          // no bloquea la acción principal
+        }
+      }
+    }, okMessage);
   };
 
   return (
@@ -220,9 +259,15 @@ export function RequestsPage() {
                       fullWidth={false}
                       style={{ flex: 1 }}
                       onPress={() =>
-                        runAction(
+                        runManagedAction(
                           () => deliverLoan(selected.id, user!.uid, dueDate),
-                          'Equipo entregado correctamente.'
+                          'Equipo entregado correctamente.',
+                          {
+                            action: 'loan.deliver',
+                            summary: `Entregó #${selected.folio}`,
+                            before: selected.status,
+                            after: 'delivered',
+                          }
                         )
                       }
                     />
@@ -234,9 +279,15 @@ export function RequestsPage() {
                         fullWidth={false}
                         style={{ flex: 1 }}
                         onPress={() =>
-                          runAction(
+                          runManagedAction(
                             () => rejectLoan(selected.id, user!.uid, 'Rechazada desde web'),
-                            'Solicitud rechazada.'
+                            'Solicitud rechazada.',
+                            {
+                              action: 'loan.reject',
+                              summary: `Rechazó #${selected.folio}`,
+                              before: 'pending',
+                              after: 'rejected',
+                            }
                           )
                         }
                       />
@@ -254,12 +305,102 @@ export function RequestsPage() {
                       const late = selected.dueAt
                         ? new Date(selected.dueAt).getTime() < Date.now()
                         : false;
-                      return runAction(
+                      return runManagedAction(
                         () => returnLoan(selected.id, user!.uid, { late }),
-                        late ? 'Devuelto con retraso.' : 'Devolución registrada.'
+                        late ? 'Devuelto con retraso.' : 'Devolución registrada.',
+                        {
+                          action: 'loan.return',
+                          summary: `Devolvió #${selected.folio}`,
+                          before: 'delivered',
+                          after: late ? 'returned_late' : 'returned',
+                        }
                       );
                     }}
                   />
+                </View>
+              ) : null}
+
+              {canOverride &&
+              (selected.status === 'pending' ||
+                selected.status === 'approved' ||
+                selected.status === 'rejected') ? (
+                <View style={styles.actions}>
+                  <Text style={styles.fieldLabel}>Corrección administrativa</Text>
+                  <Text style={styles.overrideHint}>
+                    Puedes modificar una decisión del encargado (aceptar, rechazar o reabrir).
+                  </Text>
+                  <View style={styles.actionRow}>
+                    {selected.status !== 'approved' ? (
+                      <Button
+                        title="Marcar aprobada"
+                        loading={busy}
+                        fullWidth={false}
+                        style={{ flex: 1 }}
+                        onPress={() =>
+                          runAction(
+                            () =>
+                              adminOverrideLoanStatus(selected.id, 'approved', {
+                                uid: user!.uid,
+                                email: user!.email,
+                                displayName: user!.displayName,
+                                role: user!.role,
+                                labId: user!.labId,
+                              }),
+                            'Solicitud marcada como aprobada.'
+                          )
+                        }
+                      />
+                    ) : null}
+                    {selected.status !== 'rejected' ? (
+                      <Button
+                        title="Marcar rechazada"
+                        variant="danger"
+                        loading={busy}
+                        fullWidth={false}
+                        style={{ flex: 1 }}
+                        onPress={() =>
+                          runAction(
+                            () =>
+                              adminOverrideLoanStatus(
+                                selected.id,
+                                'rejected',
+                                {
+                                  uid: user!.uid,
+                                  email: user!.email,
+                                  displayName: user!.displayName,
+                                  role: user!.role,
+                                  labId: user!.labId,
+                                },
+                                'Rechazo administrativo'
+                              ),
+                            'Solicitud marcada como rechazada.'
+                          )
+                        }
+                      />
+                    ) : null}
+                    {selected.status !== 'pending' ? (
+                      <Button
+                        title="Reabrir (pendiente)"
+                        variant="secondary"
+                        loading={busy}
+                        fullWidth={false}
+                        style={{ flex: 1 }}
+                        onPress={() =>
+                          runAction(
+                            () =>
+                              adminOverrideLoanStatus(selected.id, 'pending', {
+                                uid: user!.uid,
+                                email: user!.email,
+                                displayName: user!.displayName,
+                                role: user!.role,
+                                labId: user!.labId,
+                              }),
+                            'Solicitud reabierta en pendiente.'
+                          )
+                        }
+                      />
+                    ) : null}
+                  </View>
                 </View>
               ) : null}
             </>
@@ -386,5 +527,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontSize: theme.font.size.md,
   },
-  actionRow: { flexDirection: 'row', gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  overrideHint: {
+    color: theme.color.muted,
+    fontSize: theme.font.size.sm,
+    marginBottom: 8,
+  },
 });

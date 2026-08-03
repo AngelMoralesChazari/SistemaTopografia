@@ -1,9 +1,14 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
+import { isAdminRole } from '@lab-topo/domain';
 import { useAuth } from '../auth/AuthContext';
 import type { WebSection } from '../layout/AppShell';
+import { AdminAuditPage } from './AdminAuditPage';
+import { AdminDashboardPage } from './AdminDashboardPage';
 import { EquipmentPage } from './EquipmentPage';
+import { HistoryPage } from './HistoryPage';
+import { MetricsPage } from './MetricsPage';
 import { ProfilePage } from './ProfilePage';
 import { RequestsPage } from './RequestsPage';
 import { RentersPage } from './RentersPage';
@@ -11,44 +16,10 @@ import { StudentCatalogPage } from './StudentCatalogPage';
 import { StudentRequestsPage } from './StudentRequestsPage';
 import { TeacherDashboardPage } from './TeacherDashboardPage';
 import { TeacherStudentsPage } from './TeacherStudentsPage';
+import { UsersPage } from './UsersPage';
 
 type DashboardHomeProps = {
   section: WebSection;
-};
-
-const SECTION_COPY: Record<
-  Exclude<
-    WebSection,
-    | 'equipment'
-    | 'requests'
-    | 'catalog'
-    | 'studentRequests'
-    | 'teacherStudents'
-    | 'renters'
-    | 'profile'
-  >,
-  { title: string; description: string }
-> = {
-  dashboard: {
-    title: 'Inventario del laboratorio',
-    description: 'Control de equipos, préstamos y devoluciones.',
-  },
-  history: {
-    title: 'Historial',
-    description: 'Movimientos auditables del laboratorio.',
-  },
-  metrics: {
-    title: 'Métricas',
-    description: 'Indicadores operativos del laboratorio.',
-  },
-  users: {
-    title: 'Usuarios',
-    description: 'Administración de cuentas y roles.',
-  },
-  settings: {
-    title: 'Configuración',
-    description: 'Políticas del laboratorio y parámetros del sistema.',
-  },
 };
 
 export function SectionPage({ section }: DashboardHomeProps) {
@@ -61,43 +32,44 @@ export function SectionPage({ section }: DashboardHomeProps) {
   if (section === 'studentRequests') return <StudentRequestsPage />;
   if (section === 'teacherStudents') return <TeacherStudentsPage />;
   if (section === 'profile') return <ProfilePage />;
+  if (section === 'history') return <HistoryPage />;
+  if (section === 'metrics') return <MetricsPage />;
+  if (section === 'users') return <UsersPage />;
+  if (section === 'audit') return <AdminAuditPage />;
   if (section === 'dashboard' && user?.role === 'teacher') {
     return <TeacherDashboardPage />;
   }
-
-  const copy = SECTION_COPY[section];
+  if (section === 'dashboard' && user && isAdminRole(user.role)) {
+    return <AdminDashboardPage />;
+  }
+  if (section === 'dashboard') {
+    return (
+      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Inventario del laboratorio</Text>
+          <Text style={styles.subtitle}>Usa el menú para solicitudes, catálogo e historial.</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Panel del encargado</Text>
+          <Text style={styles.cardBody}>
+            Revisa solicitudes activas, gestiona el catálogo y aprueba particulares desde el menú
+            lateral.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>{copy.title}</Text>
-        <Text style={styles.subtitle}>{copy.description}</Text>
+        <Text style={styles.title}>Configuración</Text>
+        <Text style={styles.subtitle}>Políticas del laboratorio y parámetros del sistema.</Text>
       </View>
-
-      {section === 'dashboard' ? (
-        <View style={styles.kpis}>
-          {[
-            { label: 'Solicitudes pendientes', value: '—', alert: false },
-            { label: 'Equipos en préstamo', value: '—', alert: false },
-            { label: 'Devoluciones hoy', value: '—', alert: false },
-            { label: 'Alertas por retraso', value: '—', alert: true },
-          ].map((kpi) => (
-            <View key={kpi.label} style={[styles.kpi, kpi.alert && styles.kpiAlert]}>
-              <Text style={[styles.kpiLabel, kpi.alert && styles.kpiLabelAlert]}>{kpi.label}</Text>
-              <Text style={[styles.kpiValue, kpi.alert && styles.kpiValueAlert]}>{kpi.value}</Text>
-              <Text style={[styles.kpiTrend, kpi.alert && styles.kpiTrendAlert]}>
-                Módulo de préstamos pendiente
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Módulo en construcción</Text>
         <Text style={styles.cardBody}>
-          Esta sección se implementará en el siguiente módulo. El catálogo de equipos ya está
-          disponible en el menú lateral.
+          La configuración avanzada del laboratorio se completará en un siguiente paso.
         </Text>
       </View>
     </ScrollView>
@@ -105,74 +77,16 @@ export function SectionPage({ section }: DashboardHomeProps) {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: theme.color.canvas,
-  },
-  content: {
-    padding: 32,
-    paddingBottom: 48,
-  },
-  header: {
-    marginBottom: 24,
-  },
+  root: { flex: 1, backgroundColor: theme.color.canvas },
+  content: { padding: 32, paddingBottom: 48 },
+  header: { marginBottom: 24 },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
   },
-  subtitle: {
-    marginTop: 8,
-    color: theme.color.muted,
-    fontSize: theme.font.size.md,
-  },
-  kpis: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginBottom: 24,
-  },
-  kpi: {
-    flexGrow: 1,
-    flexBasis: 180,
-    minHeight: 120,
-    padding: 18,
-    backgroundColor: theme.color.surface,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    borderRadius: theme.radius.lg,
-    ...theme.shadow.soft,
-  },
-  kpiAlert: {
-    backgroundColor: theme.color.red,
-    borderColor: theme.color.red,
-  },
-  kpiLabel: {
-    color: theme.color.muted,
-    fontSize: theme.font.size.sm,
-  },
-  kpiLabelAlert: {
-    color: '#FFE2E7',
-  },
-  kpiValue: {
-    marginTop: 14,
-    color: theme.color.navy,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  kpiValueAlert: {
-    color: '#fff',
-  },
-  kpiTrend: {
-    marginTop: 6,
-    color: theme.color.success,
-    fontSize: theme.font.size.sm,
-  },
-  kpiTrendAlert: {
-    color: '#FFD5DC',
-  },
+  subtitle: { marginTop: 8, color: theme.color.muted, fontSize: theme.font.size.md },
   card: {
     backgroundColor: theme.color.surface,
     borderWidth: 1,
@@ -187,9 +101,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
   },
-  cardBody: {
-    color: theme.color.muted,
-    fontSize: theme.font.size.md,
-    lineHeight: 22,
-  },
+  cardBody: { color: theme.color.muted, fontSize: theme.font.size.md, lineHeight: 22 },
 });
