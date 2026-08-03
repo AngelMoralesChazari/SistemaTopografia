@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import { isAdminRole, type Equipment, type Loan, type LoanType } from '@lab-topo/domain';
 import { watchEquipment, watchLabLoans } from '@lab-topo/services';
 import { Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { BarChart, StackedBar } from '../components/BarChart';
+import { FilterChips } from '../components/FilterChips';
 
 type Period = '7d' | '30d' | '90d' | 'all';
 type TypeFilter = 'all' | LoanType;
@@ -81,64 +83,6 @@ export function MetricsPage() {
     });
   }, [loans, period, typeFilter]);
 
-  const mostRequested = useMemo(() => {
-    const map = new Map<string, { name: string; code: string; count: number }>();
-    for (const loan of scopedLoans) {
-      const cur = map.get(loan.equipmentId) ?? {
-        name: loan.equipmentName,
-        code: loan.equipmentCode,
-        count: 0,
-      };
-      cur.count += 1;
-      map.set(loan.equipmentId, cur);
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 8);
-  }, [scopedLoans]);
-
-  const scarce = useMemo(() => {
-    return equipment
-      .filter((e) => e.active !== false)
-      .map((e) => {
-        const total = Math.max(1, e.qtyTotal || 1);
-        const pressure = 1 - e.qtyAvailable / total;
-        return {
-          name: e.name,
-          code: e.internalCode,
-          available: e.qtyAvailable,
-          total: e.qtyTotal,
-          pressure,
-        };
-      })
-      .sort((a, b) => b.pressure - a.pressure || a.available - b.available)
-      .slice(0, 8);
-  }, [equipment]);
-
-  const deliveryTimes = useMemo(() => {
-    const map = new Map<string, { name: string; code: string; hours: number[]; }>();
-    for (const loan of scopedLoans) {
-      const h = hoursBetween(loan.requestedAt, loan.deliveredAt);
-      if (h == null) continue;
-      const cur = map.get(loan.equipmentId) ?? {
-        name: loan.equipmentName,
-        code: loan.equipmentCode,
-        hours: [] as number[],
-      };
-      cur.hours.push(h);
-      map.set(loan.equipmentId, cur);
-    }
-    return [...map.values()]
-      .map((row) => ({
-        name: row.name,
-        code: row.code,
-        avgHours: row.hours.reduce((a, b) => a + b, 0) / row.hours.length,
-        samples: row.hours.length,
-      }))
-      .sort((a, b) => b.avgHours - a.avgHours);
-  }, [scopedLoans]);
-
-  const slowest = deliveryTimes.slice(0, 5);
-  const fastest = [...deliveryTimes].sort((a, b) => a.avgHours - b.avgHours).slice(0, 5);
-
   const overview = useMemo(() => {
     const pending = scopedLoans.filter((l) => l.status === 'pending').length;
     const delivered = scopedLoans.filter((l) => l.status === 'delivered').length;
@@ -150,172 +94,151 @@ export function MetricsPage() {
     return { total: scopedLoans.length, pending, delivered, returned, rejected, late };
   }, [scopedLoans]);
 
+  const mostRequested = useMemo(() => {
+    const map = new Map<string, { label: string; sublabel: string; value: number }>();
+    for (const loan of scopedLoans) {
+      const cur = map.get(loan.equipmentId) ?? {
+        label: loan.equipmentName,
+        sublabel: loan.equipmentCode,
+        value: 0,
+      };
+      cur.value += 1;
+      map.set(loan.equipmentId, cur);
+    }
+    return [...map.entries()]
+      .map(([id, row]) => ({ id, ...row, color: theme.color.navy }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [scopedLoans]);
+
+  const scarce = useMemo(() => {
+    return equipment
+      .filter((e) => e.active !== false)
+      .map((e) => {
+        const total = Math.max(1, e.qtyTotal || 1);
+        const used = total - e.qtyAvailable;
+        return {
+          id: e.id,
+          label: e.name,
+          sublabel: `${e.internalCode} · ${e.qtyAvailable}/${e.qtyTotal} disp.`,
+          value: used / total,
+          display: Math.round((used / total) * 100),
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8)
+      .map((row) => ({
+        id: row.id,
+        label: row.label,
+        sublabel: row.sublabel,
+        value: row.display,
+        color: '#A76A00',
+      }));
+  }, [equipment]);
+
+  const deliveryTimes = useMemo(() => {
+    const map = new Map<string, { name: string; code: string; hours: number[] }>();
+    for (const loan of scopedLoans) {
+      const h = hoursBetween(loan.requestedAt, loan.deliveredAt);
+      if (h == null) continue;
+      const cur = map.get(loan.equipmentId) ?? {
+        name: loan.equipmentName,
+        code: loan.equipmentCode,
+        hours: [] as number[],
+      };
+      cur.hours.push(h);
+      map.set(loan.equipmentId, cur);
+    }
+    return [...map.entries()].map(([id, row]) => ({
+      id,
+      label: row.name,
+      sublabel: `${row.code} · ${row.hours.length} casos`,
+      value: row.hours.reduce((a, b) => a + b, 0) / row.hours.length,
+    }));
+  }, [scopedLoans]);
+
+  const slowest = [...deliveryTimes].sort((a, b) => b.value - a.value).slice(0, 6);
+  const fastest = [...deliveryTimes].sort((a, b) => a.value - b.value).slice(0, 6);
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Métricas del laboratorio</Text>
       <Text style={styles.subtitle}>
-        Demanda, escasez y tiempos de atención. Filtra por periodo y tipo de préstamo.
+        Demanda, escasez y tiempos de atención — con gráficas filtrables.
       </Text>
 
-      <View style={styles.filters}>
-        {(
-          [
-            ['7d', '7 días'],
-            ['30d', '30 días'],
-            ['90d', '90 días'],
-            ['all', 'Todo'],
-          ] as const
-        ).map(([id, label]) => (
-          <Pressable
-            key={id}
-            onPress={() => setPeriod(id)}
-            style={[styles.chip, period === id && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, period === id && styles.chipTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <View style={styles.filters}>
-        {(
-          [
-            ['all', 'Todos'],
-            ['academic', 'Académico'],
-            ['rental', 'Renta'],
-          ] as const
-        ).map(([id, label]) => (
-          <Pressable
-            key={id}
-            onPress={() => setTypeFilter(id)}
-            style={[styles.chip, typeFilter === id && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, typeFilter === id && styles.chipTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <FilterChips
+        label="Periodo"
+        value={period}
+        onChange={setPeriod}
+        options={[
+          { id: '7d', label: '7 días' },
+          { id: '30d', label: '30 días' },
+          { id: '90d', label: '90 días' },
+          { id: 'all', label: 'Todo' },
+        ]}
+      />
+      <FilterChips
+        label="Tipo de préstamo"
+        value={typeFilter}
+        onChange={setTypeFilter}
+        options={[
+          { id: 'all', label: 'Todos' },
+          { id: 'academic', label: 'Académico' },
+          { id: 'rental', label: 'Renta' },
+        ]}
+      />
 
       {error ? <Notice tone="danger" title={error} /> : null}
       {loading ? (
         <ActivityIndicator color={theme.color.navy} style={{ marginTop: 24 }} />
       ) : (
         <>
-          <View style={styles.kpis}>
-            {[
-              ['Solicitudes', overview.total],
-              ['Pendientes', overview.pending],
-              ['En préstamo', overview.delivered],
-              ['Devueltos', overview.returned],
-              ['Rechazados', overview.rejected],
-              ['Con retraso', overview.late],
-            ].map(([label, value]) => (
-              <View key={label as string} style={styles.kpi}>
-                <Text style={styles.kpiLabel}>{label}</Text>
-                <Text style={styles.kpiValue}>{value}</Text>
-              </View>
-            ))}
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Volumen del periodo · {overview.total} solicitudes</Text>
+            <StackedBar
+              segments={[
+                { id: 'pending', label: 'Pendientes', value: overview.pending, color: '#E8A317' },
+                { id: 'delivered', label: 'En préstamo', value: overview.delivered, color: '#7463BD' },
+                { id: 'returned', label: 'Devueltos', value: overview.returned, color: '#16855B' },
+                { id: 'rejected', label: 'Rechazados', value: overview.rejected, color: '#D90429' },
+                { id: 'late', label: 'Con retraso', value: overview.late, color: '#19315F' },
+              ]}
+            />
           </View>
 
-          <Section title="Material más pedido">
-            {mostRequested.length === 0 ? (
-              <Text style={styles.empty}>Sin datos en el periodo.</Text>
-            ) : (
-              mostRequested.map((row, i) => (
-                <RankRow
-                  key={`${row.code}-${i}`}
-                  rank={i + 1}
-                  title={row.name}
-                  subtitle={row.code}
-                  value={`${row.count} sol.`}
-                />
-              ))
-            )}
-          </Section>
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Material más pedido</Text>
+            <BarChart data={mostRequested} unit="sol." emptyText="Sin solicitudes en el periodo." />
+          </View>
 
-          <Section title="Material que más escasea">
-            <Text style={styles.hint}>Según existencias actuales (disponible / total).</Text>
-            {scarce.map((row, i) => (
-              <RankRow
-                key={`${row.code}-${i}`}
-                rank={i + 1}
-                title={row.name}
-                subtitle={row.code}
-                value={`${row.available}/${row.total} disp.`}
-              />
-            ))}
-          </Section>
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Material que más escasea</Text>
+            <Text style={styles.hint}>Porcentaje de stock ocupado (no disponible).</Text>
+            <BarChart data={scarce} unit="%" emptyText="Sin equipos en inventario." />
+          </View>
 
-          <Section title="Tardan más en entregar">
-            <Text style={styles.hint}>Promedio horas entre solicitud y entrega.</Text>
-            {slowest.length === 0 ? (
-              <Text style={styles.empty}>Aún no hay entregas con tiempo medible.</Text>
-            ) : (
-              slowest.map((row, i) => (
-                <RankRow
-                  key={`slow-${row.code}-${i}`}
-                  rank={i + 1}
-                  title={row.name}
-                  subtitle={`${row.code} · ${row.samples} casos`}
-                  value={`${row.avgHours.toFixed(1)} h`}
-                />
-              ))
-            )}
-          </Section>
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Tardan más en entregar</Text>
+            <Text style={styles.hint}>Promedio de horas entre solicitud y entrega.</Text>
+            <BarChart
+              data={slowest.map((r) => ({ ...r, color: '#D90429' }))}
+              unit="h"
+              emptyText="Aún no hay entregas con tiempo medible."
+            />
+          </View>
 
-          <Section title="Se entregan más rápido">
-            {fastest.length === 0 ? (
-              <Text style={styles.empty}>Aún no hay entregas con tiempo medible.</Text>
-            ) : (
-              fastest.map((row, i) => (
-                <RankRow
-                  key={`fast-${row.code}-${i}`}
-                  rank={i + 1}
-                  title={row.name}
-                  subtitle={`${row.code} · ${row.samples} casos`}
-                  value={`${row.avgHours.toFixed(1)} h`}
-                />
-              ))
-            )}
-          </Section>
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Se entregan más rápido</Text>
+            <BarChart
+              data={fastest.map((r) => ({ ...r, color: '#16855B' }))}
+              unit="h"
+              emptyText="Aún no hay entregas con tiempo medible."
+            />
+          </View>
         </>
       )}
     </ScrollView>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function RankRow({
-  rank,
-  title,
-  subtitle,
-  value,
-}: {
-  rank: number;
-  title: string;
-  subtitle: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.rankRow}>
-      <View style={styles.rankBadge}>
-        <Text style={styles.rankNum}>{rank}</Text>
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.rankTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={styles.rankSub} numberOfLines={1}>
-          {subtitle}
-        </Text>
-      </View>
-      <Text style={styles.rankValue}>{value}</Text>
-    </View>
   );
 }
 
@@ -329,68 +252,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   subtitle: { marginTop: 8, marginBottom: 16, color: theme.color.muted, fontSize: theme.font.size.md },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    backgroundColor: theme.color.surface,
-  },
-  chipActive: { backgroundColor: theme.color.infoSoft, borderColor: theme.color.navy },
-  chipText: { color: theme.color.muted, fontWeight: '700', fontSize: 12 },
-  chipTextActive: { color: theme.color.navy },
-  kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginVertical: 16 },
-  kpi: {
-    flexGrow: 1,
-    flexBasis: 120,
-    minHeight: 88,
-    padding: 14,
+  panel: {
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
-    ...theme.shadow.soft,
-  },
-  kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
-  kpiValue: { marginTop: 10, color: theme.color.navy, fontSize: 26, fontWeight: '800' },
-  section: {
-    marginTop: 10,
-    marginBottom: 18,
     padding: 16,
-    backgroundColor: theme.color.surface,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    borderRadius: theme.radius.lg,
+    marginBottom: 14,
     ...theme.shadow.soft,
   },
-  sectionTitle: {
+  panelTitle: {
     color: theme.color.navy,
     fontSize: theme.font.size.lg,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   hint: { color: theme.color.muted, fontSize: 12, marginBottom: 10 },
-  empty: { color: theme.color.muted, fontSize: theme.font.size.md },
-  rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: theme.color.line,
-  },
-  rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: theme.color.infoSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankNum: { color: theme.color.navy, fontWeight: '800', fontSize: 12 },
-  rankTitle: { color: theme.color.ink, fontWeight: '700', fontSize: theme.font.size.md },
-  rankSub: { color: theme.color.muted, fontSize: 11, marginTop: 2 },
-  rankValue: { color: theme.color.navy, fontWeight: '800', fontSize: theme.font.size.md },
 });
