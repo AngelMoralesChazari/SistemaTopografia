@@ -150,8 +150,9 @@ const styles = StyleSheet.create({
   },
   registerAnchor: {
     marginTop: 4,
-    color: theme.color.muted,
+    color: theme.color.info,
     fontSize: theme.font.size.sm,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

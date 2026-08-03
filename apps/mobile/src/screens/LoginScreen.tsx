@@ -179,8 +179,9 @@ const styles = StyleSheet.create({
   },
   registerAnchor: {
     marginTop: 4,
-    color: theme.color.muted,
+    color: theme.color.info,
     fontSize: 12,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
