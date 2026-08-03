@@ -24,6 +24,8 @@ import { createLoanRequest, watchEquipment } from '@lab-topo/services';
 import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { AppDatePicker } from '../components/AppDatePicker';
+import { ListPagination } from '../components/ListPagination';
+import { paginate } from '../lib/pagination';
 
 const MS_24H = 24 * 60 * 60 * 1000;
 
@@ -79,6 +81,7 @@ export function StudentCatalogPage() {
   const [search, setSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -137,6 +140,16 @@ export function StudentCatalogPage() {
       `${e.name} ${e.internalCode} ${e.brand ?? ''} ${e.model ?? ''}`.toLowerCase().includes(q)
     );
   }, [availableItems, selectedCategoryId, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategoryId, search]);
+
+  const paging = useMemo(() => paginate(categoryItems, page), [categoryItems, page]);
+
+  useEffect(() => {
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? null;
   const selectedEquipment = items.find((e) => e.id === selectedEquipmentId) ?? null;
@@ -391,7 +404,7 @@ export function StudentCatalogPage() {
               />
             ) : (
               <View style={styles.list}>
-                {categoryItems.map((item) => (
+                {paging.pageItems.map((item) => (
                   <MaterialCard
                     key={item.id}
                     equipment={item}
@@ -399,6 +412,15 @@ export function StudentCatalogPage() {
                     onPress={() => setSelectedEquipmentId(item.id)}
                   />
                 ))}
+                <ListPagination
+                  page={paging.page}
+                  totalPages={paging.totalPages}
+                  from={paging.from}
+                  to={paging.to}
+                  total={paging.total}
+                  pageNumbers={paging.pageNumbers}
+                  onChange={setPage}
+                />
               </View>
             )}
 
