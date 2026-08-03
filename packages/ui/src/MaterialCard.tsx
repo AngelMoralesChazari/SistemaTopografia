@@ -92,7 +92,8 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderColor: theme.color.navy,
-    backgroundColor: '#F7FAFD',
+    borderWidth: 1.5,
+    backgroundColor: theme.color.infoSoft,
   },
   pressed: {
     opacity: 0.85,
