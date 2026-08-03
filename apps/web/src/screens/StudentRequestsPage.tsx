@@ -18,8 +18,8 @@ import {
 import { watchLoansForStudent } from '@lab-topo/services';
 import { Avatar, Badge, Notice, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
-
-const PAGE_SIZE = 10;
+import { ListPagination } from '../components/ListPagination';
+import { DEFAULT_PAGE_SIZE, paginate } from '../lib/pagination';
 
 type RequestTab = 'pending' | 'delivered' | 'returned' | 'rejected';
 type TableColumn = 'folio' | 'equip' | 'teacher' | 'requested' | 'due' | 'status';
@@ -122,17 +122,6 @@ function formatDateTime(value: string | null): string {
   });
 }
 
-function buildPageWindow(current: number, total: number): number[] {
-  if (total <= 10) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-  const half = 4;
-  let start = Math.max(1, current - half);
-  let end = Math.min(total, start + 9);
-  start = Math.max(1, end - 9);
-  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-}
-
 export function StudentRequestsPage() {
   const { user } = useAuth();
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -180,25 +169,20 @@ export function StudentRequestsPage() {
     [loans, tab]
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
   useEffect(() => {
     setPage(1);
     setSelectedId(null);
     setActiveColumn(null);
   }, [tab]);
 
+  const paging = useMemo(() => paginate(filtered, page), [filtered, page]);
+
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    if (page !== paging.page) setPage(paging.page);
+  }, [page, paging.page]);
 
-  const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
-
+  const pageItems = paging.pageItems;
   const selected = filtered.find((l) => l.id === selectedId) ?? null;
-  const pageNumbers = buildPageWindow(page, totalPages);
   const accent = TAB_COLORS[tab];
 
   const colStyle = (id: TableColumn) => {
@@ -224,7 +208,7 @@ export function StudentRequestsPage() {
           <Text style={styles.eyebrow}>Mis movimientos</Text>
           <Text style={styles.title}>Solicitudes</Text>
           <Text style={styles.subtitle}>
-            Revisa tus pedidos por estado. Se muestran {PAGE_SIZE} por página.
+            Revisa tus pedidos por estado. Se muestran {DEFAULT_PAGE_SIZE} por página.
           </Text>
         </View>
         <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={40} />
@@ -397,68 +381,15 @@ export function StudentRequestsPage() {
             ) : null}
           </View>
 
-          {filtered.length > 0 ? (
-            <View style={styles.pagination}>
-              <Text style={styles.pageInfo}>
-                {(page - 1) * PAGE_SIZE + 1}–
-                {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
-              </Text>
-
-              <View style={styles.pageControls}>
-                <Pressable
-                  onPress={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  style={[styles.pageNav, page <= 1 && styles.pageNavDisabled]}
-                >
-                  <MaterialIcons
-                    name="chevron-left"
-                    size={20}
-                    color={page <= 1 ? theme.color.muted : theme.color.info}
-                  />
-                  <Text style={[styles.pageNavText, page <= 1 && styles.pageNavTextDisabled]}>
-                    Anterior
-                  </Text>
-                </Pressable>
-
-                <View style={styles.pageNumbers}>
-                  {pageNumbers.map((num) => {
-                    const active = num === page;
-                    return (
-                      <Pressable
-                        key={num}
-                        onPress={() => setPage(num)}
-                        style={[styles.pageNum, active && styles.pageNumActive]}
-                      >
-                        <Text style={[styles.pageNumText, active && styles.pageNumTextActive]}>
-                          {num}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <Pressable
-                  onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  style={[styles.pageNav, page >= totalPages && styles.pageNavDisabled]}
-                >
-                  <Text
-                    style={[
-                      styles.pageNavText,
-                      page >= totalPages && styles.pageNavTextDisabled,
-                    ]}
-                  >
-                    Siguiente
-                  </Text>
-                  <MaterialIcons
-                    name="chevron-right"
-                    size={20}
-                    color={page >= totalPages ? theme.color.muted : theme.color.info}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
+          <ListPagination
+            page={paging.page}
+            totalPages={paging.totalPages}
+            from={paging.from}
+            to={paging.to}
+            total={paging.total}
+            pageNumbers={paging.pageNumbers}
+            onChange={setPage}
+          />
         </>
       ) : null}
     </ScrollView>
