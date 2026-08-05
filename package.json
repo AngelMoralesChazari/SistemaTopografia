@@ -13,6 +13,7 @@
     "mobile:ios": "npm run ios --workspace=@lab-topo/mobile",
     "web": "npm run start --workspace=@lab-topo/web",
     "web:browser": "npm run web --workspace=@lab-topo/web",
+    "build": "npm run build --workspace=@lab-topo/web",
     "seed:users": "node scripts/seed-users.mjs",
     "seed:equipment": "node scripts/seed-equipment.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present"
