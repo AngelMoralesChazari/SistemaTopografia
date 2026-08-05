@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm run build --workspace=@lab-topo/web",
+  "outputDirectory": "apps/web/dist",
+  "framework": "expo"
+}
