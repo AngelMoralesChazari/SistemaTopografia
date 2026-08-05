@@ -62,7 +62,7 @@ export function assertPermission(role: UserRole, permission: Permission): void {
   }
 }
 
-/** Transiciones válidas de préstamo (máquina de estados Fase 3). */
+/** Transiciones válidas de préstamo */
 const LOAN_TRANSITIONS: Record<LoanStatus, LoanStatus[]> = {
   pending: ['approved', 'rejected', 'cancelled'],
   approved: ['delivered', 'cancelled', 'rejected', 'pending'],
