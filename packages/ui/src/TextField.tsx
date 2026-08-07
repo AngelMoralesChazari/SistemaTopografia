@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -8,6 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 
 type TextFieldProps = TextInputProps & {
@@ -23,16 +25,36 @@ export function TextField({
   error,
   containerStyle,
   style,
+  secureTextEntry,
   ...rest
 }: TextFieldProps) {
+  const [isSecure, setIsSecure] = useState(secureTextEntry);
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <TextInput
-        placeholderTextColor={theme.color.muted}
-        style={[styles.input, error ? styles.inputError : null, style]}
-        {...rest}
-      />
+      <View style={[styles.inputContainer, error ? styles.inputError : null]}>
+        <TextInput
+          placeholderTextColor={theme.color.muted}
+          style={[styles.input, style]}
+          secureTextEntry={isSecure}
+          {...rest}
+        />
+        {secureTextEntry ? (
+          <Pressable
+            onPress={() => setIsSecure(!isSecure)}
+            style={styles.eyeBtn}
+            accessibilityRole="button"
+            accessibilityLabel={isSecure ? "Mostrar contraseña" : "Ocultar contraseña"}
+          >
+            <MaterialIcons
+              name={isSecure ? 'visibility' : 'visibility-off'}
+              size={20}
+              color={theme.color.muted}
+            />
+          </Pressable>
+        ) : null}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!error && helperText ? <Text style={styles.helper}>{helperText}</Text> : null}
     </View>
@@ -49,18 +71,29 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.sm,
     fontWeight: '800',
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 48,
-    paddingHorizontal: 12,
-    color: theme.color.ink,
-    backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.md,
+    backgroundColor: theme.color.surface,
+  },
+  input: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 12,
+    color: theme.color.ink,
     fontSize: theme.font.size.md,
   },
   inputError: {
     borderColor: theme.color.red,
+  },
+  eyeBtn: {
+    paddingHorizontal: 12,
+    height: '100%',
+    justifyContent: 'center',
   },
   helper: {
     marginTop: 6,
