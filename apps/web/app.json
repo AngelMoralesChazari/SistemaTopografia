@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "web": {
-      "favicon": "./images/logo-uagro.png",
+      "favicon": "./assets/logo-uagro-copy.png",
       "bundler": "metro"
     }
   }
