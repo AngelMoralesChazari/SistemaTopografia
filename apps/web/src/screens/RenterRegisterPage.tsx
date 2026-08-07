@@ -9,6 +9,9 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import { registerRenter } from '@lab-topo/services';
 import { Button, Notice, TextField } from '@lab-topo/ui';
@@ -82,12 +85,24 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <StatusBar style="light" />
+      <LinearGradient
+        colors={[theme.color.navy, theme.color.navy2, theme.color.navyHover]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.card, { width: cardWidth }]}>
+          <Pressable onPress={onBack} style={styles.backButtonTop} disabled={loading}>
+            <MaterialIcons name="arrow-back" size={20} color={theme.color.navy} />
+            <Text style={styles.backButtonText}>Volver</Text>
+          </Pressable>
+
           <Text style={styles.eyebrow}>Renta a particulares</Text>
           <Text style={styles.title}>Registro de renta</Text>
           <Text style={styles.subtitle}>
@@ -108,7 +123,7 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
             label="Nombre completo"
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="Nombre y apellidos"
+            placeholder="Nombre completo"
           />
           <TextField
             label="Correo"
@@ -164,10 +179,6 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
             disabled={!canSubmit || loading}
             onPress={onSubmit}
           />
-
-          <Pressable onPress={onBack} style={styles.backLink} disabled={loading}>
-            <Text style={styles.backText}>Ya tengo cuenta · Iniciar sesión</Text>
-          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -177,7 +188,7 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: theme.color.canvas,
+    backgroundColor: theme.color.navy,
   },
   scroll: {
     flexGrow: 1,
@@ -214,14 +225,21 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.md,
     lineHeight: 22,
   },
-  backLink: {
-    marginTop: 16,
+  backButtonTop: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: -8,
+    marginLeft: -4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: theme.radius.md,
   },
-  backText: {
+  backButtonText: {
     color: theme.color.navy,
-    fontWeight: '700',
     fontSize: theme.font.size.md,
+    fontWeight: '700',
+    marginLeft: 6,
   },
 });
