@@ -131,7 +131,7 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
           {error ? <Notice tone="danger" title={error} /> : null}
 
           <TextField
-            label="Nombre completo"
+            label="Nombre"
             value={displayName}
             onChangeText={setDisplayName}
             placeholder="Nombre completo"
@@ -157,6 +157,7 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
             value={phone}
             onChangeText={setPhone}
             placeholder="747 123 4567"
+            maxLength={10}
           />
           <TextField
             label="Empresa / institución"
@@ -167,15 +168,17 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
           <TextField
             label="INE / identificación"
             value={ine}
-            onChangeText={setIne}
+            onChangeText={(val) => setIne(val.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
             placeholder="Número o folio de INE"
+            maxLength={18}
           />
           <TextField
             label="RFC"
             autoCapitalize="characters"
             value={rfc}
-            onChangeText={setRfc}
+            onChangeText={(val) => setRfc(val.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
             placeholder="RFC"
+            maxLength={13}
           />
           <TextField
             label="Dirección"
