@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import { registerRenter } from '@lab-topo/services';
 import { Button, Notice } from '@lab-topo/ui';
@@ -92,61 +93,78 @@ export function RenterRegisterScreen({ onBack }: Props) {
 
       <KeyboardFormShell backgroundColor="transparent">
         <View style={styles.card}>
-        <Text style={styles.eyebrow}>Renta a particulares</Text>
-        <Text style={styles.title}>Registro de renta</Text>
-        <Text style={styles.subtitle}>Completa tus datos..</Text>
+          <Pressable onPress={onBack} style={styles.backButtonTop} disabled={loading}>
+            <MaterialIcons name="arrow-back" size={20} color={theme.color.navy} />
+            <Text style={styles.backButtonText}>Volver</Text>
+          </Pressable>
 
-        {!firebaseReady ? (
-          <Notice tone="danger" title="Firebase pendiente" description={firebaseMessage} />
-        ) : null}
+          <Text style={styles.eyebrow}>Renta a particulares</Text>
+          <Text style={styles.title}>Registro de renta</Text>
+          <Text style={styles.subtitle}>Completa tu registro para rentar equipos. Validaremos tu solicitud muy pronto.</Text>
 
-        <FormTextField label="Nombre completo" value={displayName} onChangeText={setDisplayName} />
-        <FormTextField
-          label="Correo"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <FormTextField
-          label="Contraseña"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Mínimo 6 caracteres"
-        />
-        <FormTextField
-          label="Teléfono"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-        />
-        <FormTextField
-          label="Empresa / institución"
-          value={company}
-          onChangeText={setCompany}
-        />
-        <FormTextField label="INE / identificación" value={ine} onChangeText={setIne} />
-        <FormTextField
-          label="RFC"
-          autoCapitalize="characters"
-          value={rfc}
-          onChangeText={setRfc}
-        />
-        <FormTextField label="Dirección" value={address} onChangeText={setAddress} />
+          {!firebaseReady ? (
+            <Notice tone="danger" title="Firebase pendiente" description={firebaseMessage} />
+          ) : null}
 
-        {error ? <Notice tone="danger" title={error} /> : null}
+          <FormTextField label="Nombre" value={displayName} onChangeText={setDisplayName}
+            placeholder="Nombre completo"
+          />
+          <FormTextField
+            label="Correo"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Correo electronico"
+          />
+          <FormTextField
+            label="Contraseña"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Mínimo 6 caracteres"
+          />
+          <FormTextField
+            label="Teléfono"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder='747 123 4567'
+            maxLength={10}
+          />
+          <FormTextField
+            label="Empresa / institución"
+            value={company}
+            onChangeText={setCompany}
+            placeholder="Nombre de la empresa"
+          />
+          <FormTextField
+            label="INE / identificación"
+            value={ine}
+            onChangeText={(val) => setIne(val.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="Número o folio de INE"
+            maxLength={18}
+          />
+          <FormTextField
+            label="RFC"
+            autoCapitalize="characters"
+            value={rfc}
+            onChangeText={(val) => setRfc(val.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="RFC"
+            maxLength={13}
+          />
+          <FormTextField label="Dirección" value={address} onChangeText={setAddress}
+            placeholder="Calle, colonia, ciudad"
+          />
 
-        <Button
-          title="Enviar registro"
-          loading={loading}
-          disabled={!canSubmit || loading}
-          onPress={onSubmit}
-        />
+          {error ? <Notice tone="danger" title={error} /> : null}
 
-        <Pressable onPress={onBack} style={styles.backLink} disabled={loading}>
-          <Text style={styles.backText}>Ya tengo cuenta · Iniciar sesión</Text>
-        </Pressable>
+          <Button
+            title="Enviar registro"
+            loading={loading}
+            disabled={!canSubmit || loading}
+            onPress={onSubmit}
+          />
         </View>
       </KeyboardFormShell>
     </View>
@@ -190,6 +208,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  backLink: { marginTop: 16, alignItems: 'center', paddingVertical: 8 },
-  backText: { color: theme.color.navy, fontWeight: '700', fontSize: 13 },
+  backButtonTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: -8,
+    marginLeft: -4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: theme.radius.md,
+  },
+  backButtonText: {
+    color: theme.color.navy,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
 });
