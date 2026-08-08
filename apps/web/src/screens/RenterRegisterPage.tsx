@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,8 +24,9 @@ type RenterRegisterPageProps = {
 
 export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
   const { setSessionUser, firebaseReady, firebaseMessage } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const cardWidth = Math.min(480, width - 32);
+  const logoSize = Math.max(width, height) * 0.75;
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -92,6 +94,16 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
         end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
+
+      <View style={styles.bgLogoWrap} pointerEvents="none">
+        <Image
+          source={require('../../assets/logo-uagro-bg-v2.png')}
+          style={[styles.bgLogo, { width: logoSize, height: logoSize }]}
+          resizeMode="contain"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      </View>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -106,8 +118,7 @@ export function RenterRegisterPage({ onBack }: RenterRegisterPageProps) {
           <Text style={styles.eyebrow}>Renta a particulares</Text>
           <Text style={styles.title}>Registro de renta</Text>
           <Text style={styles.subtitle}>
-            Completa tus datos. El laboratorio revisará tu solicitud y, al aprobarte, podrás rentar
-            equipo con tu correo y contraseña.
+            Completa tu registro para rentar equipos. Validaremos tu solicitud muy pronto.
           </Text>
 
           {!firebaseReady ? (
@@ -241,5 +252,13 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.md,
     fontWeight: '700',
     marginLeft: 6,
+  },
+  bgLogoWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bgLogo: {
+    opacity: 0.58,
   },
 });

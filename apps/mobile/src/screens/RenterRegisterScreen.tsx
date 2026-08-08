@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { theme } from '@lab-topo/config';
 import { registerRenter } from '@lab-topo/services';
 import { Button, Notice } from '@lab-topo/ui';
@@ -11,6 +13,8 @@ type Props = { onBack: () => void };
 
 export function RenterRegisterScreen({ onBack }: Props) {
   const { setSessionUser, firebaseReady, firebaseMessage } = useAuth();
+  const { width, height } = useWindowDimensions();
+  const logoSize = Math.max(width, height) * 1.1;
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -67,8 +71,27 @@ export function RenterRegisterScreen({ onBack }: Props) {
   };
 
   return (
-    <KeyboardFormShell>
-      <View style={styles.card}>
+    <View style={styles.screen}>
+      <StatusBar style="light" />
+      <LinearGradient
+        colors={[theme.color.navy, theme.color.navy2, theme.color.navyHover]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <View style={styles.bgLogoWrap} pointerEvents="none">
+        <Image
+          source={require('../../assets/logo-uagro-bg-v2.png')}
+          style={[styles.bgLogo, { width: logoSize, height: logoSize }]}
+          resizeMode="contain"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      </View>
+
+      <KeyboardFormShell backgroundColor="transparent">
+        <View style={styles.card}>
         <Text style={styles.eyebrow}>Renta a particulares</Text>
         <Text style={styles.title}>Registro de renta</Text>
         <Text style={styles.subtitle}>Completa tus datos..</Text>
@@ -124,12 +147,25 @@ export function RenterRegisterScreen({ onBack }: Props) {
         <Pressable onPress={onBack} style={styles.backLink} disabled={loading}>
           <Text style={styles.backText}>Ya tengo cuenta · Iniciar sesión</Text>
         </Pressable>
-      </View>
-    </KeyboardFormShell>
+        </View>
+      </KeyboardFormShell>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.color.navy,
+  },
+  bgLogoWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bgLogo: {
+    opacity: 0.55,
+  },
   card: {
     backgroundColor: theme.color.surface,
     borderRadius: theme.radius.lg,
