@@ -22,7 +22,6 @@ import { createEquipment, watchEquipment } from '@lab-topo/services';
 import { Badge, Button, Notice, TextField, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { FilterChips } from '../components/FilterChips';
-import { StackedBar } from '../components/BarChart';
 import { ListPagination } from '../components/ListPagination';
 import { paginate } from '../lib/pagination';
 
@@ -190,21 +189,23 @@ export function EquipmentPage() {
         ) : null}
       </View>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Estado del inventario</Text>
-        <StackedBar
-          segments={[
-            { id: 'available', label: 'Disponibles', value: kpis.available, color: '#16855B' },
-            { id: 'loaned', label: 'En préstamo', value: kpis.loaned, color: '#7463BD' },
-            { id: 'maintenance', label: 'Mantenimiento', value: kpis.maintenance, color: '#718092' },
-            {
-              id: 'other',
-              label: 'Otros',
-              value: Math.max(0, kpis.total - kpis.available - kpis.loaned - kpis.maintenance),
-              color: '#19315F',
-            },
-          ]}
-        />
+      <View style={styles.kpis}>
+        <View style={styles.kpi}>
+          <Text style={styles.kpiLabel}>Total equipos</Text>
+          <Text style={styles.kpiValue}>{kpis.total}</Text>
+        </View>
+        <View style={styles.kpi}>
+          <Text style={styles.kpiLabel}>Disponibles</Text>
+          <Text style={styles.kpiValue}>{kpis.available}</Text>
+        </View>
+        <View style={styles.kpi}>
+          <Text style={styles.kpiLabel}>En préstamo</Text>
+          <Text style={styles.kpiValue}>{kpis.loaned}</Text>
+        </View>
+        <View style={styles.kpi}>
+          <Text style={styles.kpiLabel}>Mantenimiento</Text>
+          <Text style={styles.kpiValue}>{kpis.maintenance}</Text>
+        </View>
       </View>
 
       <View style={styles.search}>
@@ -263,7 +264,7 @@ export function EquipmentPage() {
               {filteredGroups.map((group) => (
                 <Pressable
                   key={group.id}
-                  style={styles.groupCard}
+                  style={({ pressed }) => [styles.groupCard, pressed && styles.groupCardPressed]}
                   onPress={() => {
                     setSelectedCategoryId(group.id);
                     setStatusFilter('all');
@@ -272,11 +273,17 @@ export function EquipmentPage() {
                   <View style={styles.groupMark}>
                     <Text style={styles.groupMarkText}>{group.mark}</Text>
                   </View>
-                  <Text style={styles.groupName}>{group.name}</Text>
-                  <Text style={styles.groupHint}>{group.hint}</Text>
+                  <Text style={styles.groupName} numberOfLines={2}>
+                    {group.name}
+                  </Text>
+                  <Text style={styles.groupHint} numberOfLines={2}>
+                    {group.hint}
+                  </Text>
                   <View style={styles.groupFoot}>
-                    <Text style={styles.groupCount}>{group.totalItems} ítems</Text>
                     <Text style={styles.groupAvail}>{group.availableCount} disp.</Text>
+                    <Text style={styles.groupCount}>
+                      {group.totalItems} ítem{group.totalItems === 1 ? '' : 's'}
+                    </Text>
                   </View>
                 </Pressable>
               ))}
@@ -384,20 +391,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryBtnText: { color: '#fff', fontSize: theme.font.size.md, fontWeight: '800' },
-  panel: {
+  kpis: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 18,
+  },
+  kpi: {
+    flexGrow: 1,
+    flexBasis: 140,
+    minHeight: 100,
+    padding: 16,
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
-    padding: 16,
-    marginBottom: 14,
     ...theme.shadow.soft,
   },
-  panelTitle: {
+  kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
+  kpiValue: {
     color: theme.color.navy,
+    fontSize: theme.font.size.display,
     fontWeight: '800',
-    fontSize: theme.font.size.md,
-    marginBottom: 12,
+    marginTop: 8,
   },
   search: {
     height: 48,
@@ -421,36 +437,41 @@ const styles = StyleSheet.create({
   sectionHint: { color: theme.color.muted, fontSize: theme.font.size.sm, marginBottom: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   groupCard: {
-    flexGrow: 1,
-    flexBasis: 200,
+    width: '31%',
     minWidth: 180,
-    maxWidth: 280,
-    backgroundColor: theme.color.surface,
+    flexGrow: 1,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.color.line,
-    borderRadius: theme.radius.lg,
-    padding: 16,
+    backgroundColor: theme.color.surface,
     ...theme.shadow.soft,
   },
+  groupCardPressed: { opacity: 0.9, borderColor: '#C5D8F0' },
   groupMark: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     backgroundColor: theme.color.infoSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
-  groupMarkText: { color: theme.color.navy, fontWeight: '900', fontSize: 13 },
-  groupName: { color: theme.color.navy, fontWeight: '800', fontSize: theme.font.size.lg },
-  groupHint: { marginTop: 4, color: theme.color.muted, fontSize: 12, lineHeight: 18 },
+  groupMarkText: { color: theme.color.navy, fontWeight: '800', fontSize: theme.font.size.md },
+  groupName: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.lg,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  groupHint: { color: theme.color.muted, fontSize: theme.font.size.sm, minHeight: 36 },
   groupFoot: {
-    marginTop: 14,
+    marginTop: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  groupCount: { color: theme.color.muted, fontWeight: '700', fontSize: 12 },
-  groupAvail: { color: theme.color.success, fontWeight: '800', fontSize: 12 },
+  groupAvail: { color: theme.color.success, fontSize: theme.font.size.sm, fontWeight: '800' },
+  groupCount: { color: theme.color.muted, fontSize: theme.font.size.sm },
   groupHead: {
     flexDirection: 'row',
     alignItems: 'center',

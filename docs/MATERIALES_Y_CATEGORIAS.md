@@ -55,9 +55,9 @@ Este documento contiene el catálogo completo, actualizado y oficial de **catego
 | `NIV-SOK-C410` | Nivel Fijo Óptico | SOKKIA | C410 | `934` | Unitario (`unit`) | 1 |
 | `NIV-SOK-CT3` | Nivel Fijo Óptico | SOKKIA | CT3 30 | `342371` | Unitario (`unit`) | 1 |
 | `NIV-SOK-C3` | Nivel Fijo Óptico | SOKKIA | C3 30 | `342220` | Unitario (`unit`) | 1 |
-| `NIV-SOK-B40` | Nivel Fijo Óptico (2 piezas) | SOKKIA | B40 | `120775`, `120565` | Unitario (`unit`) | 2 |
-| `NIV-LEI-RUN24` | Nivel Fijo Óptico (7 piezas) | LEICA | RUNNER 24 | `432477`, `431808`, `432702`, `432491`, `433830`, `433179`, etc. | Unitario (`unit`) | 7 |
-| `NIV-LEI-RUN25` | Nivel Fijo Óptico (2 piezas) | LEICA | RUNNER 25 | `432508`, `432084` | Unitario (`unit`) | 2 |
+| `NIV-SOK-B40` | Nivel Fijo Óptico | SOKKIA | B40 | `120775`, `120565` | Unitario (`unit`) | 2 |
+| `NIV-LEI-RUN24` | Nivel Fijo Óptico | LEICA | RUNNER 24 | `432477`, `431808`, `432702`, `432491`, `433830`, `433179`, etc. | Unitario (`unit`) | 7 |
+| `NIV-LEI-RUN25` | Nivel Fijo Óptico | LEICA | RUNNER 25 | `432508`, `432084` | Unitario (`unit`) | 2 |
 | `NIV-DW-AL8` | Nivel Fijo Óptico | DAVID WHITE | AL8-22M | `403449` | Unitario (`unit`) | 1 |
 | `NIV-GEO-ZAL` | Nivel Fijo Óptico | GEOMAX | ZAL132 | `788196` | Unitario (`unit`) | 1 |
 | `NIV-SM-4T15` | Nivel Fijo Óptico | S/M | 4T15N | `12613` | Unitario (`unit`) | 1 |
@@ -69,20 +69,20 @@ Este documento contiene el catálogo completo, actualizado y oficial de **catego
 
 | Código Interno | Material / Descripción | Marca | Modelo | Serie(s) | Control | Cant. |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: |
-| `ANG-ET-CST200` | Estación Total (5 piezas) | CST-BERGER | CST-205 / 206 / 207 | `136829`, `88936`, `90386`, `137138`, `137139` | Unitario (`unit`) | 5 |
+| `ANG-ET-CST200` | Estación Total | CST-BERGER | CST-205 / 206 / 207 | `136829`, `88936`, `90386`, `137138`, `137139` | Unitario (`unit`) | 5 |
 | `ANG-ET-CST305` | Estación Total | CST-BERGER | CST-305R | `71547` | Unitario (`unit`) | 1 |
 | `ANG-ET-SOK-CX` | Estación Total | SOKKIA | CX-S | `SUA0134` | Unitario (`unit`) | 1 |
 | `ANG-ET-SOK-610` | Estación Total | SOKKIA | SET 610 | `138756` | Unitario (`unit`) | 1 |
-| `ANG-ET-LEI-TC407`| Estación Total (2 piezas) | LEICA | TC407 | `834626`, `843343` | Unitario (`unit`) | 2 |
+| `ANG-ET-LEI-TC407`| Estación Total TC407 | LEICA | TC407 | `834626`, `843343` | Unitario (`unit`) | 2 |
 | `ANG-ET-SAN-ARG` | Estación Total | SANDING | ARG 65 | `SD45382` | Unitario (`unit`) | 1 |
-| `ANG-TEO-DW10` | Teodolito Electrónico (2 piezas) | DAVID WHITE | DWT-10 | `139733`, `120897` | Unitario (`unit`) | 2 |
-| `ANG-TEO-BER10` | Teodolito Electrónico (2 piezas) | BERGER | DGT10 | `140552`, `141463` | Unitario (`unit`) | 2 |
-| `ANG-TEO-APA2` | Teodolito Electrónico (2 piezas) | APACHE | ADT-2 | `291516`, `290732` | Unitario (`unit`) | 2 |
-| `ANG-TEO-FOIF402`| Teodolito Electrónico (3 piezas) | FOIF | DT 402 L | `28S31203`, `28S34163`, `28S29917` | Unitario (`unit`) | 3 |
+| `ANG-TEO-DW10` | Teodolito Electrónico DWT-10 | DAVID WHITE | DWT-10 | `139733`, `120897` | Unitario (`unit`) | 2 |
+| `ANG-TEO-BER10` | Teodolito Electrónico DGT10 | BERGER | DGT10 | `140552`, `141463` | Unitario (`unit`) | 2 |
+| `ANG-TEO-APA2` | Teodolito Electrónico ADT-2 | APACHE | ADT-2 | `291516`, `290732` | Unitario (`unit`) | 2 |
+| `ANG-TEO-FOIF402`| Teodolito Electrónico DT 402 L | FOIF | DT 402 L | `28S31203`, `28S34163`, `28S29917` | Unitario (`unit`) | 3 |
 | `ANG-TEO-WILD-T2`| Teodolito Óptico de Precisión | WILD HEERBRUGG | T2 | `197115` | Unitario (`unit`) | 1 |
 | `ANG-TEO-AT15N` | Teodolito Óptico | AT15N | 4T15N | `N13018` | Unitario (`unit`) | 1 |
-| `ANG-TRA-LUFT` | Tránsito Mecánico (4 piezas) | LUFT | BD-3 / BD-4 | `901139`, `901140`, `901136`, `901137` | Unitario (`unit`) | 4 |
-| `ANG-TRA-SOK116` | Tránsito Mecánico (3 piezas) | SOKKIA / SOKKISHA | 116 | `36062`, `36420`, `36435` | Unitario (`unit`) | 3 |
+| `ANG-TRA-LUFT` | Tránsito Mecánico BD-3 / BD-4 | LUFT | BD-3 / BD-4 | `901139`, `901140`, `901136`, `901137` | Unitario (`unit`) | 4 |
+| `ANG-TRA-SOK116` | Tránsito Mecánico 116 | SOKKIA / SOKKISHA | 116 | `36062`, `36420`, `36435` | Unitario (`unit`) | 3 |
 
 ---
 

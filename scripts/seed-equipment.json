@@ -267,7 +267,7 @@
   },
   {
     "internalCode": "NIV-SOK-B40",
-    "name": "Nivel Fijo Óptico (2 piezas)",
+    "name": "Nivel Fijo Óptico",
     "model": "B40",
     "brand": "SOKKIA",
     "serialNumber": "120775, 120565",
@@ -281,7 +281,7 @@
   },
   {
     "internalCode": "NIV-LEI-RUN24",
-    "name": "Nivel Fijo Óptico (7 piezas)",
+    "name": "Nivel Fijo Óptico",
     "model": "RUNNER 24",
     "brand": "LEICA",
     "serialNumber": "432477, 431808, 432702, 432491, 433830, 433179",
@@ -295,7 +295,7 @@
   },
   {
     "internalCode": "NIV-LEI-RUN25",
-    "name": "Nivel Fijo Óptico (2 piezas)",
+    "name": "Nivel Fijo Óptico",
     "model": "RUNNER 25",
     "brand": "LEICA",
     "serialNumber": "432508, 432084",
@@ -351,7 +351,7 @@
   },
   {
     "internalCode": "ANG-ET-CST200",
-    "name": "Estación Total (5 piezas)",
+    "name": "Estación Total",
     "model": "CST-205 / 206 / 207",
     "brand": "CST-BERGER",
     "serialNumber": "136829, 88936, 90386, 137138, 137139",
@@ -407,7 +407,7 @@
   },
   {
     "internalCode": "ANG-ET-LEI-TC407",
-    "name": "Estación Total TC407 (2 piezas)",
+    "name": "Estación Total TC407",
     "model": "TC407",
     "brand": "LEICA",
     "serialNumber": "834626, 843343",
@@ -435,7 +435,7 @@
   },
   {
     "internalCode": "ANG-TEO-DW10",
-    "name": "Teodolito Electrónico DWT-10 (2 piezas)",
+    "name": "Teodolito Electrónico DWT-10",
     "model": "DWT-10",
     "brand": "DAVID WHITE",
     "serialNumber": "139733, 120897",
@@ -449,7 +449,7 @@
   },
   {
     "internalCode": "ANG-TEO-BER10",
-    "name": "Teodolito Electrónico DGT10 (2 piezas)",
+    "name": "Teodolito Electrónico DGT10",
     "model": "DGT10",
     "brand": "BERGER",
     "serialNumber": "140552, 141463",
@@ -463,7 +463,7 @@
   },
   {
     "internalCode": "ANG-TEO-APA2",
-    "name": "Teodolito Electrónico ADT-2 (2 piezas)",
+    "name": "Teodolito Electrónico ADT-2",
     "model": "ADT-2",
     "brand": "APACHE",
     "serialNumber": "291516, 290732",
@@ -477,7 +477,7 @@
   },
   {
     "internalCode": "ANG-TEO-FOIF402",
-    "name": "Teodolito Electrónico DT 402 L (3 piezas)",
+    "name": "Teodolito Electrónico DT 402 L",
     "model": "DT 402 L",
     "brand": "FOIF",
     "serialNumber": "28S31203, 28S34163, 28S29917",
@@ -519,7 +519,7 @@
   },
   {
     "internalCode": "ANG-TRA-LUFT",
-    "name": "Tránsito Mecánico BD-3 / BD-4 (4 piezas)",
+    "name": "Tránsito Mecánico BD-3 / BD-4",
     "model": "BD-3 / BD-4",
     "brand": "LUFT",
     "serialNumber": "901139, 901140, 901136, 901137",
@@ -533,7 +533,7 @@
   },
   {
     "internalCode": "ANG-TRA-SOK116",
-    "name": "Tránsito Mecánico 116 (3 piezas)",
+    "name": "Tránsito Mecánico 116",
     "model": "116",
     "brand": "SOKKIA / SOKKISHA",
     "serialNumber": "36062, 36420, 36435",
