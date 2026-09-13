@@ -371,6 +371,14 @@ export function StudentRequestsPage() {
                   ['Solicitada', formatDateTime(selected.requestedAt)],
                   ['Devolver antes de', formatDateTime(selected.dueAt)],
                   ['Estado', loanStatusLabel(selected.status)],
+                  ...(selected.deliveryNotes
+                    ? [['Estado al entregar', selected.deliveryNotes]]
+                    : selected.status !== 'pending' &&
+                        selected.status !== 'approved' &&
+                        selected.status !== 'rejected' &&
+                        selected.status !== 'cancelled'
+                      ? [['Estado al entregar', 'Sin observaciones (perfecto estado)']]
+                      : []),
                 ].map(([label, value]) => (
                   <View key={label} style={styles.detailRow}>
                     <Text style={styles.detailLabel}>{label}</Text>

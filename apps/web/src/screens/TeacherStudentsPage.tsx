@@ -481,12 +481,20 @@ export function TeacherStudentsPage() {
                           {formatDateTime(loan.requestedAt)}
                         </Text>
                       </View>
-                      <View style={[styles.detailRow, styles.detailRowLast]}>
+                      <View style={[styles.detailRow, !loan.deliveryNotes && styles.detailRowLast]}>
                         <Text style={styles.detailLabel}>Devolución</Text>
                         <Text style={[styles.detailValue, { color: theme.color.navy }]}>
                           {formatDateTime(loan.dueAt)}
                         </Text>
                       </View>
+                      {loan.deliveryNotes ? (
+                        <View style={[styles.detailRow, styles.detailRowLast]}>
+                          <Text style={styles.detailLabel}>Estado al entregar</Text>
+                          <Text style={[styles.detailValue, { color: theme.color.warning }]}>
+                            {loan.deliveryNotes}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   );
                 })}

@@ -105,12 +105,20 @@ function LoanHistoryCard({ loan }: { loan: Loan }) {
         <Text style={styles.loanLabel}>Solicitada</Text>
         <Text style={styles.loanValue}>{formatDateTime(loan.requestedAt)}</Text>
       </View>
-      <View style={[styles.loanRow, styles.loanRowLast]}>
+      <View style={[styles.loanRow, !loan.deliveryNotes && styles.loanRowLast]}>
         <Text style={styles.loanLabel}>Devolución</Text>
         <Text style={[styles.loanValue, { color: theme.color.navy }]}>
           {formatDateTime(loan.dueAt)}
         </Text>
       </View>
+      {loan.deliveryNotes ? (
+        <View style={[styles.loanRow, styles.loanRowLast]}>
+          <Text style={styles.loanLabel}>Estado inicial</Text>
+          <Text style={[styles.loanValue, { color: theme.color.warning }]}>
+            {loan.deliveryNotes}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

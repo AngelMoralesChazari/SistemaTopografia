@@ -177,6 +177,23 @@ function LabLoanItem({
                 valueColor: theme.color.success,
               },
           { label: 'Solicitada', value: formatDateTime(loan.requestedAt) },
+          ...(loan.deliveryNotes
+            ? [
+                {
+                  label: 'Estado al entregar',
+                  value: loan.deliveryNotes,
+                  valueColor: theme.color.warning,
+                },
+              ]
+            : loan.status === 'delivered'
+              ? [
+                  {
+                    label: 'Estado al entregar',
+                    value: 'Sin observaciones (perfecto estado)',
+                    valueColor: theme.color.success,
+                  },
+                ]
+              : []),
           { label: 'Estado', value: loanStatusLabel(loan.status) },
         ]}
       />
@@ -244,6 +261,11 @@ export function LabRequestsScreen() {
   const [successSubtitle, setSuccessSubtitle] = useState('');
   const [successFolio, setSuccessFolio] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deliverTarget, setDeliverTarget] = useState<Loan | null>(null);
+  const [deliverModalOpen, setDeliverModalOpen] = useState(false);
+  const [isPerfectCondition, setIsPerfectCondition] = useState(true);
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [deliverError, setDeliverError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -337,23 +359,42 @@ export function LabRequestsScreen() {
     });
   };
 
-  const onDeliver = async (loan: Loan) => {
-    if (!user) return;
-    const display = dueById[loan.id] ?? isoToDisplay(dueIsoFromLoan(loan));
+  const openDeliverModal = (loan: Loan) => {
+    setDeliverTarget(loan);
+    setIsPerfectCondition(true);
+    setDeliveryNotes('');
+    setDeliverError(null);
+    setDeliverModalOpen(true);
+  };
+
+  const confirmDeliver = async () => {
+    if (!user || !deliverTarget) return;
+    if (!isPerfectCondition && !deliveryNotes.trim()) {
+      setDeliverError(
+        'Escribe las observaciones del equipo o marca la casilla de "Equipo en perfecto estado".'
+      );
+      return;
+    }
+    setDeliverError(null);
+    const display = dueById[deliverTarget.id] ?? isoToDisplay(dueIsoFromLoan(deliverTarget));
     const iso = displayToIso(display);
     setBusy(true);
     setActionError(null);
+    const noteToSave = isPerfectCondition ? null : deliveryNotes.trim();
     try {
-      await deliverLoan(loan.id, user.uid, iso);
+      await deliverLoan(deliverTarget.id, user.uid, iso, {
+        deliveryNotes: noteToSave,
+      });
+      setDeliverModalOpen(false);
       setExpandedId(null);
       setTab('aceptados');
       showSuccess(
         'Equipo entregado',
-        'El préstamo quedó registrado en Aceptados.',
-        loan.folio
+        `El préstamo #${deliverTarget.folio} quedó registrado${noteToSave ? ' con observaciones' : ' en perfecto estado'}.`,
+        deliverTarget.folio
       );
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo entregar.');
+      setDeliverError(err instanceof Error ? err.message : 'No se pudo entregar.');
     } finally {
       setBusy(false);
     }
@@ -489,13 +530,156 @@ export function LabRequestsScreen() {
                   [loan.id]: value,
                 }))
               }
-              onDeliver={() => onDeliver(loan)}
+              onDeliver={() => openDeliverModal(loan)}
               onReject={() => onReject(loan)}
               onReturn={() => onReturn(loan)}
             />
           );
         })}
       </ScrollView>
+
+      <Modal
+        visible={deliverModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeliverModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.deliverCard}>
+            <View style={styles.deliverHeaderRow}>
+              <View style={styles.deliverIconWrap}>
+                <MaterialIcons name="assignment-turned-in" size={24} color={theme.color.navy} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.deliverTitle}>Entrega de material</Text>
+                <Text style={styles.deliverSubtitle}>
+                  Registra el estado del equipo para respaldar al alumno de daños previos.
+                </Text>
+              </View>
+            </View>
+
+            {deliverTarget ? (
+              <View style={styles.deliverSummaryBox}>
+                {[
+                  ['Equipo', deliverTarget.equipmentName],
+                  ['Código', deliverTarget.equipmentCode],
+                  ['Alumno', deliverTarget.studentName],
+                  [
+                    'Fecha límite',
+                    dueById[deliverTarget.id] ?? isoToDisplay(dueIsoFromLoan(deliverTarget)),
+                  ],
+                ].map(([label, value], idx, arr) => (
+                  <View
+                    key={label}
+                    style={[
+                      styles.deliverSummaryRow,
+                      idx === arr.length - 1 && { borderBottomWidth: 0 },
+                    ]}
+                  >
+                    <Text style={styles.deliverSummaryLabel}>{label}</Text>
+                    <Text style={styles.deliverSummaryValue}>{value}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {deliverError ? (
+              <View style={{ marginBottom: 10 }}>
+                <Notice tone="danger" title="Atención" description={deliverError} />
+              </View>
+            ) : null}
+
+            <Pressable
+              onPress={() => {
+                const next = !isPerfectCondition;
+                setIsPerfectCondition(next);
+                if (next) setDeliverError(null);
+              }}
+              style={[styles.checkRow, isPerfectCondition && styles.checkRowActive]}
+            >
+              <MaterialIcons
+                name={isPerfectCondition ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={isPerfectCondition ? theme.color.success : theme.color.muted}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.checkLabel, isPerfectCondition && styles.checkLabelActive]}>
+                  Equipo en perfecto estado
+                </Text>
+                <Text style={styles.checkHint}>Sin rayones, roturas, manchas ni fallas previas.</Text>
+              </View>
+            </Pressable>
+
+            <View style={styles.quickChipsSection}>
+              <Text style={styles.quickChipsTitle}>Observaciones comunes (desmarca perfecto estado):</Text>
+              <View style={styles.chipsRow}>
+                {[
+                  'Rayones leves',
+                  'Desgaste',
+                  'Manchas en estuche',
+                  'Rotura menor',
+                  'Piezas flojas',
+                ].map((chip) => (
+                  <Pressable
+                    key={chip}
+                    style={styles.chip}
+                    onPress={() => {
+                      setIsPerfectCondition(false);
+                      setDeliveryNotes((prev) => {
+                        const trimmed = prev.trim();
+                        if (!trimmed) return chip;
+                        if (trimmed.includes(chip)) return trimmed;
+                        return `${trimmed}, ${chip}`;
+                      });
+                    }}
+                  >
+                    <MaterialIcons name="add" size={12} color={theme.color.navy} />
+                    <Text style={styles.chipText}>{chip}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ marginBottom: 14 }}>
+              <Text style={styles.fieldLabel}>
+                Detalles / Desperfectos previos {!isPerfectCondition ? '(requerido)' : '(opcional)'}
+              </Text>
+              <TextInput
+                value={deliveryNotes}
+                onChangeText={(text) => {
+                  setDeliveryNotes(text);
+                  if (text.trim().length > 0) {
+                    setIsPerfectCondition(false);
+                  }
+                }}
+                placeholder="Ej. Rayones en la base, estuche manchado..."
+                placeholderTextColor={theme.color.muted}
+                multiline
+                numberOfLines={3}
+                style={styles.textArea}
+              />
+            </View>
+
+            <View style={styles.deliverActions}>
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                fullWidth={false}
+                style={{ flex: 1 }}
+                disabled={busy}
+                onPress={() => setDeliverModalOpen(false)}
+              />
+              <Button
+                title="Confirmar entrega"
+                loading={busy}
+                fullWidth={false}
+                style={{ flex: 1 }}
+                onPress={confirmDeliver}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={successOpen} transparent animationType="fade" onRequestClose={closeSuccess}>
         <View style={styles.modalBackdrop}>
@@ -708,5 +892,142 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  deliverCard: {
+    marginHorizontal: 16,
+    backgroundColor: theme.color.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    padding: 18,
+  },
+  deliverHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  deliverIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: theme.color.infoSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deliverTitle: {
+    color: theme.color.navy,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  deliverSubtitle: {
+    marginTop: 2,
+    color: theme.color.muted,
+    fontSize: 11,
+  },
+  deliverSummaryBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  deliverSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+  },
+  deliverSummaryLabel: {
+    color: theme.color.muted,
+    fontSize: 12,
+  },
+  deliverSummaryValue: {
+    flex: 1,
+    color: theme.color.ink,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+  },
+  checkRowActive: {
+    borderColor: theme.color.success,
+    backgroundColor: theme.color.successSoft,
+  },
+  checkLabel: {
+    color: theme.color.ink,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  checkLabelActive: {
+    color: theme.color.success,
+  },
+  checkHint: {
+    color: theme.color.muted,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  quickChipsSection: {
+    marginBottom: 10,
+  },
+  quickChipsTitle: {
+    color: theme.color.muted,
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 5,
+  },
+  chipText: {
+    color: theme.color.navy,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  fieldLabel: {
+    color: theme.color.navy,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 8,
+    padding: 8,
+    minHeight: 56,
+    textAlignVertical: 'top',
+    color: theme.color.ink,
+    backgroundColor: '#fff',
+    fontSize: 12,
+  },
+  deliverActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
 });

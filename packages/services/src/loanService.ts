@@ -62,6 +62,7 @@ function mapLoan(id: string, data: Record<string, unknown>): Loan {
     paymentConfirmed: Boolean(data.paymentConfirmed),
     isOverdue: Boolean(data.isOverdue),
     returnCondition: (data.returnCondition as Loan['returnCondition']) ?? null,
+    deliveryNotes: (data.deliveryNotes as string | null) ?? null,
     damageNotes: (data.damageNotes as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
     approvedBy: (data.approvedBy as string | null) ?? null,
@@ -122,6 +123,7 @@ export async function createLoanRequest(
       paymentConfirmed: false,
       isOverdue: false,
       returnCondition: null,
+      deliveryNotes: null,
       damageNotes: null,
       notes: input.notes ?? null,
       approvedBy: null,
@@ -312,7 +314,8 @@ export async function rejectLoan(
 export async function deliverLoan(
   loanId: string,
   actorId: string,
-  dueAtIso: string
+  dueAtIso: string,
+  options?: { deliveryNotes?: string | null }
 ): Promise<void> {
   const db = getDb();
   const loanRef = doc(db, 'loans', loanId);
@@ -349,6 +352,7 @@ export async function deliverLoan(
       dueAt: dueDate,
       approvedBy: loan.approvedBy ?? actorId,
       deliveredBy: actorId,
+      deliveryNotes: options?.deliveryNotes?.trim() || null,
       isOverdue: false,
       updatedAt: serverTimestamp(),
     });

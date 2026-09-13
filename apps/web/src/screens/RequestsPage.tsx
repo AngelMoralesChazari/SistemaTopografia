@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import {
   isAdminRole,
@@ -78,6 +80,10 @@ export function RequestsPage() {
   const [dueDate, setDueDate] = useState(defaultDueDate());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [deliverModalOpen, setDeliverModalOpen] = useState(false);
+  const [isPerfectCondition, setIsPerfectCondition] = useState(true);
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [deliverError, setDeliverError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -264,6 +270,11 @@ export function RequestsPage() {
                 ['Código', selected.equipmentCode],
                 ['Solicitada', formatDate(selected.requestedAt)],
                 ['Fecha límite', formatDate(selected.dueAt)],
+                ...(selected.deliveryNotes
+                  ? [['Estado al entregar', selected.deliveryNotes]]
+                  : selected.status === 'delivered'
+                    ? [['Estado al entregar', 'Sin observaciones (perfecto estado)']]
+                    : []),
               ].map(([label, value]) => (
                 <View key={label} style={styles.detailRow}>
                   <Text style={styles.detailLabel}>{label}</Text>
@@ -286,18 +297,12 @@ export function RequestsPage() {
                       loading={busy}
                       fullWidth={false}
                       style={{ flex: 1 }}
-                      onPress={() =>
-                        runManagedAction(
-                          () => deliverLoan(selected.id, user!.uid, dueDate),
-                          'Equipo entregado correctamente.',
-                          {
-                            action: 'loan.deliver',
-                            summary: `Entregó #${selected.folio}`,
-                            before: selected.status,
-                            after: 'delivered',
-                          }
-                        )
-                      }
+                      onPress={() => {
+                        setDeliverModalOpen(true);
+                        setIsPerfectCondition(true);
+                        setDeliveryNotes('');
+                        setDeliverError(null);
+                      }}
                     />
                     {selected.status === 'pending' ? (
                       <Button
@@ -435,6 +440,181 @@ export function RequestsPage() {
           )}
         </View>
       </View>
+
+      <Modal
+        visible={deliverModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeliverModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalIconWrap}>
+                <MaterialIcons name="assignment-turned-in" size={24} color={theme.color.navy} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Verificación y entrega de equipo</Text>
+                <Text style={styles.modalSubtitle}>
+                  Registra el estado del material para proteger al alumno de desperfectos previos.
+                </Text>
+              </View>
+            </View>
+
+            {selected ? (
+              <View style={styles.summaryBox}>
+                {[
+                  ['Equipo', selected.equipmentName],
+                  ['Código interno', selected.equipmentCode],
+                  [
+                    'Alumno receptor',
+                    `${selected.studentName}${selected.studentNumber ? ` (${selected.studentNumber})` : ''}`,
+                  ],
+                  ['Fecha límite', dueDate],
+                ].map(([label, value], index, arr) => (
+                  <View
+                    key={label}
+                    style={[styles.summaryRow, index === arr.length - 1 && styles.summaryRowLast]}
+                  >
+                    <Text style={styles.summaryLabel}>{label}</Text>
+                    <Text style={styles.summaryValue}>{value}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {deliverError ? (
+              <View style={{ marginBottom: 12 }}>
+                <Notice tone="danger" title="Atención" description={deliverError} />
+              </View>
+            ) : null}
+
+            {/* Checkbox Perfecto Estado */}
+            <Pressable
+              onPress={() => {
+                const next = !isPerfectCondition;
+                setIsPerfectCondition(next);
+                if (next) {
+                  setDeliverError(null);
+                }
+              }}
+              style={[styles.checkRow, isPerfectCondition && styles.checkRowActive]}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isPerfectCondition }}
+            >
+              <MaterialIcons
+                name={isPerfectCondition ? 'check-box' : 'check-box-outline-blank'}
+                size={24}
+                color={isPerfectCondition ? theme.color.success : theme.color.muted}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.checkLabel, isPerfectCondition && styles.checkLabelActive]}>
+                  Equipo en perfecto estado
+                </Text>
+                <Text style={styles.checkHint}>
+                  Sin rayones, roturas, manchas ni fallas previas. Entrega directa sin detalles.
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* Quick chips para observaciones comunes */}
+            <View style={styles.quickChipsSection}>
+              <Text style={styles.quickChipsTitle}>
+                Observaciones rápidas (desmarca "perfecto estado"):
+              </Text>
+              <View style={styles.chipsRow}>
+                {[
+                  'Rayones leves',
+                  'Desgaste estético',
+                  'Manchas en estuche/equipo',
+                  'Rotura o fisura menor',
+                  'Tornillos/piezas flojas',
+                ].map((chip) => (
+                  <Pressable
+                    key={chip}
+                    style={styles.chip}
+                    onPress={() => {
+                      setIsPerfectCondition(false);
+                      setDeliveryNotes((prev) => {
+                        const trimmed = prev.trim();
+                        if (!trimmed) return chip;
+                        if (trimmed.includes(chip)) return trimmed;
+                        return `${trimmed}, ${chip}`;
+                      });
+                    }}
+                  >
+                    <MaterialIcons name="add" size={14} color={theme.color.navy} />
+                    <Text style={styles.chipText}>{chip}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Textarea de Observaciones */}
+            <View style={styles.notesBlock}>
+              <Text style={styles.fieldLabel}>
+                Observaciones o desperfectos observados {!isPerfectCondition ? '(requerido)' : '(opcional)'}
+              </Text>
+              <TextInput
+                value={deliveryNotes}
+                onChangeText={(text) => {
+                  setDeliveryNotes(text);
+                  if (text.trim().length > 0) {
+                    setIsPerfectCondition(false);
+                  }
+                }}
+                placeholder="Ej. Rayones en la base, estuche manchado, pequeña fisura en perilla..."
+                placeholderTextColor={theme.color.muted}
+                multiline
+                numberOfLines={3}
+                style={styles.textArea}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                fullWidth={false}
+                style={styles.modalBtn}
+                disabled={busy}
+                onPress={() => setDeliverModalOpen(false)}
+              />
+              <Button
+                title="Confirmar entrega"
+                loading={busy}
+                fullWidth={false}
+                style={styles.modalBtn}
+                onPress={async () => {
+                  if (!selected || !user) return;
+                  if (!isPerfectCondition && !deliveryNotes.trim()) {
+                    setDeliverError(
+                      'Por favor escribe las observaciones del equipo o marca la casilla de "Equipo en perfecto estado".'
+                    );
+                    return;
+                  }
+                  setDeliverError(null);
+                  const noteToSave = isPerfectCondition ? null : deliveryNotes.trim();
+                  await runManagedAction(
+                    () =>
+                      deliverLoan(selected.id, user.uid, dueDate, {
+                        deliveryNotes: noteToSave,
+                      }),
+                    'Equipo entregado correctamente.',
+                    {
+                      action: 'loan.deliver',
+                      summary: `Entregó #${selected.folio}${noteToSave ? ` (${noteToSave})` : ' (perfecto estado)'}`,
+                      before: selected.status,
+                      after: 'delivered',
+                    }
+                  );
+                  setDeliverModalOpen(false);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -560,5 +740,150 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     fontSize: theme.font.size.sm,
     marginBottom: 8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: theme.color.surface,
+    borderRadius: 14,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.color.infoSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.xl,
+    fontWeight: '800',
+  },
+  modalSubtitle: {
+    marginTop: 4,
+    color: theme.color.muted,
+    fontSize: theme.font.size.sm,
+  },
+  summaryBox: {
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 14,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+  },
+  summaryRowLast: { borderBottomWidth: 0 },
+  summaryLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
+  summaryValue: {
+    flex: 1,
+    color: theme.color.ink,
+    fontSize: theme.font.size.sm,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  checkRowActive: {
+    borderColor: theme.color.success,
+    backgroundColor: theme.color.successSoft,
+  },
+  checkLabel: {
+    color: theme.color.ink,
+    fontSize: theme.font.size.md,
+    fontWeight: '700',
+  },
+  checkLabelActive: {
+    color: theme.color.success,
+  },
+  checkHint: {
+    color: theme.color.muted,
+    fontSize: theme.font.size.xs,
+    marginTop: 2,
+  },
+  quickChipsSection: {
+    marginBottom: 12,
+  },
+  quickChipsTitle: {
+    color: theme.color.muted,
+    fontSize: theme.font.size.xs,
+    fontWeight: '700',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  chipText: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.xs,
+    fontWeight: '600',
+  },
+  notesBlock: {
+    marginBottom: 16,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    color: theme.color.ink,
+    backgroundColor: '#fff',
+    fontSize: theme.font.size.sm,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+  },
+  modalBtn: {
+    flex: 1,
   },
 });

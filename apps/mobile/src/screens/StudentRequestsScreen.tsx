@@ -107,6 +107,26 @@ function LoanAccordionItem({
             value: formatDateTime(loan.dueAt),
             valueColor: theme.color.navy,
           },
+          ...(loan.deliveryNotes
+            ? [
+                {
+                  label: 'Estado al entregar',
+                  value: loan.deliveryNotes,
+                  valueColor: theme.color.warning,
+                },
+              ]
+            : loan.status !== 'pending' &&
+                loan.status !== 'approved' &&
+                loan.status !== 'rejected' &&
+                loan.status !== 'cancelled'
+              ? [
+                  {
+                    label: 'Estado al entregar',
+                    value: 'Sin observaciones (perfecto estado)',
+                    valueColor: theme.color.success,
+                  },
+                ]
+              : []),
           {
             label: 'Actualización',
             value: loanStatusLabel(loan.status),

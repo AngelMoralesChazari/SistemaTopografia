@@ -27,6 +27,7 @@ export type Loan = {
   paymentConfirmed: boolean;
   isOverdue: boolean;
   returnCondition: ReturnCondition | null;
+  deliveryNotes: string | null;
   damageNotes: string | null;
   notes: string | null;
   approvedBy: string | null;
