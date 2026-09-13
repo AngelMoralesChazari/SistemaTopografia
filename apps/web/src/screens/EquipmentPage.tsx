@@ -149,7 +149,7 @@ export function EquipmentPage() {
         name,
         brand: brand || null,
         model: model || null,
-        categoryId: `cat-${categoryName.toLowerCase().replace(/\s+/g, '-')}`,
+        categoryId: categoryIdOf({ categoryName, categoryId: '' } as Equipment),
         categoryName,
         status: 'available',
         trackMode: total > 1 ? 'bulk' : 'unit',

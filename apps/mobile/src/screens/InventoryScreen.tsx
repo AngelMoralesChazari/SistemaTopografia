@@ -38,9 +38,12 @@ const KNOWN_CATEGORIES = [
   'Medición',
   'Niveles',
   'Ángulos y estación',
-  'GNSS',
+  'GNSS y Geoposicionamiento',
   'Soporte y accesorios',
   'Dibujo y gabinete',
+  'Radios y Alimentación GNSS',
+  'Cómputo y Audiovisual',
+  'Mobiliario y Auxiliares',
 ];
 
 export function InventoryScreen() {
@@ -145,7 +148,7 @@ export function InventoryScreen() {
         name,
         brand: brand || null,
         model: model || null,
-        categoryId: `cat-${categoryName.toLowerCase().replace(/\s+/g, '-')}`,
+        categoryId: categoryIdOf({ categoryName, categoryId: '' } as Equipment),
         categoryName,
         status,
         trackMode: total > 1 ? 'bulk' : 'unit',
