@@ -227,14 +227,27 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
       min-height: 1050px;
       page-break-after: always;
       break-after: page;
-      background-image: url("${REPORT_COVER_BASE64}");
-      background-size: 100% 100%;
-      background-position: center center;
-      background-repeat: no-repeat;
+      overflow: hidden;
+      padding: 85mm 18mm 25mm 18mm;
+    }
+    .cover-bg-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .cover-content {
+      position: relative;
+      z-index: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 85mm 18mm 25mm 18mm;
+      height: 100%;
+      min-height: 720px;
     }
     .cover-top-badge {
       display: inline-block;
@@ -361,7 +374,8 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
 
     /* Inner Pages Layout */
     .report-page {
-      padding: 10px 0;
+      padding: 12mm 16mm 14mm 16mm;
+      box-sizing: border-box;
     }
     .header-bar {
       display: flex;
@@ -503,11 +517,13 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
 
   <!-- PORTADA OFICIAL UAGRO -->
   <div class="cover-page">
-    <div>
-      <span class="cover-top-badge">UAGro · Documento Oficial</span>
-      <h1 class="cover-inst-title">UNIVERSIDAD AUTÓNOMA DE GUERRERO</h1>
-      <h2 class="cover-dept-title">DEPARTAMENTO DE TOPOGRAFÍA · FACULTAD DE INGENIERÍA</h2>
-      <div class="cover-divider"></div>
+    <img src="${REPORT_COVER_BASE64}" class="cover-bg-img" alt="Membrete UAGro" />
+    <div class="cover-content">
+      <div>
+        <span class="cover-top-badge">UAGro · Documento Oficial</span>
+        <h1 class="cover-inst-title">UNIVERSIDAD AUTÓNOMA DE GUERRERO</h1>
+        <h2 class="cover-dept-title">DEPARTAMENTO DE TOPOGRAFÍA · FACULTAD DE INGENIERÍA</h2>
+        <div class="cover-divider"></div>
 
       <div class="cover-report-title-wrap">
         <div class="cover-report-label">Informe Oficial del Laboratorio</div>
@@ -560,6 +576,7 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     <div class="cover-footer">
       <span>Sistema de Control y Gestión del Laboratorio de Topografía · UAGro</span>
       <span>${escapeHtml(config.folio)}</span>
+    </div>
     </div>
   </div>
 
@@ -909,6 +926,89 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
 
 </body>
 </html>`;
+}
+
+/**
+ * Carga el bundle autónomo de html2pdf.js en el navegador sin intermediación
+ * de bundlers (Metro/Webpack), evitando errores de resolución de html2canvas/jspdf.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function loadHtml2Pdf(): Promise<any> {
+  if (typeof window === 'undefined') return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((window as any).html2pdf) return (window as any).html2pdf;
+
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-lib="html2pdf"]') as HTMLScriptElement | null;
+    if (existing) {
+      const start = Date.now();
+      const interval = setInterval(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((window as any).html2pdf) {
+          clearInterval(interval);
+          resolve((window as any).html2pdf);
+        } else if (Date.now() - start > 15000) {
+          clearInterval(interval);
+          reject(new Error('Tiempo de espera agotado al inicializar el generador de PDF.'));
+        }
+      }, 100);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.setAttribute('data-lib', 'html2pdf');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
+    script.onload = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((window as any).html2pdf) {
+        resolve((window as any).html2pdf);
+      } else {
+        reject(new Error('No se pudo inicializar la librería de generación de PDF.'));
+      }
+    };
+    script.onerror = () => {
+      reject(new Error('No se pudo cargar el motor para generar el PDF. Verifica tu conexión a internet.'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+export async function downloadReportPdf(
+  html: string,
+  filename = 'reporte-laboratorio-topografia.pdf'
+): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const html2pdf = await loadHtml2Pdf();
+  if (!html2pdf) {
+    throw new Error('El motor de generación de PDF no está disponible en este entorno.');
+  }
+
+  const opt = {
+    margin: 0,
+    filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollY: 0,
+      scrollX: 0,
+    },
+    jsPDF: {
+      unit: 'mm',
+      format: 'letter',
+      orientation: 'portrait',
+    },
+    pagebreak: {
+      mode: ['css', 'legacy'],
+      before: '.page-break',
+    },
+  };
+
+  await html2pdf().set(opt).from(html).save();
 }
 
 export function printReport(html: string): void {

@@ -22,9 +22,10 @@ import { useAuth } from '../auth/AuthContext';
 import {
   computeDynamicTitle,
   downloadReportHtml,
+  downloadReportPdf,
   generateReportFolio,
   generateReportHtml,
-  printReport,
+  loadHtml2Pdf,
   REPORT_MODULE_DEFS,
   type ReportConfig,
   type ReportModule,
@@ -52,7 +53,7 @@ function defaultRoleLabel(role?: string): string {
     case 'lab_manager':
       return 'Encargado de Laboratorio';
     case 'super_admin':
-      return 'Superadministrador del Sistema';
+      return 'Administrador del Sistema';
     case 'admin':
       return 'Administrador General';
     case 'teacher':
@@ -90,6 +91,12 @@ export function ReportsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  useEffect(() => {
+    // Preload PDF engine quietly in background for instant download
+    loadHtml2Pdf().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (user?.displayName) setAuthorName(user.displayName);
@@ -249,11 +256,29 @@ export function ReportsPage() {
     return generateReportHtml(reportConfig, { loans, equipment, users });
   }, [reportConfig, loans, equipment, users]);
 
-  const handlePrint = () => {
+  const handleDownloadPdf = async () => {
     if (!validateForm()) return;
-    printReport(generatedHtml);
-    setActionSuccess('Diálogo de impresión y descarga en PDF abierto correctamente.');
-    setTimeout(() => setActionSuccess(null), 5000);
+    setDownloadingPdf(true);
+    setActionSuccess(null);
+    setValidationError(null);
+    try {
+      const safeTitle = activeTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      await downloadReportPdf(generatedHtml, `${safeTitle}-${today}.pdf`);
+      setActionSuccess('Reporte en PDF descargado directamente con éxito.');
+      setTimeout(() => setActionSuccess(null), 5000);
+    } catch (err) {
+      console.error('Error al generar PDF:', err);
+      setValidationError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo generar el PDF directamente. Puedes usar "Previsualizar reporte" o descargar el archivo HTML.'
+      );
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleDownloadHtml = () => {
@@ -345,7 +370,7 @@ export function ReportsPage() {
             <View style={styles.card}>
               <View style={styles.cardHead}>
                 <MaterialIcons name="date-range" size={20} color={theme.color.navy} />
-                <Text style={styles.cardTitle}>Período de evaluación (Rango de fechas)</Text>
+                <Text style={styles.cardTitle}>Período de evaluación</Text>
               </View>
               <Text style={styles.cardDesc}>
                 Filtra los préstamos y rentas ocurridos en este intervalo. La fecha de fin no puede superar el día de hoy ({today}).
@@ -521,19 +546,22 @@ export function ReportsPage() {
 
               <View style={styles.actionsBox}>
                 <Button
-                  title="Descargar PDF / Imprimir"
-                  onPress={handlePrint}
+                  title={downloadingPdf ? 'Generando PDF...' : 'Descargar PDF'}
+                  onPress={handleDownloadPdf}
+                  loading={downloadingPdf}
                   style={styles.mainActionBtn}
                 />
                 <Button
                   title="Previsualizar reporte"
                   variant="secondary"
+                  disabled={downloadingPdf}
                   onPress={handleOpenPreview}
                   style={styles.secondaryActionBtn}
                 />
                 <Button
                   title="Descargar archivo HTML autónomo"
                   variant="secondary"
+                  disabled={downloadingPdf}
                   onPress={handleDownloadHtml}
                   style={styles.secondaryActionBtn}
                 />
@@ -583,14 +611,16 @@ export function ReportsPage() {
                 title="Cerrar vista previa"
                 variant="secondary"
                 fullWidth={false}
+                disabled={downloadingPdf}
                 onPress={() => setPreviewOpen(false)}
               />
               <Button
-                title="Descargar PDF / Imprimir ahora"
+                title={downloadingPdf ? 'Generando PDF...' : 'Descargar PDF ahora'}
                 fullWidth={false}
-                onPress={() => {
+                loading={downloadingPdf}
+                onPress={async () => {
+                  await handleDownloadPdf();
                   setPreviewOpen(false);
-                  setTimeout(() => printReport(generatedHtml), 300);
                 }}
               />
             </View>
