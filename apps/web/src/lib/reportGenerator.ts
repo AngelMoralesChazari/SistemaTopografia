@@ -203,6 +203,10 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
   const staffCount = data.users.filter((u) => u.role === 'admin' || u.role === 'super_admin' || u.role === 'lab_manager').length;
 
   const todayFormal = formatDateFormal(new Date());
+  const hasPreviousSectionsBeforeRental =
+    config.modules.includes('equipment_inventory') ||
+    config.modules.includes('equipment_status') ||
+    config.modules.includes('loans_academic');
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -409,13 +413,23 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
       font-weight: 700;
       text-align: right;
     }
+    .report-section {
+      margin-bottom: 22px;
+    }
+    .section-header-block {
+      margin: 22px 0 10px 0;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
     .section-title-wrap {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin: 22px 0 12px 0;
-      page-break-after: avoid;
-      break-after: avoid;
+      margin: 0 0 4px 0;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .section-num {
       background: #002B49;
@@ -428,6 +442,7 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
     .section-title {
       font-size: 15px;
@@ -438,7 +453,15 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     .section-desc {
       font-size: 11px;
       color: #64748B;
-      margin-bottom: 12px;
+      margin: 0;
+      line-height: 1.35;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .section-page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+      margin-top: 16px !important;
     }
 
     /* Tables */
@@ -447,32 +470,48 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
       border-collapse: collapse;
       margin-bottom: 18px;
       font-size: 11px;
+      table-layout: auto;
     }
     th {
       background: #002B49;
       color: #FFFFFF;
       font-weight: 700;
       text-align: left;
-      padding: 7px 9px;
+      padding: 7px 8px;
       font-size: 10.5px;
       letter-spacing: 0.3px;
       border: 1px solid #002B49;
+      box-sizing: border-box;
     }
     td {
-      padding: 6px 9px;
+      padding: 6px 8px;
       border: 1px solid #E2E8F0;
       vertical-align: top;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
     }
     tr:nth-child(even) td {
       background: #F8FAFC;
     }
     tr {
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .td-bold {
       font-weight: 700;
       color: #0F172A;
+    }
+    .td-folio {
+      font-weight: 700;
+      color: #002B49;
+      font-size: 10px;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 115px;
+      line-height: 1.3;
     }
     .td-num {
       text-align: right;
@@ -608,68 +647,72 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     ${
       config.modules.includes('equipment_inventory')
         ? `
-      <div class="section-title-wrap">
-        <div class="section-num">1</div>
-        <h3 class="section-title">Inventario General de Materiales y Equipos</h3>
-      </div>
-      <div class="section-desc">
-        Catálogo institucional de instrumentación topográfica registrada. Existencias físicas totales, disponibles y en servicio.
-      </div>
+      <div class="report-section" id="sec-equipment-inventory">
+        <div class="section-header-block">
+          <div class="section-title-wrap">
+            <div class="section-num">1</div>
+            <h3 class="section-title">Inventario General de Materiales y Equipos</h3>
+          </div>
+          <div class="section-desc">
+            Catálogo institucional de instrumentación topográfica registrada. Existencias físicas totales, disponibles y en servicio.
+          </div>
+        </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-bottom:12px;">
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:8px;border-radius:6px;text-align:center;">
-          <div style="font-size:16px;font-weight:800;color:#002B49;">${totalEquipmentItems}</div>
-          <div style="font-size:10px;color:#64748B;font-weight:700;">MODELOS / LÍNEAS</div>
+        <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-bottom:12px;">
+          <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:8px;border-radius:6px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#002B49;">${totalEquipmentItems}</div>
+            <div style="font-size:10px;color:#64748B;font-weight:700;">MODELOS / LÍNEAS</div>
+          </div>
+          <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:8px;border-radius:6px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#002B49;">${totalEquipmentUnits}</div>
+            <div style="font-size:10px;color:#64748B;font-weight:700;">PIEZAS TOTALES</div>
+          </div>
+          <div style="background:#F0FDF4;border:1px solid #BBF7D0;padding:8px;border-radius:6px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#166534;">${availableEquipmentUnits}</div>
+            <div style="font-size:10px;color:#166534;font-weight:700;">DISPONIBLES</div>
+          </div>
+          <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:8px;border-radius:6px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#1D4ED8;">${loanedEquipmentUnits}</div>
+            <div style="font-size:10px;color:#1D4ED8;font-weight:700;">EN PRÉSTAMO</div>
+          </div>
         </div>
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:8px;border-radius:6px;text-align:center;">
-          <div style="font-size:16px;font-weight:800;color:#002B49;">${totalEquipmentUnits}</div>
-          <div style="font-size:10px;color:#64748B;font-weight:700;">PIEZAS TOTALES</div>
-        </div>
-        <div style="background:#F0FDF4;border:1px solid #BBF7D0;padding:8px;border-radius:6px;text-align:center;">
-          <div style="font-size:16px;font-weight:800;color:#166534;">${availableEquipmentUnits}</div>
-          <div style="font-size:10px;color:#166534;font-weight:700;">DISPONIBLES</div>
-        </div>
-        <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:8px;border-radius:6px;text-align:center;">
-          <div style="font-size:16px;font-weight:800;color:#1D4ED8;">${loanedEquipmentUnits}</div>
-          <div style="font-size:10px;color:#1D4ED8;font-weight:700;">EN PRÉSTAMO</div>
-        </div>
-      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th style="width:110px;">Código</th>
-            <th>Equipo / Material</th>
-            <th>Categoría</th>
-            <th>Marca / Modelo</th>
-            <th style="width:50px;text-align:center;">Total</th>
-            <th style="width:50px;text-align:center;">Disp.</th>
-            <th style="width:50px;text-align:center;">Prést.</th>
-            <th style="width:80px;text-align:center;">Estatus</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.equipment
-            .map(
-              (eq) => `
+        <table>
+          <thead>
             <tr>
-              <td class="td-bold">${escapeHtml(eq.internalCode)}</td>
-              <td>
-                <span class="td-bold">${escapeHtml(eq.name)}</span>
-                ${eq.notes ? `<span class="notes-tag">${escapeHtml(eq.notes)}</span>` : ''}
-              </td>
-              <td>${escapeHtml(eq.categoryName)}</td>
-              <td>${escapeHtml([eq.brand, eq.model].filter(Boolean).join(' · ') || '—')}</td>
-              <td class="td-num td-bold">${eq.qtyTotal}</td>
-              <td class="td-num" style="color:#166534;font-weight:700;">${eq.qtyAvailable}</td>
-              <td class="td-num" style="color:#1D4ED8;font-weight:700;">${eq.qtyLoaned}</td>
-              <td style="text-align:center;">${statusBadge(eq.status)}</td>
+              <th style="width:110px;">Código</th>
+              <th>Equipo / Material</th>
+              <th>Categoría</th>
+              <th>Marca / Modelo</th>
+              <th style="width:50px;text-align:center;">Total</th>
+              <th style="width:50px;text-align:center;">Disp.</th>
+              <th style="width:50px;text-align:center;">Prést.</th>
+              <th style="width:80px;text-align:center;">Estatus</th>
             </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${data.equipment
+              .map(
+                (eq) => `
+              <tr>
+                <td class="td-bold">${escapeHtml(eq.internalCode)}</td>
+                <td>
+                  <span class="td-bold">${escapeHtml(eq.name)}</span>
+                  ${eq.notes ? `<span class="notes-tag">${escapeHtml(eq.notes)}</span>` : ''}
+                </td>
+                <td>${escapeHtml(eq.categoryName)}</td>
+                <td>${escapeHtml([eq.brand, eq.model].filter(Boolean).join(' · ') || '—')}</td>
+                <td class="td-num td-bold">${eq.qtyTotal}</td>
+                <td class="td-num" style="color:#166534;font-weight:700;">${eq.qtyAvailable}</td>
+                <td class="td-num" style="color:#1D4ED8;font-weight:700;">${eq.qtyLoaned}</td>
+                <td style="text-align:center;">${statusBadge(eq.status)}</td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
     `
         : ''
     }
@@ -677,54 +720,58 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     ${
       config.modules.includes('equipment_status')
         ? `
-      <div class="section-title-wrap">
-        <div class="section-num">2</div>
-        <h3 class="section-title">Estatus Físico, Mantenimiento y Reporte de Fallas</h3>
-      </div>
-      <div class="section-desc">
-        Equipos en mantenimiento, con fallas reportadas, desgaste o que requieren supervisión técnica.
-      </div>
+      <div class="report-section" id="sec-equipment-status">
+        <div class="section-header-block">
+          <div class="section-title-wrap">
+            <div class="section-num">2</div>
+            <h3 class="section-title">Estatus Físico, Mantenimiento y Reporte de Fallas</h3>
+          </div>
+          <div class="section-desc">
+            Equipos en mantenimiento, con fallas reportadas, desgaste o que requieren supervisión técnica.
+          </div>
+        </div>
 
-      ${
-        flaggedEquipment.length === 0
-          ? `<p style="padding:12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;color:#166534;font-weight:600;">
-              ✓ No se registran equipos en mantenimiento ni con fallas críticas activas en este período.
-            </p>`
-          : `
-          <table>
-            <thead>
-              <tr>
-                <th style="width:110px;">Código</th>
-                <th>Equipo</th>
-                <th>Categoría</th>
-                <th style="width:90px;text-align:center;">Estatus</th>
-                <th>Observaciones / Diagnóstico de condición</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${flaggedEquipment
-                .map(
-                  (eq) => `
+        ${
+          flaggedEquipment.length === 0
+            ? `<p style="padding:12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;color:#166534;font-weight:600;">
+                ✓ No se registran equipos en mantenimiento ni con fallas críticas activas en este período.
+              </p>`
+            : `
+            <table>
+              <thead>
                 <tr>
-                  <td class="td-bold">${escapeHtml(eq.internalCode)}</td>
-                  <td class="td-bold">${escapeHtml(eq.name)}</td>
-                  <td>${escapeHtml(eq.categoryName)}</td>
-                  <td style="text-align:center;">${statusBadge(eq.status)}</td>
-                  <td>
-                    ${
-                      eq.notes
-                        ? `<span style="font-weight:600;color:#92400E;">${escapeHtml(eq.notes)}</span>`
-                        : '<span style="color:#64748B;">En revisión / seguimiento preventivo</span>'
-                    }
-                  </td>
+                  <th style="width:110px;">Código</th>
+                  <th>Equipo</th>
+                  <th>Categoría</th>
+                  <th style="width:90px;text-align:center;">Estatus</th>
+                  <th>Observaciones / Diagnóstico de condición</th>
                 </tr>
-              `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        `
-      }
+              </thead>
+              <tbody>
+                ${flaggedEquipment
+                  .map(
+                    (eq) => `
+                  <tr>
+                    <td class="td-bold">${escapeHtml(eq.internalCode)}</td>
+                    <td class="td-bold">${escapeHtml(eq.name)}</td>
+                    <td>${escapeHtml(eq.categoryName)}</td>
+                    <td style="text-align:center;">${statusBadge(eq.status)}</td>
+                    <td>
+                      ${
+                        eq.notes
+                          ? `<span style="font-weight:600;color:#92400E;">${escapeHtml(eq.notes)}</span>`
+                          : '<span style="color:#64748B;">En revisión / seguimiento preventivo</span>'
+                      }
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          `
+        }
+      </div>
     `
         : ''
     }
@@ -732,67 +779,71 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     ${
       config.modules.includes('loans_academic')
         ? `
-      <div class="section-title-wrap">
-        <div class="section-num">3</div>
-        <h3 class="section-title">Historial de Préstamos Universitarios (Académicos)</h3>
-      </div>
-      <div class="section-desc">
-        Registro de solicitudes y préstamos de material a alumnos y profesores durante el período (${formatDateDisplay(
-          config.startDate
-        )} al ${formatDateDisplay(config.endDate)}).
-      </div>
+      <div class="report-section" id="sec-loans-academic">
+        <div class="section-header-block">
+          <div class="section-title-wrap">
+            <div class="section-num">3</div>
+            <h3 class="section-title">Historial de Préstamos Universitarios (Académicos)</h3>
+          </div>
+          <div class="section-desc">
+            Registro de solicitudes y préstamos de material a alumnos y profesores durante el período (${formatDateDisplay(
+              config.startDate
+            )} al ${formatDateDisplay(config.endDate)}).
+          </div>
+        </div>
 
-      ${
-        academicLoans.length === 0
-          ? `<p style="padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;color:#64748B;">
-              No se registraron préstamos universitarios en el rango de fechas seleccionado.
-            </p>`
-          : `
-          <table>
-            <thead>
-              <tr>
-                <th style="width:85px;">Folio</th>
-                <th style="width:85px;">Fecha</th>
-                <th>Alumno / Matrícula</th>
-                <th>Profesor</th>
-                <th>Equipo entregado</th>
-                <th style="width:80px;text-align:center;">Estatus</th>
-                <th>Condición / Obs. de entrega</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${academicLoans
-                .map(
-                  (l) => `
+        ${
+          academicLoans.length === 0
+            ? `<p style="padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;color:#64748B;">
+                No se registraron préstamos universitarios en el rango de fechas seleccionado.
+              </p>`
+            : `
+            <table>
+              <thead>
                 <tr>
-                  <td class="td-bold">#${escapeHtml(l.folio)}</td>
-                  <td>${formatDateDisplay(l.requestedAt)}</td>
-                  <td>
-                    <span class="td-bold">${escapeHtml(l.studentName)}</span>
-                    ${l.studentNumber ? `<br><span style="font-size:10px;color:#64748B;">Mat. ${escapeHtml(l.studentNumber)}</span>` : ''}
-                  </td>
-                  <td>${escapeHtml(l.teacherName || '—')}</td>
-                  <td>
-                    <span class="td-bold">${escapeHtml(l.equipmentName)}</span>
-                    <br><span style="font-size:10px;color:#64748B;">${escapeHtml(l.equipmentCode)}</span>
-                  </td>
-                  <td style="text-align:center;">${statusBadge(l.status)}</td>
-                  <td>
-                    ${
-                      l.deliveryNotes
-                        ? `<span class="notes-tag">Entrega: ${escapeHtml(l.deliveryNotes)}</span>`
-                        : '<span style="color:#059669;font-weight:600;font-size:10px;">✓ Perfecto estado</span>'
-                    }
-                    ${l.damageNotes ? `<br><span style="color:#DC2626;font-size:10px;font-weight:700;">Daño: ${escapeHtml(l.damageNotes)}</span>` : ''}
-                  </td>
+                  <th style="width:115px;">Folio</th>
+                  <th style="width:78px;text-align:center;">Fecha</th>
+                  <th>Alumno / Matrícula</th>
+                  <th>Profesor</th>
+                  <th>Equipo entregado</th>
+                  <th style="width:78px;text-align:center;">Estatus</th>
+                  <th style="width:135px;">Condición / Obs. de entrega</th>
                 </tr>
-              `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        `
-      }
+              </thead>
+              <tbody>
+                ${academicLoans
+                  .map(
+                    (l) => `
+                  <tr>
+                    <td class="td-folio">#${escapeHtml(l.folio)}</td>
+                    <td style="text-align:center;">${formatDateDisplay(l.requestedAt)}</td>
+                    <td>
+                      <span class="td-bold">${escapeHtml(l.studentName)}</span>
+                      ${l.studentNumber ? `<br><span style="font-size:10px;color:#64748B;">Mat. ${escapeHtml(l.studentNumber)}</span>` : ''}
+                    </td>
+                    <td>${escapeHtml(l.teacherName || '—')}</td>
+                    <td>
+                      <span class="td-bold">${escapeHtml(l.equipmentName)}</span>
+                      <br><span style="font-size:10px;color:#64748B;">${escapeHtml(l.equipmentCode)}</span>
+                    </td>
+                    <td style="text-align:center;">${statusBadge(l.status)}</td>
+                    <td>
+                      ${
+                        l.deliveryNotes
+                          ? `<span class="notes-tag">Entrega: ${escapeHtml(l.deliveryNotes)}</span>`
+                          : '<span style="color:#059669;font-weight:600;font-size:10px;">✓ Perfecto estado</span>'
+                      }
+                      ${l.damageNotes ? `<br><span style="color:#DC2626;font-size:10px;font-weight:700;">Daño: ${escapeHtml(l.damageNotes)}</span>` : ''}
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          `
+        }
+      </div>
     `
         : ''
     }
@@ -800,66 +851,71 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     ${
       config.modules.includes('loans_rental')
         ? `
-      <div class="section-title-wrap">
-        <div class="section-num">4</div>
-        <h3 class="section-title">Historial de Rentas de Equipo a Particulares</h3>
-      </div>
-      <div class="section-desc">
-        Servicios de renta a terceros y particulares dentro del período evaluado (${formatDateDisplay(
-          config.startDate
-        )} al ${formatDateDisplay(config.endDate)}).
-      </div>
+      ${hasPreviousSectionsBeforeRental ? '<div class="page-break"></div>' : ''}
+      <div class="report-section" id="sec-loans-rental">
+        <div class="section-header-block">
+          <div class="section-title-wrap">
+            <div class="section-num">4</div>
+            <h3 class="section-title">Historial de Rentas de Equipo a Particulares</h3>
+          </div>
+          <div class="section-desc">
+            Servicios de renta a terceros y particulares dentro del período evaluado (${formatDateDisplay(
+              config.startDate
+            )} al ${formatDateDisplay(config.endDate)}).
+          </div>
+        </div>
 
-      ${
-        rentalLoans.length === 0
-          ? `<p style="padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;color:#64748B;">
-              No se registraron rentas a particulares en el rango de fechas seleccionado.
-            </p>`
-          : `
-          <table>
-            <thead>
-              <tr>
-                <th style="width:85px;">Folio</th>
-                <th style="width:85px;">Fecha</th>
-                <th>Solicitante / Particular</th>
-                <th>Equipo rentado</th>
-                <th style="width:85px;">Devolución</th>
-                <th style="width:80px;text-align:center;">Estatus</th>
-                <th>Pago / Observaciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rentalLoans
-                .map(
-                  (l) => `
+        ${
+          rentalLoans.length === 0
+            ? `<p style="padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;color:#64748B;">
+                No se registraron rentas a particulares en el rango de fechas seleccionado.
+              </p>`
+            : `
+            <table>
+              <thead>
                 <tr>
-                  <td class="td-bold">#${escapeHtml(l.folio)}</td>
-                  <td>${formatDateDisplay(l.requestedAt)}</td>
-                  <td>
-                    <span class="td-bold">${escapeHtml(l.studentName)}</span>
-                  </td>
-                  <td>
-                    <span class="td-bold">${escapeHtml(l.equipmentName)}</span>
-                    <br><span style="font-size:10px;color:#64748B;">${escapeHtml(l.equipmentCode)}</span>
-                  </td>
-                  <td>${formatDateDisplay(l.dueAt)}</td>
-                  <td style="text-align:center;">${statusBadge(l.status)}</td>
-                  <td>
-                    ${
-                      l.paymentConfirmed
-                        ? '<span style="color:#059669;font-weight:700;">✓ Pago confirmado</span>'
-                        : '<span style="color:#D97706;font-weight:600;">Pendiente de pago</span>'
-                    }
-                    ${l.deliveryNotes ? `<br><span class="notes-tag">Estado: ${escapeHtml(l.deliveryNotes)}</span>` : ''}
-                  </td>
+                  <th style="width:115px;">Folio</th>
+                  <th style="width:78px;text-align:center;">Fecha</th>
+                  <th>Solicitante / Particular</th>
+                  <th>Equipo rentado</th>
+                  <th style="width:78px;text-align:center;">Devolución</th>
+                  <th style="width:78px;text-align:center;">Estatus</th>
+                  <th style="width:130px;">Pago / Observaciones</th>
                 </tr>
-              `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        `
-      }
+              </thead>
+              <tbody>
+                ${rentalLoans
+                  .map(
+                    (l) => `
+                  <tr>
+                    <td class="td-folio">#${escapeHtml(l.folio)}</td>
+                    <td style="text-align:center;">${formatDateDisplay(l.requestedAt)}</td>
+                    <td>
+                      <span class="td-bold">${escapeHtml(l.studentName)}</span>
+                    </td>
+                    <td>
+                      <span class="td-bold">${escapeHtml(l.equipmentName)}</span>
+                      <br><span style="font-size:10px;color:#64748B;">${escapeHtml(l.equipmentCode)}</span>
+                    </td>
+                    <td style="text-align:center;">${formatDateDisplay(l.dueAt)}</td>
+                    <td style="text-align:center;">${statusBadge(l.status)}</td>
+                    <td>
+                      ${
+                        l.paymentConfirmed
+                          ? '<span style="color:#059669;font-weight:700;">✓ Pago confirmado</span>'
+                          : '<span style="color:#D97706;font-weight:600;">Pendiente de pago</span>'
+                      }
+                      ${l.deliveryNotes ? `<br><span class="notes-tag">Estado: ${escapeHtml(l.deliveryNotes)}</span>` : ''}
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          `
+        }
+      </div>
     `
         : ''
     }
@@ -867,46 +923,50 @@ export function generateReportHtml(config: ReportConfig, data: ReportData): stri
     ${
       config.modules.includes('users')
         ? `
-      <div class="section-title-wrap">
-        <div class="section-num">5</div>
-        <h3 class="section-title">Directorio y Censo de Usuarios del Laboratorio</h3>
-      </div>
-      <div class="section-desc">
-        Usuarios registrados en la plataforma: ${studentsCount} alumnos, ${teachersCount} docentes, ${rentersCount} particulares y ${staffCount} administradores/encargados.
-      </div>
+      <div class="report-section" id="sec-users">
+        <div class="section-header-block">
+          <div class="section-title-wrap">
+            <div class="section-num">5</div>
+            <h3 class="section-title">Directorio y Censo de Usuarios del Laboratorio</h3>
+          </div>
+          <div class="section-desc">
+            Usuarios registrados en la plataforma: ${studentsCount} alumnos, ${teachersCount} docentes, ${rentersCount} particulares y ${staffCount} administradores/encargados.
+          </div>
+        </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Nombre Completo</th>
-            <th>Correo Electrónico</th>
-            <th style="width:100px;text-align:center;">Rol</th>
-            <th>Matrícula / ID</th>
-            <th style="width:80px;text-align:center;">Estatus</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.users
-            .map(
-              (u) => `
+        <table>
+          <thead>
             <tr>
-              <td class="td-bold">${escapeHtml(u.displayName)}</td>
-              <td>${escapeHtml(u.email)}</td>
-              <td style="text-align:center;">${statusBadge(u.role)}</td>
-              <td>${escapeHtml(u.studentId || u.employeeId || '—')}</td>
-              <td style="text-align:center;">
-                ${
-                  u.active !== false
-                    ? '<span style="color:#166534;font-weight:700;">Activo</span>'
-                    : '<span style="color:#991B1B;font-weight:700;">Inactivo</span>'
-                }
-              </td>
+              <th>Nombre Completo</th>
+              <th>Correo Electrónico</th>
+              <th style="width:100px;text-align:center;">Rol</th>
+              <th>Matrícula / ID</th>
+              <th style="width:80px;text-align:center;">Estatus</th>
             </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${data.users
+              .map(
+                (u) => `
+              <tr>
+                <td class="td-bold">${escapeHtml(u.displayName)}</td>
+                <td>${escapeHtml(u.email)}</td>
+                <td style="text-align:center;">${statusBadge(u.role)}</td>
+                <td>${escapeHtml(u.studentId || u.employeeId || '—')}</td>
+                <td style="text-align:center;">
+                  ${
+                    u.active !== false
+                      ? '<span style="color:#166534;font-weight:700;">Activo</span>'
+                      : '<span style="color:#991B1B;font-weight:700;">Inactivo</span>'
+                  }
+                </td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
     `
         : ''
     }
