@@ -10,6 +10,7 @@ import { EquipmentPage } from './EquipmentPage';
 import { HistoryPage } from './HistoryPage';
 import { MetricsPage } from './MetricsPage';
 import { ProfilePage } from './ProfilePage';
+import { ReportsPage } from './ReportsPage';
 import { RequestsPage } from './RequestsPage';
 import { RentersPage } from './RentersPage';
 import { StudentCatalogPage } from './StudentCatalogPage';
@@ -28,6 +29,7 @@ export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
 
   if (section === 'equipment') return <EquipmentPage />;
   if (section === 'requests') return <RequestsPage />;
+  if (section === 'reports') return <ReportsPage />;
   if (section === 'renters') return <RentersPage />;
   if (section === 'catalog') return <StudentCatalogPage />;
   if (section === 'studentRequests') return <StudentRequestsPage />;
