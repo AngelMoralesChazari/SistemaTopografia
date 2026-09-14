@@ -19,10 +19,12 @@ import {
 } from '@lab-topo/services';
 import { Button, Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { AppDatePicker } from '../components/AppDatePicker';
 import {
   computeDynamicTitle,
   downloadReportHtml,
   downloadReportPdf,
+  formatMexicoDate,
   generateReportFolio,
   generateReportHtml,
   loadHtml2Pdf,
@@ -31,21 +33,23 @@ import {
   type ReportModule,
 } from '../lib/reportGenerator';
 
-function getTodayIso(): string {
-  const d = new Date();
+function toIsoDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
+function parseIsoDate(iso: string): Date {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return new Date();
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function getDaysAgoIso(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return toIsoDate(d);
 }
 
 function defaultRoleLabel(role?: string): string {
@@ -65,7 +69,8 @@ function defaultRoleLabel(role?: string): string {
 
 export function ReportsPage() {
   const { user } = useAuth();
-  const today = useMemo(() => getTodayIso(), []);
+  const todayDate = useMemo(() => new Date(), []);
+  const today = useMemo(() => toIsoDate(new Date()), []);
 
   // Data listeners
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -75,10 +80,13 @@ export function ReportsPage() {
   const [dataError, setDataError] = useState<string | null>(null);
 
   // Form State
-  const [authorName, setAuthorName] = useState(user?.displayName || 'Responsable');
+  const [authorName, setAuthorName] = useState(user?.displayName || '');
   const [authorRole, setAuthorRole] = useState(defaultRoleLabel(user?.role));
   const [startDate, setStartDate] = useState(() => getDaysAgoIso(30));
   const [endDate, setEndDate] = useState(today);
+
+  const startDateObj = useMemo(() => parseIsoDate(startDate), [startDate]);
+  const endDateObj = useMemo(() => parseIsoDate(endDate), [endDate]);
   const [selectedModules, setSelectedModules] = useState<ReportModule[]>([
     'loans_academic',
     'loans_rental',
@@ -163,7 +171,7 @@ export function ReportsPage() {
     // Regla estricta solicitada: Fecha de fin no puede superar el día de creación (hoy)
     if (endDate > today) {
       setValidationError(
-        `La fecha de fin (${endDate}) no puede ser posterior al día de hoy (${today}), que es la fecha de creación del reporte.`
+        `La fecha de fin (${formatMexicoDate(endDate)}) no puede ser posterior al día de hoy (${formatMexicoDate(today)}), que es la fecha de creación del reporte.`
       );
       return false;
     }
@@ -202,8 +210,11 @@ export function ReportsPage() {
 
   // Quick date ranges
   const applyRange = (days: number) => {
-    setEndDate(today);
-    setStartDate(getDaysAgoIso(days));
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    setEndDate(toIsoDate(end));
+    setStartDate(toIsoDate(start));
     setValidationError(null);
   };
 
@@ -366,43 +377,55 @@ export function ReportsPage() {
               </View>
             </View>
 
-            {/* Bloque 2: Rango de Fechas */}
+            {/* Bloque 2: Rango de Fechas con Calendario */}
             <View style={styles.card}>
               <View style={styles.cardHead}>
                 <MaterialIcons name="date-range" size={20} color={theme.color.navy} />
                 <Text style={styles.cardTitle}>Período de evaluación</Text>
               </View>
               <Text style={styles.cardDesc}>
-                Filtra los préstamos y rentas ocurridos en este intervalo. La fecha de fin no puede superar el día de hoy ({today}).
+                Selecciona las fechas mediante el calendario (formato Día/Mes/Año). La fecha de fin no puede superar el día de hoy ({formatMexicoDate(today)}).
               </Text>
 
               <View style={styles.dateRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Fecha de inicio (AAAA-MM-DD)</Text>
-                  <TextInput
-                    value={startDate}
-                    onChangeText={setStartDate}
-                    placeholder="AAAA-MM-DD"
-                    style={styles.input}
+                  <Text style={styles.label}>Fecha de inicio (Día/Mes/Año)</Text>
+                  <AppDatePicker
+                    value={startDateObj}
+                    maximumDate={endDateObj}
+                    displayValue={formatMexicoDate(startDate)}
+                    placeholder="DD/MM/AAAA"
+                    accessibilityLabel="Elegir fecha de inicio en calendario"
+                    onChange={(d) => {
+                      const next = toIsoDate(d);
+                      setStartDate(next);
+                      if (next > endDate) setEndDate(next);
+                      setValidationError(null);
+                    }}
                   />
                 </View>
 
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Fecha de fin (Máx. hoy: {today})</Text>
-                  <TextInput
-                    value={endDate}
-                    onChangeText={(val) => {
-                      setEndDate(val);
-                      if (val > today) {
+                  <Text style={styles.label}>Fecha de fin (Máx. hoy: {formatMexicoDate(today)})</Text>
+                  <AppDatePicker
+                    value={endDateObj}
+                    minimumDate={startDateObj}
+                    maximumDate={todayDate}
+                    displayValue={formatMexicoDate(endDate)}
+                    placeholder="DD/MM/AAAA"
+                    accessibilityLabel="Elegir fecha de fin en calendario"
+                    onChange={(d) => {
+                      const next = toIsoDate(d);
+                      if (next > today) {
                         setValidationError(
-                          `La fecha de fin no puede ser mayor al día de hoy (${today}).`
+                          `La fecha de fin no puede ser mayor al día de hoy (${formatMexicoDate(today)}).`
                         );
-                      } else {
-                        setValidationError(null);
+                        return;
                       }
+                      setEndDate(next);
+                      if (next < startDate) setStartDate(next);
+                      setValidationError(null);
                     }}
-                    placeholder={today}
-                    style={[styles.input, endDate > today && styles.inputError]}
                   />
                 </View>
               </View>
@@ -513,7 +536,7 @@ export function ReportsPage() {
             <View style={styles.summaryCard}>
               <Text style={styles.summaryCardTitle}>Resumen del documento</Text>
               <Text style={styles.summaryCardDesc}>
-                Datos que se consolidarán en el informe con corte al {today}:
+                Datos que se consolidarán en el informe con corte al {formatMexicoDate(today)}:
               </Text>
 
               <View style={styles.kpiGrid}>

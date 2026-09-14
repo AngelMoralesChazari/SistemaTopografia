@@ -40,21 +40,26 @@ function buildMonthCells(monthCursor: Date): Array<Date | null> {
 type AppDatePickerProps = {
   value: Date;
   minimumDate?: Date;
+  maximumDate?: Date;
   displayValue: string;
   placeholder?: string;
+  accessibilityLabel?: string;
   onChange: (date: Date) => void;
 };
 
 export function AppDatePicker({
   value,
   minimumDate,
+  maximumDate,
   displayValue,
   placeholder = 'DD/MM/AAAA',
+  accessibilityLabel = 'Elegir fecha',
   onChange,
 }: AppDatePickerProps) {
   const [open, setOpen] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => startOfDay(value));
   const minDay = minimumDate ? startOfDay(minimumDate) : null;
+  const maxDay = maximumDate ? startOfDay(maximumDate) : null;
 
   useEffect(() => {
     if (open) setMonthCursor(startOfDay(value));
@@ -63,7 +68,9 @@ export function AppDatePicker({
   const cells = useMemo(() => buildMonthCells(monthCursor), [monthCursor]);
 
   const selectDay = (day: Date) => {
-    if (minDay && startOfDay(day).getTime() < minDay.getTime()) return;
+    const dayStart = startOfDay(day).getTime();
+    if (minDay && dayStart < minDay.getTime()) return;
+    if (maxDay && dayStart > maxDay.getTime()) return;
     const next = new Date(
       day.getFullYear(),
       day.getMonth(),
@@ -87,7 +94,7 @@ export function AppDatePicker({
         onPress={() => setOpen(true)}
         style={styles.field}
         accessibilityRole="button"
-        accessibilityLabel="Elegir fecha de devolución"
+        accessibilityLabel={accessibilityLabel}
       >
         <Text style={[styles.fieldValue, !displayValue && styles.fieldPlaceholder]}>
           {displayValue || placeholder}
@@ -130,7 +137,10 @@ export function AppDatePicker({
                 if (!day) {
                   return <View key={`empty-${index}`} style={styles.dayCell} />;
                 }
-                const disabled = !!minDay && startOfDay(day).getTime() < minDay.getTime();
+                const dayStart = startOfDay(day).getTime();
+                const disabled =
+                  (!!minDay && dayStart < minDay.getTime()) ||
+                  (!!maxDay && dayStart > maxDay.getTime());
                 const selected = sameDay(day, value);
                 const isToday = sameDay(day, new Date());
                 return (

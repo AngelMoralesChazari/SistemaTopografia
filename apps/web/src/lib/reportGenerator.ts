@@ -95,15 +95,26 @@ export function generateReportFolio(now = new Date()): string {
   return `UAGRO-TOPO-${y}${m}-${tail}`;
 }
 
+export function formatMexicoDate(dateOrIso: string | Date | null | undefined): string {
+  if (!dateOrIso) return '—';
+  let d: Date;
+  if (dateOrIso instanceof Date) {
+    d = dateOrIso;
+  } else if (typeof dateOrIso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateOrIso)) {
+    const [y, m, day] = dateOrIso.split('-').map(Number);
+    d = new Date(y, m - 1, day);
+  } else {
+    d = new Date(dateOrIso);
+  }
+  if (Number.isNaN(d.getTime())) return String(dateOrIso);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 function formatDateDisplay(isoOrDateStr: string | null | undefined): string {
-  if (!isoOrDateStr) return '—';
-  const d = new Date(isoOrDateStr);
-  if (Number.isNaN(d.getTime())) return String(isoOrDateStr);
-  return d.toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  return formatMexicoDate(isoOrDateStr);
 }
 
 function formatDateFormal(d = new Date()): string {
