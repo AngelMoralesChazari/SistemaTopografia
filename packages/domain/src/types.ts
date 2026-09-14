@@ -56,7 +56,7 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  super_admin: 'Superadministrador',
+  super_admin: 'Administrador',
   admin: 'Administrador',
   lab_manager: 'Encargado de laboratorio',
   teacher: 'Maestro',
