@@ -154,7 +154,7 @@ function statusBadge(status: string): string {
     renter: { label: 'Particular', bg: '#FEF3C7', color: '#92400E' },
     lab_manager: { label: 'Encargado', bg: '#D1FAE5', color: '#065F46' },
     admin: { label: 'Administrador', bg: '#FCE7F3', color: '#9D174D' },
-    super_admin: { label: 'Superadmin', bg: '#FCE7F3', color: '#9D174D' },
+    super_admin: { label: 'Administrador', bg: '#FCE7F3', color: '#9D174D' },
   };
 
   const item = map[status] || {

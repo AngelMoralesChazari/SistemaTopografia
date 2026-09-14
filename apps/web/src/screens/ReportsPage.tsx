@@ -53,9 +53,9 @@ function defaultRoleLabel(role?: string): string {
     case 'lab_manager':
       return 'Encargado de Laboratorio';
     case 'super_admin':
-      return 'Administrador del Sistema';
+      return 'Administrador';
     case 'admin':
-      return 'Administrador General';
+      return 'Administrador';
     case 'teacher':
       return 'Profesor Supervisor';
     default:
@@ -95,7 +95,7 @@ export function ReportsPage() {
 
   useEffect(() => {
     // Preload PDF engine quietly in background for instant download
-    loadHtml2Pdf().catch(() => {});
+    loadHtml2Pdf().catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -424,6 +424,41 @@ export function ReportsPage() {
               </View>
             </View>
 
+            {/* Bloque 4: Título del Reporte */}
+            <View style={styles.card}>
+              <View style={styles.cardHeadBetween}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <MaterialIcons name="title" size={20} color={theme.color.navy} />
+                  <Text style={styles.cardTitle}>Título del reporte</Text>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setIsCustomTitle((v) => !v);
+                    if (!isCustomTitle) setCustomTitle(computedTitle);
+                  }}
+                  style={styles.smallActionBtn}
+                >
+                  <Text style={styles.smallActionText}>
+                    {isCustomTitle ? 'Usar automático' : 'Personalizar título'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {isCustomTitle ? (
+                <TextInput
+                  value={customTitle}
+                  onChangeText={setCustomTitle}
+                  placeholder="Escribe el título personalizado del reporte..."
+                  style={[styles.input, { marginTop: 8 }]}
+                />
+              ) : (
+                <View style={styles.autoTitleBox}>
+                  <Text style={styles.autoTitleLabel}>Título automático institucional:</Text>
+                  <Text style={styles.autoTitleText}>{computedTitle}</Text>
+                </View>
+              )}
+            </View>
+
             {/* Bloque 3: Módulos a incluir */}
             <View style={styles.card}>
               <View style={styles.cardHeadBetween}>
@@ -470,40 +505,7 @@ export function ReportsPage() {
               </View>
             </View>
 
-            {/* Bloque 4: Título del Reporte */}
-            <View style={styles.card}>
-              <View style={styles.cardHeadBetween}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <MaterialIcons name="title" size={20} color={theme.color.navy} />
-                  <Text style={styles.cardTitle}>Título del reporte</Text>
-                </View>
-                <Pressable
-                  onPress={() => {
-                    setIsCustomTitle((v) => !v);
-                    if (!isCustomTitle) setCustomTitle(computedTitle);
-                  }}
-                  style={styles.smallActionBtn}
-                >
-                  <Text style={styles.smallActionText}>
-                    {isCustomTitle ? 'Usar automático' : 'Personalizar título'}
-                  </Text>
-                </Pressable>
-              </View>
 
-              {isCustomTitle ? (
-                <TextInput
-                  value={customTitle}
-                  onChangeText={setCustomTitle}
-                  placeholder="Escribe el título personalizado del reporte..."
-                  style={[styles.input, { marginTop: 8 }]}
-                />
-              ) : (
-                <View style={styles.autoTitleBox}>
-                  <Text style={styles.autoTitleLabel}>Título automático institucional:</Text>
-                  <Text style={styles.autoTitleText}>{computedTitle}</Text>
-                </View>
-              )}
-            </View>
           </View>
 
           {/* Columna Derecha: Resumen de Contenido y Acciones de Descarga */}
