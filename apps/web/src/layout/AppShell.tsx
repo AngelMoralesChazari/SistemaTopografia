@@ -127,11 +127,9 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
         ? 'Supervisión académica'
         : user.role === 'renter'
           ? 'Renta de equipo'
-          : user.role === 'super_admin'
-            ? 'Superadministración'
-            : user.role === 'admin'
-              ? 'Administración'
-              : 'Gestión del laboratorio';
+          : user.role === 'super_admin' || user.role === 'admin'
+            ? 'Administración'
+            : 'Gestión del laboratorio';
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>

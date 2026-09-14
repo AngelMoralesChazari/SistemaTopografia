@@ -163,9 +163,7 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>
-        {user?.role === 'super_admin' ? 'Superadministrador' : 'Administrador'}
-      </Text>
+      <Text style={styles.eyebrow}>Administrador</Text>
       <Text style={styles.title}>Vista general</Text>
       <Text style={styles.subtitle}>
         Resumen operativo y accesos rápidos al resto del panel.

@@ -24,6 +24,14 @@ const ROLE_ORDER: UserRole[] = [
   'renter',
 ];
 
+const DISPLAY_ROLES: UserRole[] = [
+  'admin',
+  'lab_manager',
+  'teacher',
+  'student',
+  'renter',
+];
+
 export function UsersPage() {
   const { user } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -51,7 +59,12 @@ export function UsersPage() {
   }, [user]);
 
   const filtered = useMemo(() => {
-    const list = roleFilter === 'all' ? users : users.filter((u) => u.role === roleFilter);
+    const list =
+      roleFilter === 'all'
+        ? users
+        : roleFilter === 'admin'
+          ? users.filter((u) => u.role === 'admin' || u.role === 'super_admin')
+          : users.filter((u) => u.role === roleFilter);
     return [...list].sort((a, b) => {
       const ra = ROLE_ORDER.indexOf(a.role);
       const rb = ROLE_ORDER.indexOf(b.role);
@@ -92,7 +105,7 @@ export function UsersPage() {
         >
           <Text style={[styles.chipText, roleFilter === 'all' && styles.chipTextActive]}>Todos</Text>
         </Pressable>
-        {ROLE_ORDER.map((role) => (
+        {DISPLAY_ROLES.map((role) => (
           <Pressable
             key={role}
             onPress={() => setRoleFilter(role)}

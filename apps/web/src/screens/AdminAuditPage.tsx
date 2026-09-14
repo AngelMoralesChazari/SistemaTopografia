@@ -69,7 +69,7 @@ export function AdminAuditPage() {
   if (!user || !isSuperAdminRole(user.role)) {
     return (
       <View style={styles.root}>
-        <Notice tone="danger" title="Solo el superadministrador puede ver esta bitácora." />
+        <Notice tone="danger" title="Solo el administrador autorizado puede ver esta bitácora." />
       </View>
     );
   }
