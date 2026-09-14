@@ -18,6 +18,7 @@ export type WebSection =
   | 'equipment'
   | 'requests'
   | 'history'
+  | 'reports'
   | 'users'
   | 'metrics'
   | 'settings'
@@ -76,6 +77,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { id: 'history', label: 'Historial', icon: 'history', roles: LAB_ADMIN },
   { id: 'metrics', label: 'Métricas', icon: 'bar-chart', roles: LAB_ADMIN },
+  { id: 'reports', label: 'Generar reporte', icon: 'assessment', roles: LAB_ADMIN },
   { id: 'users', label: 'Usuarios', icon: 'group', roles: STAFF_ADMIN },
   { id: 'audit', label: 'Auditoría admins', icon: 'policy', roles: ['super_admin'] },
   { id: 'settings', label: 'Configuración', icon: 'settings', roles: STAFF_ADMIN },
