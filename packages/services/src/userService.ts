@@ -125,6 +125,15 @@ export async function createTeacher(
     }
   }
 
+  // Vincular alumnos pendientes que ya pertenezcan a los grupos asignados al maestro
+  if ((input.groupIds ?? []).length > 0) {
+    try {
+      await syncPendingStudentsForTeacher(uid, displayName, input.groupIds ?? [], labId);
+    } catch {
+      // Ignorar fallo no crítico de sincronización
+    }
+  }
+
   return uid;
 }
 
@@ -185,6 +194,18 @@ export async function updateTeacher(
 
   await updateDoc(userRef, updateData);
 
+  // Si se actualizaron grupos o el maestro está activo, sincronizar alumnos pendientes
+  const groupsToSync = input.groupIds;
+  if (groupsToSync && groupsToSync.length > 0 && input.active !== false) {
+    const teacherDisplayName =
+      (updateData.displayName as string) || input.displayName || 'Maestro';
+    try {
+      await syncPendingStudentsForTeacher(teacherId, teacherDisplayName, groupsToSync, labId);
+    } catch {
+      // Ignorar fallo no crítico de sincronización
+    }
+  }
+
   if (actor) {
     try {
       const summaryParts: string[] = [];
@@ -241,6 +262,139 @@ export async function setTeacherActiveStatus(
     } catch {
       // Ignorar fallo de auditoría secundaria
     }
+  }
+}
+
+export type AssignStudentGroupResult = {
+  teacherId: string | null;
+  teacherName: string;
+  groupCode: string;
+};
+
+/**
+ * Asigna el grupo de Topografía al alumno y busca automáticamente en Firestore
+ * al docente activo que tenga a cargo dicho grupo para vincularlos.
+ */
+export async function assignStudentAcademicGroup(
+  studentUid: string,
+  groupCode: string,
+  studentId?: string | null,
+  actor?: { uid: string; email?: string | null; displayName?: string | null; role?: UserRole },
+  labId = getLabId()
+): Promise<AssignStudentGroupResult> {
+  const db = getDb();
+
+  // 1. Buscar maestros activos del laboratorio
+  const q = query(
+    collection(db, 'users'),
+    where('labId', '==', labId),
+    where('role', '==', 'teacher'),
+    where('active', '==', true)
+  );
+  const snap = await getDocs(q);
+
+  let assignedTeacherId: string | null = null;
+  let assignedTeacherName = 'Pendiente de asignación';
+
+  for (const d of snap.docs) {
+    const data = d.data();
+    const groupIds: string[] = (data.groupIds as string[]) || [];
+    if (groupIds.includes(groupCode)) {
+      assignedTeacherId = d.id;
+      assignedTeacherName = String(data.displayName || 'Maestro');
+      break;
+    }
+  }
+
+  // 2. Actualizar documento del alumno
+  const studentRef = doc(db, 'users', studentUid);
+  const updateData: Record<string, unknown> = {
+    groupIds: [groupCode],
+    teacherId: assignedTeacherId,
+    teacherName: assignedTeacherName,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (studentId && studentId.trim()) {
+    updateData.studentId = studentId.trim();
+  }
+
+  await updateDoc(studentRef, updateData);
+
+  // 3. Auditoría
+  if (actor) {
+    try {
+      await writeAuditLog({
+        labId,
+        actorId: actor.uid,
+        actorEmail: actor.email ?? '',
+        actorName: actor.displayName ?? 'Alumno',
+        actorRole: actor.role ?? 'student',
+        action: 'USER_UPDATE',
+        targetType: 'user',
+        targetId: studentUid,
+        summary: `Alumno asignó grupo ${groupCode} (Maestro: ${assignedTeacherName})`,
+      });
+    } catch {
+      // Ignorar fallo de auditoría secundaria
+    }
+  }
+
+  return {
+    teacherId: assignedTeacherId,
+    teacherName: assignedTeacherName,
+    groupCode,
+  };
+}
+
+/**
+  * Sincroniza y vincula a alumnos que estén con "Pendiente de asignación"
+  * y cuyo grupo coincida con los grupos recién asignados a un maestro.
+  */
+export async function syncPendingStudentsForTeacher(
+  teacherId: string,
+  teacherDisplayName: string,
+  groupIds: string[],
+  labId = getLabId()
+): Promise<number> {
+  if (!groupIds || groupIds.length === 0) return 0;
+  const db = getDb();
+  try {
+    const q = query(
+      collection(db, 'users'),
+      where('labId', '==', labId),
+      where('role', '==', 'student')
+    );
+    const snap = await getDocs(q);
+    let updatedCount = 0;
+
+    for (const d of snap.docs) {
+      const data = d.data();
+      const currentTeacherId = data.teacherId;
+      const currentTeacherName = data.teacherName;
+      const studentGroups: string[] = (data.groupIds as string[]) || [];
+
+      // Si el alumno no tiene maestro o está marcado como 'Pendiente de asignación'
+      const isPending =
+        !currentTeacherId ||
+        currentTeacherName === 'Pendiente de asignación' ||
+        currentTeacherName === null;
+
+      if (isPending) {
+        const matchesGroup = studentGroups.some((g) => groupIds.includes(g));
+        if (matchesGroup) {
+          await updateDoc(doc(db, 'users', d.id), {
+            teacherId,
+            teacherName: teacherDisplayName,
+            updatedAt: serverTimestamp(),
+          });
+          updatedCount++;
+        }
+      }
+    }
+    return updatedCount;
+  } catch {
+    return 0;
   }
 }
 
