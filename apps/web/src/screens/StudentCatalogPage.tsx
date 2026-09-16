@@ -77,10 +77,14 @@ export function StudentCatalogPage() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const compact = width < 900;
-  const availableWidth = Math.max(300, width - (compact ? 0 : 280) - 56);
-  const numColumns = availableWidth > 1150 ? 4 : availableWidth > 720 ? 3 : availableWidth > 460 ? 2 : 1;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const availableWidth =
+    containerWidth > 0
+      ? containerWidth
+      : Math.max(300, width - (compact ? 0 : 280) - 80);
+  const numColumns = !compact ? 4 : availableWidth > 560 ? 3 : availableWidth > 360 ? 2 : 1;
   const gridGap = 14;
-  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1)) / numColumns);
+  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1) - 4) / numColumns);
 
   const [items, setItems] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,7 +364,15 @@ export function StudentCatalogPage() {
                 description="No hay material disponible. Ejecuta npm run seed:equipment si el inventario está vacío."
               />
             ) : (
-              <View style={styles.grid}>
+              <View
+                style={styles.grid}
+                onLayout={(e) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0 && Math.abs(w - containerWidth) > 1) {
+                    setContainerWidth(w);
+                  }
+                }}
+              >
                 {filteredCategories.map((cat) => (
                   <Pressable
                     key={cat.id}

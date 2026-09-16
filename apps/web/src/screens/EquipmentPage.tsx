@@ -49,10 +49,14 @@ export function EquipmentPage() {
     user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'lab_manager';
   const { width } = useWindowDimensions();
   const compact = width < 900;
-  const availableWidth = Math.max(300, width - (compact ? 0 : 280) - 56);
-  const numColumns = availableWidth > 1150 ? 4 : availableWidth > 720 ? 3 : availableWidth > 460 ? 2 : 1;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const availableWidth =
+    containerWidth > 0
+      ? containerWidth
+      : Math.max(300, width - (compact ? 0 : 280) - 80);
+  const numColumns = !compact ? 4 : availableWidth > 560 ? 3 : availableWidth > 360 ? 2 : 1;
   const gridGap = 14;
-  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1)) / numColumns);
+  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1) - 4) / numColumns);
   const [items, setItems] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,13 +191,13 @@ export function EquipmentPage() {
           <Text style={styles.title}>Catálogo de equipos</Text>
           <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
         </View>
-        {canWrite ? (
+        {/* {canWrite ? (
           <Pressable style={styles.primaryBtn} onPress={() => setShowForm((v) => !v)}>
             <Text style={styles.primaryBtnText}>
               {showForm ? 'Cerrar formulario' : '+ Nuevo equipo'}
             </Text>
           </Pressable>
-        ) : null}
+        ) : null} */}
       </View>
 
       <View style={styles.kpis}>
@@ -267,7 +271,15 @@ export function EquipmentPage() {
               description="Ejecuta npm run seed:equipment o registra el primer equipo."
             />
           ) : (
-            <View style={styles.grid}>
+            <View
+              style={styles.grid}
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                if (w > 0 && Math.abs(w - containerWidth) > 1) {
+                  setContainerWidth(w);
+                }
+              }}
+            >
               {filteredGroups.map((group) => (
                 <Pressable
                   key={group.id}
