@@ -1,11 +1,14 @@
 import {
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithCredential,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { AppUser, RenterStatus, UserRole } from '@lab-topo/domain';
 import { getLabId } from '@lab-topo/config';
 import { getDb, getFirebaseAuth } from './firebase';
@@ -27,6 +30,23 @@ function mapRole(value: unknown): UserRole | null {
 function mapRenterStatus(value: unknown): RenterStatus | null {
   if (value === 'pending' || value === 'approved' || value === 'rejected') {
     return value;
+  }
+  return null;
+}
+
+/** Correos institucionales @uagro.mx excluidos de asignación automática de rol alumno */
+export const EXCEPTION_STAFF_EMAILS = ['19258@uagro.mx'];
+
+/** Determina si un correo pertenece al dominio institucional @uagro.mx */
+export function isUagroEmail(email: string): boolean {
+  return email.trim().toLowerCase().endsWith('@uagro.mx');
+}
+
+/** Extrae la matrícula del correo institucional si inicia con dígitos (ej: 24722899@uagro.mx -> 24722899) */
+export function extractStudentIdFromEmail(email: string): string | null {
+  const localPart = email.split('@')[0]?.trim() || '';
+  if (/^\d{5,12}$/.test(localPart)) {
+    return localPart;
   }
   return null;
 }
@@ -61,9 +81,37 @@ async function loadUserProfile(user: User): Promise<AppUser> {
   }
 
   if (!snapExists || !data) {
-    throw new Error(
-      'Tu cuenta existe en Authentication, pero no hay perfil en Firestore (users/{uid}). Ejecuta npm run seed:users.'
-    );
+    const email = (user.email ?? '').trim().toLowerCase();
+    if (isUagroEmail(email) && !EXCEPTION_STAFF_EMAILS.includes(email)) {
+      const studentData = {
+        uid: user.uid,
+        email,
+        displayName: user.displayName || 'Alumno',
+        role: 'student' as UserRole,
+        studentId: extractStudentIdFromEmail(email),
+        employeeId: null,
+        teacherId: null,
+        teacherName: 'Pendiente de asignación',
+        groupIds: [],
+        active: true,
+        labId: getLabId(),
+        renterStatus: null,
+        phone: user.phoneNumber ?? null,
+        company: null,
+        ine: null,
+        rfc: null,
+        address: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(doc(getDb(), 'users', user.uid), studentData);
+      data = studentData as Record<string, unknown>;
+      snapExists = true;
+    } else {
+      throw new Error(
+        'Tu cuenta existe en Authentication, pero no hay perfil en Firestore (users/{uid}).'
+      );
+    }
   }
 
   const role = mapRole(token.claims.role) ?? mapRole(data.role);
@@ -114,6 +162,75 @@ async function loadUserProfile(user: User): Promise<AppUser> {
 export async function signIn(email: string, password: string): Promise<AppUser> {
   const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
   return loadUserProfile(credential.user);
+}
+
+/** Iniciar sesión con Google (Web popup o idToken para móvil) */
+export async function signInWithGoogle(idToken?: string): Promise<AppUser> {
+  const auth = getFirebaseAuth();
+
+  let user: User;
+  if (idToken) {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, credential);
+    user = result.user;
+  } else {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account',
+      hd: 'uagro.mx',
+    });
+    const result = await signInWithPopup(auth, provider);
+    user = result.user;
+  }
+
+  const email = (user.email ?? '').trim().toLowerCase();
+
+  // Verificar si ya existe el perfil en Firestore
+  const userRef = doc(getDb(), 'users', user.uid);
+  const snap = await getDoc(userRef);
+
+  if (!snap.exists()) {
+    // Si no existe, verificar si es correo @uagro.mx válido
+    if (!isUagroEmail(email)) {
+      await firebaseSignOut(auth);
+      throw new Error(
+        'Acceso restringido: Solo se permite el registro de alumnos con correo institucional @uagro.mx.'
+      );
+    }
+
+    if (EXCEPTION_STAFF_EMAILS.includes(email)) {
+      await firebaseSignOut(auth);
+      throw new Error(
+        `La cuenta ${email} es una cuenta especial y requiere que el administrador configure su rol previamente.`
+      );
+    }
+
+    // Auto-crear como alumno
+    const newStudentData = {
+      uid: user.uid,
+      email,
+      displayName: user.displayName || 'Alumno',
+      role: 'student' as UserRole,
+      studentId: extractStudentIdFromEmail(email),
+      employeeId: null,
+      teacherId: null,
+      teacherName: 'Pendiente de asignación',
+      groupIds: [],
+      active: true,
+      labId: getLabId(),
+      renterStatus: null,
+      phone: user.phoneNumber ?? null,
+      company: null,
+      ine: null,
+      rfc: null,
+      address: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    await setDoc(userRef, newStudentData);
+  }
+
+  return loadUserProfile(user);
 }
 
 export async function signOut(): Promise<void> {
