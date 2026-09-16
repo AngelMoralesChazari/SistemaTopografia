@@ -1,5 +1,4 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { theme } from '@lab-topo/config';
 import { isAdminRole } from '@lab-topo/domain';
 import { useAuth } from '../auth/AuthContext';
@@ -26,6 +25,8 @@ type DashboardHomeProps = {
 };
 
 export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const { user } = useAuth();
 
   if (section === 'manageEquipment') return <ManageEquipmentPage />;
@@ -54,12 +55,15 @@ export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
   }
   if (section === 'dashboard') {
     return (
-      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={[styles.content, isMobile && styles.contentMobile]}
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>Inventario del laboratorio</Text>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>Inventario del laboratorio</Text>
           <Text style={styles.subtitle}>Usa el menú para solicitudes, catálogo e historial.</Text>
         </View>
-        <View style={styles.card}>
+        <View style={[styles.card, isMobile && styles.cardMobile]}>
           <Text style={styles.cardTitle}>Panel del encargado</Text>
           <Text style={styles.cardBody}>
             Revisa solicitudes activas, gestiona el catálogo y aprueba particulares desde el menú
@@ -71,12 +75,15 @@ export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.content, isMobile && styles.contentMobile]}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Configuración</Text>
+        <Text style={[styles.title, isMobile && styles.titleMobile]}>Configuración</Text>
         <Text style={styles.subtitle}>Políticas del laboratorio y parámetros del sistema.</Text>
       </View>
-      <View style={styles.card}>
+      <View style={[styles.card, isMobile && styles.cardMobile]}>
         <Text style={styles.cardTitle}>Módulo en construcción</Text>
         <Text style={styles.cardBody}>
           La configuración avanzada del laboratorio se completará en un siguiente paso.
@@ -87,14 +94,19 @@ export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.canvas },
-  content: { padding: 32, paddingBottom: 48 },
+  root: { flex: 1, backgroundColor: theme.color.canvas, width: '100%' },
+  content: { padding: 32, paddingBottom: 48, width: '100%', maxWidth: '100%' },
+  contentMobile: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 40 },
   header: { marginBottom: 24 },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
+  },
+  titleMobile: {
+    fontSize: 22,
+    letterSpacing: -0.4,
   },
   subtitle: { marginTop: 8, color: theme.color.muted, fontSize: theme.font.size.md },
   card: {
@@ -104,6 +116,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     padding: 22,
     ...theme.shadow.soft,
+    width: '100%',
+    maxWidth: '100%',
+  },
+  cardMobile: {
+    padding: 16,
   },
   cardTitle: {
     color: theme.color.navy,
