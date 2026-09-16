@@ -467,9 +467,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: '100%' as unknown as number,
     backgroundColor: theme.color.canvas,
+    width: '100%',
+    maxWidth: '100%',
   },
   shellMobile: {
     flexDirection: 'column',
+    width: '100%',
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   sidebar: {
     width: 280,
@@ -728,6 +733,9 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     minWidth: 0,
+    width: '100%',
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
 });
 
