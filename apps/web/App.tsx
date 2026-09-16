@@ -8,6 +8,7 @@ import { LoginPage } from './src/screens/LoginPage';
 import { RenterPendingPage } from './src/screens/RenterPendingPage';
 import { RenterRegisterPage } from './src/screens/RenterRegisterPage';
 import { SectionPage } from './src/screens/SectionPage';
+import { StudentGroupOnboardingModal } from './src/components/StudentGroupOnboardingModal';
 
 function WebRoot() {
   const { user, loading } = useAuth();
@@ -41,9 +42,12 @@ function WebRoot() {
   }
 
   return (
-    <AppShell section={section} onSectionChange={setSection}>
-      <SectionPage section={section} onSectionChange={setSection} />
-    </AppShell>
+    <>
+      <AppShell section={section} onSectionChange={setSection}>
+        <SectionPage section={section} onSectionChange={setSection} />
+      </AppShell>
+      <StudentGroupOnboardingModal />
+    </>
   );
 }
 
