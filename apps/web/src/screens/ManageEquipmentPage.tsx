@@ -440,17 +440,18 @@ export function ManageEquipmentPage() {
           </View>
           <Pressable
             style={styles.primaryBtn}
-            onPress={() => setShowCreateForm((v) => !v)}
+            onPress={() => {
+              setCreateError(null);
+              setShowCreateForm(true);
+            }}
           >
             <MaterialIcons
-              name={showCreateForm ? 'close' : 'add'}
+              name="add"
               size={20}
               color="#fff"
               style={{ marginRight: 4 }}
             />
-            <Text style={styles.primaryBtnText}>
-              {showCreateForm ? 'Cerrar formulario' : 'Nuevo equipo'}
-            </Text>
+            <Text style={styles.primaryBtnText}>Nuevo equipo</Text>
           </Pressable>
         </View>
 
@@ -494,120 +495,6 @@ export function ManageEquipmentPage() {
             </Pressable>
           ) : null}
         </View>
-
-        {/* Formulario Alta de equipo */}
-        {showCreateForm ? (
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View>
-                <Text style={styles.cardTitle}>Alta de nuevo equipo</Text>
-                <Text style={styles.cardSub}>Registra un nuevo elemento en el inventario del laboratorio.</Text>
-              </View>
-              <Pressable onPress={() => setShowCreateForm(false)}>
-                <MaterialIcons name="close" size={20} color={theme.color.muted} />
-              </Pressable>
-            </View>
-
-            {createError ? <Notice tone="danger" title={createError} /> : null}
-
-            <View style={styles.formGrid}>
-              <TextField
-                label="Código interno *"
-                value={newCode}
-                onChangeText={setNewCode}
-                containerStyle={styles.formField}
-                placeholder="Ej. ET-01, NV-03"
-              />
-              <TextField
-                label="Nombre del equipo *"
-                value={newName}
-                onChangeText={setNewName}
-                containerStyle={styles.formField}
-                placeholder="Ej. Estación Total Leica TS06"
-              />
-              <TextField
-                label="Marca"
-                value={newBrand}
-                onChangeText={setNewBrand}
-                containerStyle={styles.formField}
-                placeholder="Ej. Leica, Topcon"
-              />
-              <TextField
-                label="Modelo"
-                value={newModel}
-                onChangeText={setNewModel}
-                containerStyle={styles.formField}
-                placeholder="Ej. TS06 Plus"
-              />
-              <TextField
-                label="Categoría"
-                value={newCategoryName}
-                onChangeText={setNewCategoryName}
-                containerStyle={styles.formField}
-                placeholder="Ej. Estación Total, Nivel óptico"
-              />
-              <TextField
-                label="Cantidad total *"
-                value={newQtyTotal}
-                onChangeText={setNewQtyTotal}
-                keyboardType="number-pad"
-                containerStyle={styles.formField}
-                placeholder="1"
-              />
-            </View>
-
-            {/* Categorías sugeridas para alta */}
-            {existingCategories.length > 0 ? (
-              <View style={styles.suggestionsWrap}>
-                <Text style={styles.suggestionsLabel}>Categorías existentes:</Text>
-                <View style={styles.suggestionsRow}>
-                  {existingCategories.slice(0, 6).map((cat) => (
-                    <Pressable
-                      key={cat}
-                      style={[
-                        styles.suggPill,
-                        newCategoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillActive,
-                      ]}
-                      onPress={() => setNewCategoryName(cat)}
-                    >
-                      <Text
-                        style={[
-                          styles.suggPillText,
-                          newCategoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillTextActive,
-                        ]}
-                      >
-                        {cat}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            <TextField
-              label="Observaciones"
-              value={newNotes}
-              onChangeText={setNewNotes}
-              placeholder="Notas sobre el estado físico, accesorios incluidos, etc."
-            />
-
-            <View style={{ marginTop: 12, flexDirection: 'row', gap: 10 }}>
-              <Button
-                title="Registrar equipo"
-                loading={createSaving}
-                onPress={onCreate}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title="Cancelar"
-                variant="secondary"
-                disabled={createSaving}
-                onPress={() => setShowCreateForm(false)}
-                fullWidth={false}
-              />
-            </View>
-          </View>
-        ) : null}
 
         {error ? <Notice tone="danger" title="Error al cargar inventario" description={error} /> : null}
         {loading ? <ActivityIndicator color={theme.color.navy} style={{ marginVertical: 32 }} /> : null}
@@ -1030,6 +917,140 @@ export function ManageEquipmentPage() {
                 variant="secondary"
                 disabled={editSaving}
                 onPress={closeEditModal}
+                fullWidth={false}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Alta de nuevo equipo */}
+      <Modal
+        visible={showCreateForm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!createSaving) setShowCreateForm(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalTitle}>Nuevo equipo</Text>
+                <Text style={styles.modalSub}>
+                  Registra un nuevo elemento en el inventario del laboratorio.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!createSaving) setShowCreateForm(false);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialIcons name="close" size={20} color={theme.color.muted} />
+              </Pressable>
+            </View>
+
+            {createError ? <Notice tone="danger" title={createError} /> : null}
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.formGrid}>
+                <TextField
+                  label="Código interno *"
+                  value={newCode}
+                  onChangeText={setNewCode}
+                  placeholder="Ej: EST-03, NIV-01..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Nombre del equipo *"
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="Ej: Estación Total Leica..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Marca"
+                  value={newBrand}
+                  onChangeText={setNewBrand}
+                  placeholder="Ej: Leica, Topcon, Trimble..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Modelo"
+                  value={newModel}
+                  onChangeText={setNewModel}
+                  placeholder="Ej: TS06 Plus..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Categoría"
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="Ej: Topografía, Drones, GPS..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Cantidad total"
+                  value={newQtyTotal}
+                  onChangeText={setNewQtyTotal}
+                  keyboardType="number-pad"
+                  placeholder="1"
+                  containerStyle={styles.formField}
+                />
+              </View>
+
+              {/* Sugerencias rápidas de categorías */}
+              {existingCategories.length > 0 ? (
+                <View style={styles.suggestionsWrap}>
+                  <Text style={styles.suggestionsLabel}>Sugerencias de categoría:</Text>
+                  <View style={styles.suggestionsRow}>
+                    {existingCategories.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={[
+                          styles.suggPill,
+                          newCategoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillActive,
+                        ]}
+                        onPress={() => setNewCategoryName(cat)}
+                      >
+                        <Text
+                          style={[
+                            styles.suggPillText,
+                            newCategoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillTextActive,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              <TextField
+                label="Observaciones y estado físico"
+                value={newNotes}
+                onChangeText={setNewNotes}
+                placeholder="Condición general, número de serie, detalles de calibración..."
+              />
+            </ScrollView>
+
+            {/* Modal Actions */}
+            <View style={styles.modalActions}>
+              <Button
+                title="Registrar equipo"
+                loading={createSaving}
+                onPress={onCreate}
+                style={styles.modalSaveBtn}
+              />
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                disabled={createSaving}
+                onPress={() => setShowCreateForm(false)}
                 fullWidth={false}
               />
             </View>

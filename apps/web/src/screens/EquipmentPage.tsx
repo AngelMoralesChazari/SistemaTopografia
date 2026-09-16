@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,8 +20,8 @@ import {
   type Equipment,
   type EquipmentStatus,
 } from '@lab-topo/domain';
-import { createEquipment, watchEquipment } from '@lab-topo/services';
-import { Badge, Button, Notice, TextField, type BadgeTone } from '@lab-topo/ui';
+import { createEquipment, watchEquipment, writeAuditLog } from '@lab-topo/services';
+import { Badge, Button, Notice, TextField, Toast, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { FilterChips } from '../components/FilterChips';
 import { ListPagination } from '../components/ListPagination';
@@ -76,6 +77,16 @@ export function EquipmentPage() {
   const [qtyTotal, setQtyTotal] = useState('1');
   const [notes, setNotes] = useState('');
 
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 3000);
+  };
+
   useEffect(() => {
     const unsub = watchEquipment(
       (next) => {
@@ -92,6 +103,14 @@ export function EquipmentPage() {
   }, []);
 
   const activeItems = useMemo(() => items.filter((e) => e.active !== false), [items]);
+
+  const existingCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of items) {
+      if (it.categoryName?.trim()) set.add(it.categoryName.trim());
+    }
+    return Array.from(set);
+  }, [items]);
 
   const kpis = useMemo(() => {
     const available = activeItems.filter((e) => e.status === 'available').length;
@@ -154,21 +173,37 @@ export function EquipmentPage() {
     const total = Math.max(1, Number(qtyTotal) || 1);
     setSaving(true);
     try {
-      await createEquipment({
-        internalCode: code,
-        name,
-        brand: brand || null,
-        model: model || null,
-        categoryId: categoryIdOf({ categoryName, categoryId: '' } as Equipment),
-        categoryName,
+      const catClean = categoryName.trim() || 'Topografía';
+      const newId = await createEquipment({
+        internalCode: code.trim(),
+        name: name.trim(),
+        brand: brand.trim() || null,
+        model: model.trim() || null,
+        categoryId: categoryIdOf({ categoryName: catClean, categoryId: '' } as Equipment),
+        categoryName: catClean,
         status: 'available',
         trackMode: total > 1 ? 'bulk' : 'unit',
         qtyTotal: total,
         qtyAvailable: total,
-        notes: notes || null,
+        notes: notes.trim() || null,
         labId: user?.labId ?? getLabId(),
         active: true,
       });
+
+      if (user) {
+        await writeAuditLog({
+          labId: user.labId || getLabId(),
+          actorId: user.uid,
+          actorEmail: user.email,
+          actorName: user.displayName,
+          actorRole: user.role,
+          action: 'EQUIPMENT_CREATE',
+          targetType: 'equipment',
+          targetId: newId,
+          summary: `Alta de equipo ${code.trim()} (${name.trim()}), cant: ${total}`,
+        });
+      }
+
       setShowForm(false);
       setCode('');
       setName('');
@@ -177,6 +212,7 @@ export function EquipmentPage() {
       setCategoryName('Topografía');
       setQtyTotal('1');
       setNotes('');
+      showToast(`Equipo "${name.trim()}" registrado con éxito.`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'No se pudo guardar.');
     } finally {
@@ -185,208 +221,324 @@ export function EquipmentPage() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.title}>Catálogo de equipos</Text>
-          <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
-        </View>
-        {/* {canWrite ? (
-          <Pressable style={styles.primaryBtn} onPress={() => setShowForm((v) => !v)}>
-            <Text style={styles.primaryBtnText}>
-              {showForm ? 'Cerrar formulario' : '+ Nuevo equipo'}
-            </Text>
-          </Pressable>
-        ) : null} */}
-      </View>
-
-      <View style={styles.kpis}>
-        <View style={styles.kpi}>
-          <Text style={styles.kpiLabel}>Total equipos</Text>
-          <Text style={styles.kpiValue}>{kpis.total}</Text>
-        </View>
-        <View style={styles.kpi}>
-          <Text style={styles.kpiLabel}>Disponibles</Text>
-          <Text style={styles.kpiValue}>{kpis.available}</Text>
-        </View>
-        <View style={styles.kpi}>
-          <Text style={styles.kpiLabel}>En préstamo</Text>
-          <Text style={styles.kpiValue}>{kpis.loaned}</Text>
-        </View>
-        <View style={styles.kpi}>
-          <Text style={styles.kpiLabel}>Mantenimiento</Text>
-          <Text style={styles.kpiValue}>{kpis.maintenance}</Text>
-        </View>
-      </View>
-
-      <View style={styles.search}>
-        <MaterialIcons name="search" size={20} color={theme.color.muted} />
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Buscar grupo o equipo…"
-          placeholderTextColor={theme.color.muted}
-          style={styles.searchInput}
-        />
-      </View>
-
-      {showForm ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Alta de equipo</Text>
-          {formError ? <Notice tone="danger" title={formError} /> : null}
-          <View style={styles.formGrid}>
-            <TextField label="Código interno" value={code} onChangeText={setCode} containerStyle={styles.formField} />
-            <TextField label="Nombre" value={name} onChangeText={setName} containerStyle={styles.formField} />
-            <TextField label="Marca" value={brand} onChangeText={setBrand} containerStyle={styles.formField} />
-            <TextField label="Modelo" value={model} onChangeText={setModel} containerStyle={styles.formField} />
-            <TextField
-              label="Categoría"
-              value={categoryName}
-              onChangeText={setCategoryName}
-              containerStyle={styles.formField}
-            />
-            <TextField
-              label="Cantidad total"
-              value={qtyTotal}
-              onChangeText={setQtyTotal}
-              keyboardType="number-pad"
-              containerStyle={styles.formField}
-            />
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.title}>Catálogo de equipos</Text>
+            <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
           </View>
-          <TextField label="Observaciones" value={notes} onChangeText={setNotes} />
-          <Button title="Guardar equipo" loading={saving} onPress={onCreate} />
-        </View>
-      ) : null}
-
-      {error ? <Notice tone="danger" title="Error al cargar" description={error} /> : null}
-      {loading ? <ActivityIndicator color={theme.color.navy} /> : null}
-
-      {!loading && !selectedCategoryId ? (
-        <>
-          <Text style={styles.sectionTitle}>Grupos de material</Text>
-          <Text style={styles.sectionHint}>Elige un grupo para ver y administrar los equipos.</Text>
-          {filteredGroups.length === 0 ? (
-            <Notice
-              title="Sin grupos"
-              description="Ejecuta npm run seed:equipment o registra el primer equipo."
-            />
-          ) : (
-            <View
-              style={styles.grid}
-              onLayout={(e) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0 && Math.abs(w - containerWidth) > 1) {
-                  setContainerWidth(w);
-                }
-              }}
-            >
-              {filteredGroups.map((group) => (
-                <Pressable
-                  key={group.id}
-                  style={({ pressed }) => [
-                    styles.groupCard,
-                    { width: cardWidth },
-                    pressed && styles.groupCardPressed,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategoryId(group.id);
-                    setStatusFilter('all');
-                  }}
-                >
-                  <View style={styles.groupMark}>
-                    <Text style={styles.groupMarkText}>{group.mark}</Text>
-                  </View>
-                  <Text style={styles.groupName} numberOfLines={2}>
-                    {group.name}
-                  </Text>
-                  <Text style={styles.groupHint} numberOfLines={2}>
-                    {group.hint}
-                  </Text>
-                  <View style={styles.groupFoot}>
-                    <Text style={styles.groupAvail}>{group.availableCount} disp.</Text>
-                    <Text style={styles.groupCount}>
-                      {group.totalItems} ítem{group.totalItems === 1 ? '' : 's'}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </>
-      ) : null}
-
-      {!loading && selectedCategoryId ? (
-        <>
-          <View style={styles.groupHead}>
+          {canWrite ? (
             <Pressable
+              style={styles.primaryBtn}
               onPress={() => {
-                setSelectedCategoryId(null);
-                setStatusFilter('all');
+                setFormError(null);
+                setShowForm(true);
               }}
-              style={styles.backBtn}
             >
-              <MaterialIcons name="arrow-back" size={18} color={theme.color.navy} />
-              <Text style={styles.backText}>Grupos</Text>
+              <MaterialIcons name="add" size={20} color="#fff" style={{ marginRight: 4 }} />
+              <Text style={styles.primaryBtnText}>Nuevo equipo</Text>
             </Pressable>
-            <View style={styles.groupTitleBlock}>
-              <Text style={styles.groupEyebrow}>Grupo</Text>
-              <Text style={styles.groupTitle}>{selectedCategory?.name ?? 'Material'}</Text>
-            </View>
-            <View style={styles.groupBadge}>
-              <Text style={styles.groupBadgeText}>{categoryItems.length} equipos</Text>
-            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.kpis}>
+          <View style={styles.kpi}>
+            <Text style={styles.kpiLabel}>Total equipos</Text>
+            <Text style={styles.kpiValue}>{kpis.total}</Text>
           </View>
+          <View style={styles.kpi}>
+            <Text style={styles.kpiLabel}>Disponibles</Text>
+            <Text style={styles.kpiValue}>{kpis.available}</Text>
+          </View>
+          <View style={styles.kpi}>
+            <Text style={styles.kpiLabel}>En préstamo</Text>
+            <Text style={styles.kpiValue}>{kpis.loaned}</Text>
+          </View>
+          <View style={styles.kpi}>
+            <Text style={styles.kpiLabel}>Mantenimiento</Text>
+            <Text style={styles.kpiValue}>{kpis.maintenance}</Text>
+          </View>
+        </View>
 
-          <FilterChips
-            label="Estado"
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { id: 'all', label: 'Todos' },
-              { id: 'available', label: 'Disponible' },
-              { id: 'loaned', label: 'En préstamo' },
-              { id: 'maintenance', label: 'Mantenimiento' },
-              { id: 'reserved', label: 'Reservado' },
-            ]}
+        <View style={styles.search}>
+          <MaterialIcons name="search" size={20} color={theme.color.muted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar grupo o equipo…"
+            placeholderTextColor={theme.color.muted}
+            style={styles.searchInput}
           />
+        </View>
 
-          <View style={styles.card}>
-            {categoryItems.length === 0 ? (
-              <Notice title="Sin equipos" description="No hay material con esos filtros." />
+        {error ? <Notice tone="danger" title="Error al cargar" description={error} /> : null}
+        {loading ? <ActivityIndicator color={theme.color.navy} /> : null}
+
+        {!loading && !selectedCategoryId ? (
+          <>
+            <Text style={styles.sectionTitle}>Grupos de material</Text>
+            <Text style={styles.sectionHint}>Elige un grupo para ver y administrar los equipos.</Text>
+            {filteredGroups.length === 0 ? (
+              <Notice
+                title="Sin grupos"
+                description="Ejecuta npm run seed:equipment o registra el primer equipo."
+              />
             ) : (
-              <>
-                {paging.pageItems.map((item) => (
-                  <View key={item.id} style={styles.row}>
-                    <View style={styles.rowMain}>
-                      <Text style={styles.rowCode}>{item.internalCode}</Text>
-                      <Text style={styles.rowName}>{item.name}</Text>
-                      <Text style={styles.rowMeta}>
-                        {item.brand ? `${item.brand}` : ''}
-                        {item.model ? ` ${item.model}` : ''}
-                        {!item.brand && !item.model ? item.categoryName : ''}
+              <View
+                style={styles.grid}
+                onLayout={(e) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0 && Math.abs(w - containerWidth) > 1) {
+                    setContainerWidth(w);
+                  }
+                }}
+              >
+                {filteredGroups.map((group) => (
+                  <Pressable
+                    key={group.id}
+                    style={({ pressed }) => [
+                      styles.groupCard,
+                      { width: cardWidth },
+                      pressed && styles.groupCardPressed,
+                    ]}
+                    onPress={() => {
+                      setSelectedCategoryId(group.id);
+                      setStatusFilter('all');
+                    }}
+                  >
+                    <View style={styles.groupMark}>
+                      <Text style={styles.groupMarkText}>{group.mark}</Text>
+                    </View>
+                    <Text style={styles.groupName} numberOfLines={2}>
+                      {group.name}
+                    </Text>
+                    <Text style={styles.groupHint} numberOfLines={2}>
+                      {group.hint}
+                    </Text>
+                    <View style={styles.groupFoot}>
+                      <Text style={styles.groupAvail}>{group.availableCount} disp.</Text>
+                      <Text style={styles.groupCount}>
+                        {group.totalItems} ítem{group.totalItems === 1 ? '' : 's'}
                       </Text>
                     </View>
-                    <Text style={styles.rowQty}>
-                      {item.qtyAvailable}/{item.qtyTotal}
-                    </Text>
-                    <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
-                  </View>
+                  </Pressable>
                 ))}
-                <ListPagination
-                  page={paging.page}
-                  totalPages={paging.totalPages}
-                  from={paging.from}
-                  to={paging.to}
-                  total={paging.total}
-                  pageNumbers={paging.pageNumbers}
-                  onChange={setPage}
-                />
-              </>
+              </View>
             )}
+          </>
+        ) : null}
+
+        {!loading && selectedCategoryId ? (
+          <>
+            <View style={styles.groupHead}>
+              <Pressable
+                onPress={() => {
+                  setSelectedCategoryId(null);
+                  setStatusFilter('all');
+                }}
+                style={styles.backBtn}
+              >
+                <MaterialIcons name="arrow-back" size={18} color={theme.color.navy} />
+                <Text style={styles.backText}>Grupos</Text>
+              </Pressable>
+              <View style={styles.groupTitleBlock}>
+                <Text style={styles.groupEyebrow}>Grupo</Text>
+                <Text style={styles.groupTitle}>{selectedCategory?.name ?? 'Material'}</Text>
+              </View>
+              <View style={styles.groupBadge}>
+                <Text style={styles.groupBadgeText}>{categoryItems.length} equipos</Text>
+              </View>
+            </View>
+
+            <FilterChips
+              label="Estado"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { id: 'all', label: 'Todos' },
+                { id: 'available', label: 'Disponible' },
+                { id: 'loaned', label: 'En préstamo' },
+                { id: 'maintenance', label: 'Mantenimiento' },
+                { id: 'reserved', label: 'Reservado' },
+              ]}
+            />
+
+            <View style={styles.card}>
+              {categoryItems.length === 0 ? (
+                <Notice title="Sin equipos" description="No hay material con esos filtros." />
+              ) : (
+                <>
+                  {paging.pageItems.map((item) => (
+                    <View key={item.id} style={styles.row}>
+                      <View style={styles.rowMain}>
+                        <Text style={styles.rowCode}>{item.internalCode}</Text>
+                        <Text style={styles.rowName}>{item.name}</Text>
+                        <Text style={styles.rowMeta}>
+                          {item.brand ? `${item.brand}` : ''}
+                          {item.model ? ` ${item.model}` : ''}
+                          {!item.brand && !item.model ? item.categoryName : ''}
+                        </Text>
+                      </View>
+                      <Text style={styles.rowQty}>
+                        {item.qtyAvailable}/{item.qtyTotal}
+                      </Text>
+                      <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
+                    </View>
+                  ))}
+
+                  <ListPagination
+                    page={paging.page}
+                    totalPages={paging.totalPages}
+                    from={paging.from}
+                    to={paging.to}
+                    total={paging.total}
+                    pageNumbers={paging.pageNumbers}
+                    onChange={setPage}
+                  />
+                </>
+              )}
+            </View>
+          </>
+        ) : null}
+      </ScrollView>
+
+      {/* Modal Alta de nuevo equipo */}
+      <Modal
+        visible={showForm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!saving) setShowForm(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalTitle}>Nuevo equipo</Text>
+                <Text style={styles.modalSub}>
+                  Registra un nuevo elemento en el catálogo del laboratorio.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!saving) setShowForm(false);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialIcons name="close" size={20} color={theme.color.muted} />
+              </Pressable>
+            </View>
+
+            {formError ? <Notice tone="danger" title={formError} /> : null}
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.formGrid}>
+                <TextField
+                  label="Código interno *"
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="Ej: EST-03, NIV-01..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Nombre del equipo *"
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ej: Estación Total Leica..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Marca"
+                  value={brand}
+                  onChangeText={setBrand}
+                  placeholder="Ej: Leica, Topcon, Trimble..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Modelo"
+                  value={model}
+                  onChangeText={setModel}
+                  placeholder="Ej: TS06 Plus..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Categoría"
+                  value={categoryName}
+                  onChangeText={setCategoryName}
+                  placeholder="Ej: Topografía, Drones, GPS..."
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Cantidad total"
+                  value={qtyTotal}
+                  onChangeText={setQtyTotal}
+                  keyboardType="number-pad"
+                  placeholder="1"
+                  containerStyle={styles.formField}
+                />
+              </View>
+
+              {/* Sugerencias rápidas de categorías */}
+              {existingCategories.length > 0 ? (
+                <View style={styles.suggestionsWrap}>
+                  <Text style={styles.suggestionsLabel}>Sugerencias de categoría:</Text>
+                  <View style={styles.suggestionsRow}>
+                    {existingCategories.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={[
+                          styles.suggPill,
+                          categoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillActive,
+                        ]}
+                        onPress={() => setCategoryName(cat)}
+                      >
+                        <Text
+                          style={[
+                            styles.suggPillText,
+                            categoryName.toLowerCase() === cat.toLowerCase() && styles.suggPillTextActive,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              <TextField
+                label="Observaciones y estado físico"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Condición general, número de serie, detalles de calibración..."
+              />
+            </ScrollView>
+
+            {/* Modal Actions */}
+            <View style={styles.modalActions}>
+              <Button
+                title="Registrar equipo"
+                loading={saving}
+                onPress={onCreate}
+                style={styles.modalSaveBtn}
+              />
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                disabled={saving}
+                onPress={() => setShowForm(false)}
+                fullWidth={false}
+              />
+            </View>
           </View>
-        </>
-      ) : null}
-    </ScrollView>
+        </View>
+      </Modal>
+
+      <Toast message={toast ?? ''} visible={toastVisible} />
+    </View>
   );
 }
 
@@ -408,6 +560,8 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginTop: 8, color: theme.color.muted, fontSize: theme.font.size.md },
   primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.color.navy,
     borderRadius: 10,
     paddingHorizontal: 16,
@@ -554,5 +708,92 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     minWidth: 48,
     textAlign: 'right',
+  },
+
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 640,
+    maxHeight: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    ...theme.shadow.soft,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.xl,
+    fontWeight: '800',
+  },
+  modalSub: {
+    color: theme.color.muted,
+    fontSize: theme.font.size.sm,
+    marginTop: 4,
+  },
+  modalCloseBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F0F3F7',
+  },
+  modalBody: {
+    maxHeight: 460,
+  },
+  suggestionsWrap: {
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  suggestionsLabel: {
+    color: theme.color.muted,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  suggestionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  suggPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F0F4F8',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  suggPillActive: {
+    backgroundColor: theme.color.navy,
+    borderColor: theme.color.navy,
+  },
+  suggPillText: {
+    color: theme.color.ink,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  suggPillTextActive: {
+    color: '#fff',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF0F3',
+  },
+  modalSaveBtn: {
+    flex: 1,
   },
 });
