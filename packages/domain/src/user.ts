@@ -44,3 +44,22 @@ export function isAdminRole(role: UserRole): boolean {
 export function isSuperAdminRole(role: UserRole): boolean {
   return role === 'super_admin';
 }
+
+export type AcademicGroup = {
+  id: string;
+  code: string;
+  name: string;
+  career: string;
+  labId: string;
+};
+
+export const TOPOGRAPHY_GROUPS = [
+  '101', '102',
+  '201', '202',
+  '301', '302',
+  '401', '402',
+  '501', '502',
+  '601', '602',
+  '701', '702',
+  '801', '802',
+] as const;
