@@ -14,7 +14,10 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      return signedIn() && userDoc().role == role;
+      return signedIn() && (
+        ('role' in request.auth.token && request.auth.token.role == role)
+        || userDoc().role == role
+      );
     }
 
     function isAdmin() {
@@ -34,7 +37,8 @@ service cloud.firestore {
     }
 
     function sameLab(data) {
-      return data.labId == userDoc().labId;
+      return ('labId' in request.auth.token && data.labId == request.auth.token.labId)
+        || data.labId == userDoc().labId;
     }
 
     function isApprovedRenter() {
@@ -52,8 +56,8 @@ service cloud.firestore {
         (hasRole('student') && resource.data.role == 'teacher' && sameLab(resource.data))
       );
 
-      // Particular crea su propio perfil en estado pending
-      allow create: if signedIn()
+      // Particular crea su propio perfil o un Administrador da de alta un usuario (ej. maestro)
+      allow create: if (signedIn()
         && uid() == userId
         && request.resource.data.role == 'renter'
         && request.resource.data.renterStatus == 'pending'
@@ -61,15 +65,14 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll([
           'email', 'displayName', 'role', 'labId', 'active', 'renterStatus',
           'phone', 'company', 'ine', 'rfc', 'address'
-        ]);
+        ])) || (
+          isAdmin()
+          && sameLab(request.resource.data)
+        );
 
-      // Encargado aprueba / rechaza particulares
+      // Administradores y encargados actualizan usuarios de su laboratorio
       allow update: if isLabManager()
-        && resource.data.labId == userDoc().labId
-        && resource.data.role == 'renter'
-        && request.resource.data.role == 'renter'
-        && request.resource.data.renterStatus in ['approved', 'rejected', 'pending']
-        && request.resource.data.labId == resource.data.labId;
+        && sameLab(resource.data);
 
       allow delete: if false;
     }
@@ -94,7 +97,8 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow write: if isAdmin()
+        && sameLab(request.resource.data);
     }
 
     // Préstamos
