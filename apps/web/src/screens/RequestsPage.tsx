@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -68,6 +69,10 @@ function formatDate(value: string | null): string {
 }
 
 export function RequestsPage() {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const detailCardY = useRef<number>(0);
   const { user } = useAuth();
   const canManage =
     !!user && (isAdminRole(user.role) || user.role === 'lab_manager');
@@ -178,26 +183,45 @@ export function RequestsPage() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      ref={scrollViewRef}
+      style={styles.root}
+      contentContainerStyle={[styles.content, isMobile && styles.contentMobile]}
+    >
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Solicitudes activas</Text>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>Solicitudes activas</Text>
           <Text style={styles.subtitle}>
             Cola en tiempo real del laboratorio · sincronizada con la app móvil
           </Text>
         </View>
       </View>
 
-      <View style={styles.kpis}>
+      <View style={[styles.kpis, isMobile && styles.kpisMobile]}>
         {[
           { label: 'Pendientes', value: String(kpis.pending) },
           { label: 'En préstamo', value: String(kpis.delivered) },
           { label: 'Activas', value: String(kpis.total) },
           { label: 'Con retraso', value: String(kpis.overdue), alert: kpis.overdue > 0 },
         ].map((kpi) => (
-          <View key={kpi.label} style={[styles.kpi, kpi.alert && styles.kpiAlert]}>
+          <View
+            key={kpi.label}
+            style={[
+              styles.kpi,
+              isMobile && styles.kpiMobile,
+              kpi.alert && styles.kpiAlert,
+            ]}
+          >
             <Text style={[styles.kpiLabel, kpi.alert && styles.kpiLabelAlert]}>{kpi.label}</Text>
-            <Text style={[styles.kpiValue, kpi.alert && styles.kpiValueAlert]}>{kpi.value}</Text>
+            <Text
+              style={[
+                styles.kpiValue,
+                isMobile && styles.kpiValueMobile,
+                kpi.alert && styles.kpiValueAlert,
+              ]}
+            >
+              {kpi.value}
+            </Text>
           </View>
         ))}
       </View>
@@ -213,19 +237,34 @@ export function RequestsPage() {
         />
       ) : null}
 
-      <View style={styles.workspace}>
-        <View style={styles.listCard}>
+      <View style={[styles.workspace, isMobile && styles.workspaceMobile]}>
+        <View style={[styles.listCard, isMobile && styles.cardMobile]}>
           <Text style={styles.cardTitle}>Cola operativa</Text>
           {paging.pageItems.map((loan) => {
             const active = loan.id === selectedId;
             return (
               <Pressable
                 key={loan.id}
-                onPress={() => setSelectedId(loan.id)}
+                onPress={() => {
+                  setSelectedId(loan.id);
+                  if (isMobile && detailCardY.current > 0) {
+                    scrollViewRef.current?.scrollTo({
+                      y: detailCardY.current - 12,
+                      animated: true,
+                    });
+                  }
+                }}
                 style={[styles.row, active && styles.rowActive]}
               >
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.rowFolio}>#{loan.folio}</Text>
+                <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.rowFolio}>#{loan.folio}</Text>
+                    {isMobile && active && (
+                      <View style={styles.activePill}>
+                        <Text style={styles.activePillText}>Activa</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.rowName} numberOfLines={1}>
                     {loan.studentName}
                   </Text>
@@ -233,7 +272,9 @@ export function RequestsPage() {
                     {loan.equipmentName} · {formatDate(loan.requestedAt)}
                   </Text>
                 </View>
-                <Badge label={loanStatusLabel(loan.status)} tone={toneForStatus(loan.status)} />
+                <View style={{ flexShrink: 0 }}>
+                  <Badge label={loanStatusLabel(loan.status)} tone={toneForStatus(loan.status)} />
+                </View>
               </Pressable>
             );
           })}
@@ -246,9 +287,44 @@ export function RequestsPage() {
             pageNumbers={paging.pageNumbers}
             onChange={setPage}
           />
+
+          {isMobile && selected && (
+            <Pressable
+              style={styles.jumpToDetailBtn}
+              onPress={() => {
+                if (detailCardY.current > 0) {
+                  scrollViewRef.current?.scrollTo({
+                    y: detailCardY.current - 12,
+                    animated: true,
+                  });
+                }
+              }}
+            >
+              <MaterialIcons name="arrow-downward" size={16} color={theme.color.navy} />
+              <Text style={styles.jumpToDetailText}>
+                Ver detalle de #{selected.folio} abajo
+              </Text>
+            </Pressable>
+          )}
         </View>
 
-        <View style={styles.detailCard}>
+        <View
+          style={[styles.detailCard, isMobile && styles.cardMobile]}
+          onLayout={(e) => {
+            detailCardY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          {isMobile && (
+            <Pressable
+              style={styles.backToQueueBtn}
+              onPress={() => {
+                scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+              }}
+            >
+              <MaterialIcons name="arrow-upward" size={16} color={theme.color.muted} />
+              <Text style={styles.backToQueueText}>Subir a la cola operativa</Text>
+            </Pressable>
+          )}
           <Text style={styles.cardTitle}>Detalle</Text>
           {!selected ? (
             <Text style={styles.emptyDetail}>Selecciona una solicitud de la cola.</Text>
@@ -256,10 +332,12 @@ export function RequestsPage() {
             <>
               <View style={styles.detailHead}>
                 <Text style={styles.detailFolio}>#{selected.folio}</Text>
-                <Badge
-                  label={loanStatusLabel(selected.status)}
-                  tone={toneForStatus(selected.status)}
-                />
+                <View style={{ flexShrink: 0 }}>
+                  <Badge
+                    label={loanStatusLabel(selected.status)}
+                    tone={toneForStatus(selected.status)}
+                  />
+                </View>
               </View>
 
               {[
@@ -447,8 +525,8 @@ export function RequestsPage() {
         animationType="fade"
         onRequestClose={() => setDeliverModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+        <View style={[styles.modalBackdrop, isMobile && { padding: 12 }]}>
+          <View style={[styles.modalCard, isMobile && styles.modalCardMobile]}>
             <View style={styles.modalHeaderRow}>
               <View style={styles.modalIconWrap}>
                 <MaterialIcons name="assignment-turned-in" size={24} color={theme.color.navy} />
@@ -620,8 +698,9 @@ export function RequestsPage() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.canvas },
-  content: { padding: 32, paddingBottom: 48 },
+  root: { flex: 1, backgroundColor: theme.color.canvas, width: '100%' },
+  content: { padding: 32, paddingBottom: 48, width: '100%', maxWidth: '100%' },
+  contentMobile: { paddingHorizontal: 12, paddingTop: 14, paddingBottom: 40 },
   header: { marginBottom: 20 },
   title: {
     color: theme.color.navy,
@@ -629,8 +708,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.8,
   },
+  titleMobile: {
+    fontSize: 22,
+    letterSpacing: -0.4,
+  },
   subtitle: { marginTop: 8, color: theme.color.muted, fontSize: theme.font.size.md },
-  kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
+  kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18, width: '100%' },
+  kpisMobile: { gap: 8, marginBottom: 14 },
   kpi: {
     flexGrow: 1,
     flexBasis: 140,
@@ -641,6 +725,12 @@ const styles = StyleSheet.create({
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
   },
+  kpiMobile: {
+    flexBasis: '47%',
+    minWidth: 0,
+    minHeight: 74,
+    padding: 12,
+  },
   kpiAlert: { backgroundColor: theme.color.red, borderColor: theme.color.red },
   kpiLabel: { color: theme.color.muted, fontSize: theme.font.size.sm },
   kpiLabelAlert: { color: '#FFE2E7' },
@@ -650,12 +740,21 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.xxl,
     fontWeight: '800',
   },
+  kpiValueMobile: {
+    marginTop: 6,
+    fontSize: 22,
+  },
   kpiValueAlert: { color: '#fff' },
   workspace: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
     alignItems: 'flex-start',
+    width: '100%',
+  },
+  workspaceMobile: {
+    flexDirection: 'column',
+    gap: 14,
   },
   listCard: {
     flexGrow: 1,
@@ -665,6 +764,8 @@ const styles = StyleSheet.create({
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
     padding: 18,
+    width: '100%',
+    minWidth: 0,
   },
   detailCard: {
     flexGrow: 1,
@@ -675,6 +776,61 @@ const styles = StyleSheet.create({
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
     padding: 18,
+    width: '100%',
+    minWidth: 0,
+  },
+  cardMobile: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    padding: 14,
+  },
+  activePill: {
+    backgroundColor: theme.color.infoSoft,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  activePillText: {
+    color: theme.color.info,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  jumpToDetailBtn: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+  },
+  jumpToDetailText: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  backToQueueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+  },
+  backToQueueText: {
+    color: theme.color.muted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   cardTitle: {
     color: theme.color.navy,
@@ -705,17 +861,22 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#EDF0F3',
+    gap: 8,
   },
-  detailLabel: { color: theme.color.muted, fontSize: theme.font.size.md },
+  detailLabel: { color: theme.color.muted, fontSize: theme.font.size.md, flexShrink: 0 },
   detailValue: {
     color: theme.color.ink,
     fontSize: theme.font.size.md,
     fontWeight: '700',
-    maxWidth: '60%',
+    maxWidth: '65%',
     textAlign: 'right',
+  },
+  modalCardMobile: {
+    padding: 16,
   },
   actions: { marginTop: 16, gap: 10 },
   fieldLabel: {
