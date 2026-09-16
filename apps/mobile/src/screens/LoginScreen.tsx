@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '@lab-topo/config';
@@ -13,11 +22,25 @@ type LoginScreenProps = {
 };
 
 export function LoginScreen({ onGoRegister }: LoginScreenProps) {
-  const { login, loading, error, clearError, firebaseReady, firebaseMessage } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, firebaseReady, firebaseMessage } =
+    useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { width, height } = useWindowDimensions();
   const logoSize = Math.max(width, height) * 1.1;
+
+  const onGoogleSubmit = async () => {
+    clearError();
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch {
+      // error ya mapeado en context
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const onSubmit = async () => {
     clearError();
@@ -62,6 +85,8 @@ export function LoginScreen({ onGoRegister }: LoginScreenProps) {
             />
           ) : null}
 
+
+
           <FormTextField
             label="Correo"
             autoCapitalize="none"
@@ -87,6 +112,31 @@ export function LoginScreen({ onGoRegister }: LoginScreenProps) {
             disabled={!firebaseReady || !email.trim() || !password}
             onPress={onSubmit}
           />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>o con cuenta institucional</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Botón Google para alumnos y personal con cuenta institucional */}
+          <Pressable
+            style={[
+              styles.googleBtn,
+              (!firebaseReady || loading || googleLoading) && styles.googleBtnDisabled,
+            ]}
+            disabled={!firebaseReady || loading || googleLoading}
+            onPress={onGoogleSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Continuar con Google"
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#4285F4" style={{ marginRight: 8 }} />
+            ) : (
+              <FontAwesome name="google" size={17} color="#4285F4" style={{ marginRight: 8 }} />
+            )}
+            <Text style={styles.googleBtnText}>Continuar con Google</Text>
+          </Pressable>
 
           {onGoRegister ? (
             <Pressable
@@ -158,5 +208,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#DADCE0',
+    borderRadius: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    ...theme.shadow.soft,
+  },
+  googleBtnDisabled: {
+    opacity: 0.6,
+  },
+  googleBtnText: {
+    color: '#3C4043',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 14,
+    gap: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    color: theme.color.muted,
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
