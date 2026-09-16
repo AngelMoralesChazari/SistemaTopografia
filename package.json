@@ -15,6 +15,7 @@
     "web:browser": "npm run web --workspace=@lab-topo/web",
     "build": "npm run build --workspace=@lab-topo/web",
     "seed:users": "node scripts/seed-users.mjs",
+    "seed:groups": "node scripts/seed-groups.mjs",
     "seed:equipment": "node scripts/seed-equipment.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
