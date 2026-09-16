@@ -52,11 +52,11 @@ service cloud.firestore {
       allow read: if signedIn() && (
         uid() == userId ||
         isLabManager() ||
-        (hasRole('teacher') && sameLab(resource.data)) ||
-        (hasRole('student') && resource.data.role == 'teacher' && sameLab(resource.data))
+        (resource.data.role == 'teacher' && sameLab(resource.data)) ||
+        (hasRole('teacher') && sameLab(resource.data))
       );
 
-      // Particular crea su propio perfil o un Administrador da de alta un usuario (ej. maestro)
+      // Particular crea su propio perfil, Alumno crea su perfil institucional, o Administrador da de alta
       allow create: if (signedIn()
         && uid() == userId
         && request.resource.data.role == 'renter'
@@ -66,13 +66,24 @@ service cloud.firestore {
           'email', 'displayName', 'role', 'labId', 'active', 'renterStatus',
           'phone', 'company', 'ine', 'rfc', 'address'
         ])) || (
+          signedIn()
+          && uid() == userId
+          && request.resource.data.role == 'student'
+          && request.resource.data.active == true
+          && sameLab(request.resource.data)
+        ) || (
           isAdmin()
           && sameLab(request.resource.data)
         );
 
-      // Administradores y encargados actualizan usuarios de su laboratorio
-      allow update: if isLabManager()
-        && sameLab(resource.data);
+      // Administradores y encargados actualizan usuarios de su laboratorio, o el alumno actualiza su propio perfil
+      allow update: if (isLabManager() && sameLab(resource.data)) || (
+        signedIn()
+        && uid() == userId
+        && resource.data.role == 'student'
+        && request.resource.data.role == 'student'
+        && sameLab(resource.data)
+      );
 
       allow delete: if false;
     }
