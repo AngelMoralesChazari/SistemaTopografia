@@ -58,7 +58,6 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   // Grupos académicos de Topografía desde la BD
@@ -161,14 +160,6 @@ export function UsersPage() {
   useEffect(() => {
     if (page !== paging.page) setPage(paging.page);
   }, [page, paging.page]);
-
-  const teachers = useMemo(() => users.filter((u) => u.role === 'teacher'), [users]);
-  const studentsOfTeacher = useMemo(() => {
-    if (!selectedTeacherId) return [];
-    return users.filter((u) => u.role === 'student' && u.teacherId === selectedTeacherId);
-  }, [users, selectedTeacherId]);
-
-  const selectedTeacher = teachers.find((t) => t.uid === selectedTeacherId) ?? null;
 
   // Lista de códigos de grupos disponibles (de la BD o fallback a la constante oficial)
   const availableGroupCodes = useMemo(() => {
@@ -499,162 +490,6 @@ export function UsersPage() {
               pageNumbers={paging.pageNumbers}
               onChange={setPage}
             />
-
-            {/* Sección Maestros y sus alumnos */}
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.sectionTitle}>Maestros y sus alumnos</Text>
-                <Text style={styles.subtitle}>
-                  Selecciona un maestro para ver sus grupos asignados y sus alumnos.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.filters}>
-              {teachers.length === 0 ? (
-                <Text style={styles.empty}>No hay maestros registrados aún.</Text>
-              ) : (
-                teachers.map((t) => (
-                  <Pressable
-                    key={t.uid}
-                    onPress={() => setSelectedTeacherId(t.uid)}
-                    style={[
-                      styles.chip,
-                      selectedTeacherId === t.uid && styles.chipActive,
-                      !t.active && styles.chipInactive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedTeacherId === t.uid && styles.chipTextActive,
-                        !t.active && styles.chipTextInactive,
-                      ]}
-                    >
-                      {t.displayName}
-                      {!t.active ? ' [Inactivo]' : ''}
-                      {t.groupIds && t.groupIds.length > 0 ? ` (${t.groupIds.join(', ')})` : ''}
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-            </View>
-
-            {selectedTeacher ? (
-              <View style={[styles.card, !selectedTeacher.active && styles.cardInactive]}>
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <Text style={styles.name}>{selectedTeacher.displayName}</Text>
-                      {selectedTeacher.active ? (
-                        <View style={styles.statusActiveBadge}>
-                          <Text style={styles.statusActiveText}>Activo</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.statusInactiveBadge}>
-                          <Text style={styles.statusInactiveText}>Desactivado</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.email}>
-                      {selectedTeacher.email || 'Sin correo registrado'}
-                      {selectedTeacher.phone ? ` · Tel: ${selectedTeacher.phone}` : ''}
-                    </Text>
-                  </View>
-                  <View style={[styles.pill, styles.pillTeacher]}>
-                    <Text style={[styles.pillText, styles.pillTextTeacher]}>Docente</Text>
-                  </View>
-                </View>
-
-                {/* Acciones de administración para el maestro seleccionado */}
-                {canCreateTeacher ? (
-                  <View style={[styles.teacherCardActions, { marginTop: 10, justifyContent: 'flex-start' }]}>
-                    <Pressable
-                      style={styles.actionBtnSmall}
-                      onPress={() => openEditTeacher(selectedTeacher)}
-                    >
-                      <MaterialIcons
-                        name="edit"
-                        size={14}
-                        color={theme.color.navy}
-                        style={{ marginRight: 4 }}
-                      />
-                      <Text style={styles.actionBtnSmallText}>Editar datos y grupos</Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={[
-                        styles.actionBtnSmall,
-                        selectedTeacher.active
-                          ? styles.actionBtnDanger
-                          : styles.actionBtnSuccess,
-                      ]}
-                      disabled={togglingActiveId === selectedTeacher.uid}
-                      onPress={() => handleToggleActiveStatus(selectedTeacher)}
-                    >
-                      {togglingActiveId === selectedTeacher.uid ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={selectedTeacher.active ? '#C62828' : '#2E7D32'}
-                        />
-                      ) : (
-                        <>
-                          <MaterialIcons
-                            name={selectedTeacher.active ? 'person-off' : 'check-circle'}
-                            size={14}
-                            color={selectedTeacher.active ? '#C62828' : '#2E7D32'}
-                            style={{ marginRight: 4 }}
-                          />
-                          <Text
-                            style={[
-                              styles.actionBtnSmallText,
-                              selectedTeacher.active
-                                ? styles.actionBtnDangerText
-                                : styles.actionBtnSuccessText,
-                            ]}
-                          >
-                            {selectedTeacher.active ? 'Desactivar maestro' : 'Reactivar maestro'}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                  </View>
-                ) : null}
-
-                {selectedTeacher.groupIds && selectedTeacher.groupIds.length > 0 ? (
-                  <View style={[styles.assignedGroupsRow, { marginTop: 12 }]}>
-                    <Text style={styles.assignedGroupsLabel}>Grupos a su cargo:</Text>
-                    <View style={styles.assignedGroupsList}>
-                      {selectedTeacher.groupIds.map((gid) => (
-                        <View key={gid} style={styles.assignedGroupBadge}>
-                          <Text style={styles.assignedGroupBadgeText}>Grupo {gid}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ) : (
-                  <Text style={[styles.meta, { marginTop: 6, fontStyle: 'italic' }]}>
-                    Sin grupos asignados actualmente.
-                  </Text>
-                )}
-
-                <Text style={[styles.meta, { marginTop: 12, fontWeight: '700', color: theme.color.navy }]}>
-                  {studentsOfTeacher.length} alumno(s) asignado(s):
-                </Text>
-                {studentsOfTeacher.length === 0 ? (
-                  <Text style={styles.empty}>Sin alumnos vinculados directamente.</Text>
-                ) : (
-                  studentsOfTeacher.map((s) => (
-                    <View key={s.uid} style={styles.studentRow}>
-                      <Text style={styles.studentName}>{s.displayName}</Text>
-                      <Text style={styles.studentMeta}>
-                        {s.studentId ? `Mat. ${s.studentId}` : '—'} · {s.email}
-                      </Text>
-                    </View>
-                  ))
-                )}
-              </View>
-            ) : null}
           </>
         )}
       </ScrollView>
