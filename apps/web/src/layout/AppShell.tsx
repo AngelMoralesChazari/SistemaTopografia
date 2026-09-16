@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -117,11 +118,21 @@ type AppShellProps = {
 export function AppShell({ section, onSectionChange, children }: AppShellProps) {
   const { user, logout } = useAuth();
   const { width, height } = useWindowDimensions();
-  const compact = width < 900;
+  const isMobile = width < 860;
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isMobile && drawerOpen) {
+      setDrawerOpen(false);
+    }
+  }, [isMobile, drawerOpen]);
 
   if (!user) return null;
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(user.role));
+  const currentItem = items.find((i) => i.id === section);
+  const currentSectionLabel = currentItem?.label || 'Laboratorio';
+
   const navLabel =
     user.role === 'student'
       ? 'Espacio del alumno'
@@ -135,7 +146,6 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
 
   const navSpacing = React.useMemo(() => {
     // Para perfiles con pocas opciones (alumnos, profesores, particulares):
-    // Se usan EXACTAMENTE las medidas y tamaños del commit a1409dd
     if (items.length <= 6) {
       return {
         sidebarPaddingTop: 28,
@@ -160,96 +170,121 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
       };
     }
 
-    // Para administrador (11 o 12 secciones):
-    // Se adapta suavemente entre la altura de una laptop (~640px-740px) y un monitor de escritorio (~900px-1080px)
-    // De esta manera no se ve ni muy pequeño en pantallas grandes, ni desborda con scroll en laptop.
+    // Para administrador (11 o 12 secciones) en escritorio:
     const minH = 640;
     const maxH = 1050;
     const clampedH = Math.min(maxH, Math.max(minH, height));
     const factor = (clampedH - minH) / (maxH - minH);
 
     return {
-      sidebarPaddingTop: Math.round(14 + factor * 14), // 14px a 28px
-      sidebarPaddingBottom: Math.round(12 + factor * 8), // 12px a 20px
-      sidebarPaddingHorizontal: Math.round(14 + factor * 4), // 14px a 18px
-      logoSize: Math.round(38 + factor * 4), // 38px a 42px
-      logoMarginBottom: Math.round(10 + factor * 12), // 10px a 22px
-      logoPaddingHorizontal: Math.round(6 + factor * 4), // 6px a 10px
-      avatarSize: Math.round(32 + factor * 4), // 32px a 36px
-      userBoxPadding: Math.round(8 + factor * 4), // 8px a 12px
-      userBoxMarginBottom: Math.round(10 + factor * 10), // 10px a 20px
-      navLabelMarginBottom: Math.round(6 + factor * 4), // 6px a 10px
-      navLabelPaddingHorizontal: Math.round(8 + factor * 3), // 8px a 11px
-      listPaddingBottom: Math.round(6 + factor * 6), // 6px a 12px
-      itemPaddingVertical: Math.round((7.5 + factor * 5.5) * 10) / 10, // 7.5px a 13px
+      sidebarPaddingTop: Math.round(14 + factor * 14),
+      sidebarPaddingBottom: Math.round(12 + factor * 8),
+      sidebarPaddingHorizontal: Math.round(14 + factor * 4),
+      logoSize: Math.round(38 + factor * 4),
+      logoMarginBottom: Math.round(10 + factor * 12),
+      logoPaddingHorizontal: Math.round(6 + factor * 4),
+      avatarSize: Math.round(32 + factor * 4),
+      userBoxPadding: Math.round(8 + factor * 4),
+      userBoxMarginBottom: Math.round(10 + factor * 10),
+      navLabelMarginBottom: Math.round(6 + factor * 4),
+      navLabelPaddingHorizontal: Math.round(8 + factor * 3),
+      listPaddingBottom: Math.round(6 + factor * 6),
+      itemPaddingVertical: Math.round((7.5 + factor * 5.5) * 10) / 10,
       itemPaddingHorizontal: 12,
-      itemGap: Math.round((2.5 + factor * 5.5) * 10) / 10, // 2.5px a 8px
+      itemGap: Math.round((2.5 + factor * 5.5) * 10) / 10,
       iconSize: (factor > 0.6 ? 22 : 20) as 22 | 20,
-      footerPaddingTop: Math.round(10 + factor * 4), // 10px a 14px
-      footerGap: Math.round(6 + factor * 4), // 6px a 10px
-      footerTextMarginBottom: Math.round(2 + factor * 2), // 2px a 4px
+      footerPaddingTop: Math.round(10 + factor * 4),
+      footerGap: Math.round(6 + factor * 4),
+      footerTextMarginBottom: Math.round(2 + factor * 2),
     };
   }, [height, items.length]);
 
   return (
-    <View style={[styles.shell, compact && styles.shellCompact]}>
-      <View
-        style={[
-          styles.sidebar,
-          compact && styles.sidebarCompact,
-          {
-            paddingTop: navSpacing.sidebarPaddingTop,
-            paddingBottom: navSpacing.sidebarPaddingBottom,
-            paddingHorizontal: navSpacing.sidebarPaddingHorizontal,
-          },
-        ]}
-      >
+    <View style={[styles.shell, isMobile && styles.shellMobile]}>
+      {/* Header superior visible únicamente en pantallas móviles */}
+      {isMobile ? (
+        <View style={styles.mobileHeader}>
+          <View style={styles.mobileHeaderLeft}>
+            <View style={styles.mobileLogoMark}>
+              <Text style={styles.mobileLogoText}>LT</Text>
+            </View>
+            <View style={styles.mobileHeaderTitles}>
+              <Text style={styles.mobileHeaderBrand} numberOfLines={1}>
+                Lab Topografía
+              </Text>
+              <Text style={styles.mobileHeaderSection} numberOfLines={1}>
+                {currentSectionLabel}
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.hamburgerBtn,
+              pressed && styles.hamburgerBtnPressed,
+            ]}
+            onPress={() => setDrawerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir menú de navegación"
+          >
+            <MaterialIcons name="menu" size={26} color="#fff" />
+          </Pressable>
+        </View>
+      ) : null}
+
+      {/* Sidebar fijo en escritorio (oculto en móvil) */}
+      {!isMobile ? (
         <View
           style={[
-            styles.logoRow,
+            styles.sidebar,
             {
-              marginBottom: navSpacing.logoMarginBottom,
-              paddingHorizontal: navSpacing.logoPaddingHorizontal,
+              paddingTop: navSpacing.sidebarPaddingTop,
+              paddingBottom: navSpacing.sidebarPaddingBottom,
+              paddingHorizontal: navSpacing.sidebarPaddingHorizontal,
             },
           ]}
         >
           <View
             style={[
-              styles.logoMark,
-              { width: navSpacing.logoSize, height: navSpacing.logoSize },
+              styles.logoRow,
+              {
+                marginBottom: navSpacing.logoMarginBottom,
+                paddingHorizontal: navSpacing.logoPaddingHorizontal,
+              },
             ]}
           >
-            <Text style={styles.logoText}>LT</Text>
-          </View>
-          {!compact ? (
+            <View
+              style={[
+                styles.logoMark,
+                { width: navSpacing.logoSize, height: navSpacing.logoSize },
+              ]}
+            >
+              <Text style={styles.logoText}>LT</Text>
+            </View>
             <View>
               <Text style={styles.brand}>Lab Topografía</Text>
               <Text style={styles.brandSub}>UAGro</Text>
             </View>
-          ) : null}
-        </View>
+          </View>
 
-        <View
-          style={[
-            styles.userBox,
-            {
-              padding: navSpacing.userBoxPadding,
-              marginBottom: navSpacing.userBoxMarginBottom,
-            },
-          ]}
-        >
-          <Avatar initials={getInitials(user.displayName)} size={navSpacing.avatarSize} />
-          {!compact ? (
+          <View
+            style={[
+              styles.userBox,
+              {
+                padding: navSpacing.userBoxPadding,
+                marginBottom: navSpacing.userBoxMarginBottom,
+              },
+            ]}
+          >
+            <Avatar initials={getInitials(user.displayName)} size={navSpacing.avatarSize} />
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>
                 {user.displayName}
               </Text>
               <Text style={styles.userRole}>{formatRole(user.role)}</Text>
             </View>
-          ) : null}
-        </View>
+          </View>
 
-        {!compact ? (
           <Text
             style={[
               styles.navLabel,
@@ -261,57 +296,53 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           >
             {navLabel}
           </Text>
-        ) : null}
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[
-            styles.navList,
-            {
-              gap: navSpacing.itemGap,
-              paddingBottom: navSpacing.listPaddingBottom,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {items.map((item) => {
-            const active = item.id === section;
-            return (
-              <Pressable
-                key={`${item.id}-${item.label}`}
-                onPress={() => onSectionChange(item.id)}
-                style={[
-                  styles.navItem,
-                  {
-                    paddingVertical: navSpacing.itemPaddingVertical,
-                    paddingHorizontal: navSpacing.itemPaddingHorizontal,
-                  },
-                  active && styles.navItemActive,
-                ]}
-              >
-                <MaterialIcons
-                  name={item.icon}
-                  size={navSpacing.iconSize}
-                  color={active ? '#fff' : theme.color.sidebarText}
-                />
-                {!compact ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[
+              styles.navList,
+              {
+                gap: navSpacing.itemGap,
+                paddingBottom: navSpacing.listPaddingBottom,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {items.map((item) => {
+              const active = item.id === section;
+              return (
+                <Pressable
+                  key={`${item.id}-${item.label}`}
+                  onPress={() => onSectionChange(item.id)}
+                  style={[
+                    styles.navItem,
+                    {
+                      paddingVertical: navSpacing.itemPaddingVertical,
+                      paddingHorizontal: navSpacing.itemPaddingHorizontal,
+                    },
+                    active && styles.navItemActive,
+                  ]}
+                >
+                  <MaterialIcons
+                    name={item.icon}
+                    size={navSpacing.iconSize}
+                    color={active ? '#fff' : theme.color.sidebarText}
+                  />
                   <Text style={[styles.navText, active && styles.navTextActive]}>{item.label}</Text>
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-        <View
-          style={[
-            styles.footer,
-            {
-              paddingTop: navSpacing.footerPaddingTop,
-              gap: navSpacing.footerGap,
-            },
-          ]}
-        >
-          {!compact ? (
+          <View
+            style={[
+              styles.footer,
+              {
+                paddingTop: navSpacing.footerPaddingTop,
+                gap: navSpacing.footerGap,
+              },
+            ]}
+          >
             <Text
               style={[
                 styles.footerText,
@@ -320,12 +351,112 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
             >
               Sesión: <Text style={styles.footerBold}>{formatRole(user.role)}</Text>
             </Text>
-          ) : null}
-          <Button title={compact ? 'Salir' : 'Cerrar sesión'} variant="secondary" onPress={() => logout()} />
+            <Button title="Cerrar sesión" variant="secondary" onPress={() => logout()} />
+          </View>
         </View>
-      </View>
+      ) : null}
 
+      {/* Contenedor principal de contenido */}
       <View style={styles.main}>{children}</View>
+
+      {/* Drawer lateral deslizable a la derecha para móvil */}
+      {isMobile ? (
+        <Modal
+          visible={drawerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDrawerOpen(false)}
+        >
+          <View style={styles.drawerBackdrop}>
+            {/* Tocar el fondo oscuro cierra el menú */}
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={() => setDrawerOpen(false)}
+              accessibilityLabel="Cerrar menú"
+            />
+            {/* Panel lateral derecho */}
+            <View style={styles.drawerPanel}>
+              <View style={styles.drawerHeader}>
+                <View style={styles.drawerLogoRow}>
+                  <View style={styles.drawerLogoMark}>
+                    <Text style={styles.drawerLogoText}>LT</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.brandDrawer}>Lab Topografía</Text>
+                    <Text style={styles.brandSubDrawer}>UAGro</Text>
+                  </View>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.closeBtn,
+                    pressed && styles.closeBtnPressed,
+                  ]}
+                  onPress={() => setDrawerOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar menú"
+                >
+                  <MaterialIcons name="close" size={24} color="#fff" />
+                </Pressable>
+              </View>
+
+              <View style={styles.userBox}>
+                <Avatar initials={getInitials(user.displayName)} size={38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {user.displayName}
+                  </Text>
+                  <Text style={styles.userRole}>{formatRole(user.role)}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.navLabel}>{navLabel}</Text>
+
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.drawerNavList}
+                showsVerticalScrollIndicator={false}
+              >
+                {items.map((item) => {
+                  const active = item.id === section;
+                  return (
+                    <Pressable
+                      key={`drawer-${item.id}-${item.label}`}
+                      onPress={() => {
+                        onSectionChange(item.id);
+                        setDrawerOpen(false);
+                      }}
+                      style={[styles.navItem, active && styles.navItemActive]}
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={22}
+                        color={active ? '#fff' : theme.color.sidebarText}
+                      />
+                      <Text style={[styles.navText, active && styles.navTextActive]}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={styles.drawerFooter}>
+                <Text style={styles.footerText}>
+                  Sesión: <Text style={styles.footerBold}>{formatRole(user.role)}</Text>
+                </Text>
+                <Button
+                  title="Cerrar sesión"
+                  variant="secondary"
+                  onPress={() => {
+                    setDrawerOpen(false);
+                    logout();
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -337,7 +468,7 @@ const styles = StyleSheet.create({
     minHeight: '100%' as unknown as number,
     backgroundColor: theme.color.canvas,
   },
-  shellCompact: {
+  shellMobile: {
     flexDirection: 'column',
   },
   sidebar: {
@@ -347,9 +478,151 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  sidebarCompact: {
+  mobileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'nowrap',
+    backgroundColor: theme.color.navy,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    zIndex: 10,
     width: '100%',
-    maxHeight: 240,
+  },
+  mobileHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
+  },
+  mobileLogoMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  mobileLogoText: {
+    color: theme.color.navy,
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  mobileHeaderTitles: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mobileHeaderBrand: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  mobileHeaderSection: {
+    color: '#9EB1C7',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  hamburgerBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto',
+    flexShrink: 0,
+  },
+  hamburgerBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.68)',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  drawerPanel: {
+    width: '84%',
+    maxWidth: 320,
+    height: '100%',
+    backgroundColor: theme.color.navy,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'nowrap',
+    marginBottom: 16,
+    width: '100%',
+  },
+  drawerLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  drawerLogoMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  drawerLogoText: {
+    color: theme.color.navy,
+    fontWeight: '900',
+    fontSize: 15,
+  },
+  brandDrawer: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  brandSubDrawer: {
+    color: '#9EB1C7',
+    fontSize: 12,
+  },
+  closeBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto',
+    flexShrink: 0,
+  },
+  closeBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  drawerNavList: {
+    gap: 6,
+    paddingBottom: 16,
+  },
+  drawerFooter: {
+    marginTop: 'auto' as unknown as number,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.12)',
+    gap: 8,
   },
   logoRow: {
     flexDirection: 'row',
@@ -457,3 +730,4 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
 });
+
