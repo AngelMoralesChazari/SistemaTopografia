@@ -5,7 +5,17 @@ export {
   getFirebaseStorage,
   checkFirebaseReady,
 } from './firebase';
-export { signIn, signOut, resetPassword, watchAuth, refreshCurrentUser } from './authService';
+export {
+  signIn,
+  signInWithGoogle,
+  signOut,
+  resetPassword,
+  watchAuth,
+  refreshCurrentUser,
+  isUagroEmail,
+  extractStudentIdFromEmail,
+  EXCEPTION_STAFF_EMAILS,
+} from './authService';
 export {
   listEquipment,
   watchEquipment,
@@ -19,8 +29,14 @@ export {
   createTeacher,
   updateTeacher,
   setTeacherActiveStatus,
+  assignStudentAcademicGroup,
+  syncPendingStudentsForTeacher,
 } from './userService';
-export type { CreateTeacherInput, UpdateTeacherInput } from './userService';
+export type {
+  CreateTeacherInput,
+  UpdateTeacherInput,
+  AssignStudentGroupResult,
+} from './userService';
 export { listGroups, ensureDefaultGroups, watchGroups } from './groupService';
 export {
   registerRenter,
