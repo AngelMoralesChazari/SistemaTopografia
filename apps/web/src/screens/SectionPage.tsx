@@ -8,6 +8,7 @@ import { AdminAuditPage } from './AdminAuditPage';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import { EquipmentPage } from './EquipmentPage';
 import { HistoryPage } from './HistoryPage';
+import { ManageEquipmentPage } from './ManageEquipmentPage';
 import { MetricsPage } from './MetricsPage';
 import { ProfilePage } from './ProfilePage';
 import { ReportsPage } from './ReportsPage';
@@ -27,11 +28,17 @@ type DashboardHomeProps = {
 export function SectionPage({ section, onSectionChange }: DashboardHomeProps) {
   const { user } = useAuth();
 
-  if (section === 'equipment') return <EquipmentPage />;
+  if (section === 'manageEquipment') return <ManageEquipmentPage />;
+  if (section === 'equipment') return <ManageEquipmentPage />;
+  if (section === 'catalog') {
+    if (user && isAdminRole(user.role)) {
+      return <EquipmentPage />;
+    }
+    return <StudentCatalogPage />;
+  }
   if (section === 'requests') return <RequestsPage />;
   if (section === 'reports') return <ReportsPage />;
   if (section === 'renters') return <RentersPage />;
-  if (section === 'catalog') return <StudentCatalogPage />;
   if (section === 'studentRequests') return <StudentRequestsPage />;
   if (section === 'teacherStudents') return <TeacherStudentsPage />;
   if (section === 'profile') return <ProfilePage />;

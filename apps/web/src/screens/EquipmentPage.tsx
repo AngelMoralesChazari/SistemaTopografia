@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme, getLabId } from '@lab-topo/config';
@@ -46,6 +47,12 @@ export function EquipmentPage() {
   const { user } = useAuth();
   const canWrite =
     user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'lab_manager';
+  const { width } = useWindowDimensions();
+  const compact = width < 900;
+  const availableWidth = Math.max(300, width - (compact ? 0 : 280) - 56);
+  const numColumns = availableWidth > 1200 ? 4 : availableWidth > 820 ? 3 : availableWidth > 500 ? 2 : 1;
+  const gridGap = 14;
+  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1)) / numColumns);
   const [items, setItems] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -264,7 +271,11 @@ export function EquipmentPage() {
               {filteredGroups.map((group) => (
                 <Pressable
                   key={group.id}
-                  style={({ pressed }) => [styles.groupCard, pressed && styles.groupCardPressed]}
+                  style={({ pressed }) => [
+                    styles.groupCard,
+                    { width: cardWidth },
+                    pressed && styles.groupCardPressed,
+                  ]}
                   onPress={() => {
                     setSelectedCategoryId(group.id);
                     setStatusFilter('all');
@@ -435,13 +446,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionHint: { color: theme.color.muted, fontSize: theme.font.size.sm, marginBottom: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   groupCard: {
-    width: '31%',
-    minWidth: 180,
-    flexGrow: 1,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface,

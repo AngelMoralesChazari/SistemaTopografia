@@ -16,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 export type WebSection =
   | 'dashboard'
   | 'equipment'
+  | 'manageEquipment'
   | 'requests'
   | 'history'
   | 'reports'
@@ -38,13 +39,20 @@ type NavItem = {
   roles: UserRole[];
 };
 
+const ALL_ROLES: UserRole[] = ['student', 'teacher', 'renter', 'lab_manager', 'admin', 'super_admin'];
 const LAB_ADMIN: UserRole[] = ['lab_manager', 'admin', 'super_admin'];
 const STAFF_ADMIN: UserRole[] = ['admin', 'super_admin'];
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Inicio', icon: 'dashboard', roles: LAB_ADMIN },
   { id: 'dashboard', label: 'Resumen', icon: 'dashboard', roles: ['teacher'] },
-  { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ['student', 'teacher', 'renter'] },
+  { id: 'catalog', label: 'Catálogo de equipos', icon: 'home', roles: ALL_ROLES },
+  {
+    id: 'manageEquipment',
+    label: 'Gestión de equipos',
+    icon: 'tune',
+    roles: LAB_ADMIN,
+  },
   {
     id: 'studentRequests',
     label: 'Mis solicitudes',
@@ -56,12 +64,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Alumnos',
     icon: 'groups',
     roles: ['teacher'],
-  },
-  {
-    id: 'equipment',
-    label: 'Catálogo de equipos',
-    icon: 'inventory-2',
-    roles: LAB_ADMIN,
   },
   {
     id: 'requests',

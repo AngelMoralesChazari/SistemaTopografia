@@ -2,6 +2,7 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   initializeAuth,
+  // @ts-expect-error - getReactNativePersistence exists in React Native entrypoint
   getReactNativePersistence,
   type Auth,
 } from 'firebase/auth';

@@ -81,11 +81,11 @@ export function StackedBar({ segments }: StackedBarProps) {
       <View style={styles.stackTrack}>
         {segments.map((seg) => {
           if (seg.value <= 0) return null;
-          const width = `${Math.max(2, (seg.value / total) * 100)}%`;
+          const width = `${Math.max(2, (seg.value / total) * 100)}%` as const;
           return (
             <View
               key={seg.id}
-              style={[styles.stackSeg, { width, backgroundColor: seg.color }]}
+              style={[styles.stackSeg, { width: width as unknown as import('react-native').DimensionValue, backgroundColor: seg.color }]}
             />
           );
         })}

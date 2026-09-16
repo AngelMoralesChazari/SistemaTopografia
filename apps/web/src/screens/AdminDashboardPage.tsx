@@ -126,9 +126,9 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
       tone: kpis.pending || kpis.overdue ? 'alert' : 'info',
     },
     {
-      section: 'equipment',
-      icon: 'inventory-2',
-      title: 'Catálogo',
+      section: 'manageEquipment',
+      icon: 'tune',
+      title: 'Gestión de equipos',
       hint: `${equipmentCount} equipos activos`,
     },
     {

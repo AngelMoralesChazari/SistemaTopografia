@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
@@ -74,6 +75,13 @@ function parseDisplayDateWithTime(value: string, timeSource: Date): Date | null 
 
 export function StudentCatalogPage() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const compact = width < 900;
+  const availableWidth = Math.max(300, width - (compact ? 0 : 280) - 56);
+  const numColumns = availableWidth > 1200 ? 4 : availableWidth > 820 ? 3 : availableWidth > 500 ? 2 : 1;
+  const gridGap = 14;
+  const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1)) / numColumns);
+
   const [items, setItems] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -357,7 +365,11 @@ export function StudentCatalogPage() {
                   <Pressable
                     key={cat.id}
                     onPress={() => openCategory(cat.id)}
-                    style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+                    style={({ pressed }) => [
+                      styles.tile,
+                      { width: cardWidth },
+                      pressed && styles.tilePressed,
+                    ]}
                   >
                     <View style={styles.tileMark}>
                       <Text style={styles.tileMarkText}>{cat.mark}</Text>
@@ -630,14 +642,11 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 14,
   },
   tile: {
-    width: '31%',
-    minWidth: 180,
-    flexGrow: 1,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface,
