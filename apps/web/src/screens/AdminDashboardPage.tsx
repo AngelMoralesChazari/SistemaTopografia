@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import { isAdminRole, type Loan } from '@lab-topo/domain';
@@ -15,6 +23,8 @@ type AdminDashboardPageProps = {
 
 export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [loans, setLoans] = useState<Loan[]>([]);
   const [equipmentCount, setEquipmentCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
@@ -162,9 +172,12 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
   ];
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.content, isMobile && { padding: 16, paddingBottom: 40 }]}
+    >
       <Text style={styles.eyebrow}>Administrador</Text>
-      <Text style={styles.title}>Vista general</Text>
+      <Text style={[styles.title, isMobile && { fontSize: 26 }]}>Vista general</Text>
       <Text style={styles.subtitle}>
         Resumen operativo y accesos rápidos al resto del panel.
       </Text>
