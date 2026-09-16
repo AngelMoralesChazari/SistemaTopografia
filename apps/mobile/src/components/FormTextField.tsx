@@ -17,7 +17,7 @@ type Props = TextInputProps & {
 export function FormTextField({ onFocus, ...rest }: Props) {
   const form = useKeyboardForm();
 
-  const handleFocus = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
+  const handleFocus = (event: any) => {
     onFocus?.(event);
     form?.onFieldFocus(event);
   };

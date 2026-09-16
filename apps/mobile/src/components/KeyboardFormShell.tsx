@@ -94,7 +94,7 @@ export function KeyboardFormShell({
     // measureInWindow fallback vía último TextInput enfocado
     const input = TextInput.State.currentlyFocusedInput?.();
     if (input) {
-      const handle = findNodeHandle(input);
+      const handle = findNodeHandle(input as any);
       if (handle && responder?.scrollResponderScrollNativeHandleToKeyboard) {
         responder.scrollResponderScrollNativeHandleToKeyboard(handle, 140, true);
         return;
