@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -68,6 +69,8 @@ function defaultRoleLabel(role?: string): string {
 }
 
 export function ReportsPage() {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const { user } = useAuth();
   const todayDate = useMemo(() => new Date(), []);
   const today = useMemo(() => toIsoDate(new Date()), []);
@@ -309,13 +312,16 @@ export function ReportsPage() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.content, isMobile && styles.contentMobile]}
+    >
       <View style={styles.header}>
         <View style={styles.headerIconWrap}>
           <MaterialIcons name="assessment" size={28} color={theme.color.navy} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Generar reporte institucional</Text>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>Generar reporte institucional</Text>
           <Text style={styles.subtitle}>
             Genera informes oficiales con portada institucional UAGro, historial de operaciones, inventario y directorio.
           </Text>
@@ -336,9 +342,9 @@ export function ReportsPage() {
           <Text style={styles.loadingText}>Cargando datos del laboratorio...</Text>
         </View>
       ) : (
-        <View style={styles.layout}>
+        <View style={[styles.layout, isMobile && styles.layoutMobile]}>
           {/* Columna Izquierda: Formulario de Configuración */}
-          <View style={styles.formCol}>
+          <View style={[styles.formCol, isMobile && styles.formColMobile]}>
             {/* Bloque 1: Datos del emisor */}
             <View style={styles.card}>
               <View style={styles.cardHead}>
@@ -387,7 +393,7 @@ export function ReportsPage() {
                 Selecciona las fechas mediante el calendario (formato Día/Mes/Año). La fecha de fin no puede superar el día de hoy ({formatMexicoDate(today)}).
               </Text>
 
-              <View style={styles.dateRow}>
+              <View style={[styles.dateRow, isMobile && styles.dateRowMobile]}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
                   <Text style={styles.label}>Fecha de inicio (Día/Mes/Año)</Text>
                   <AppDatePicker
@@ -532,7 +538,7 @@ export function ReportsPage() {
           </View>
 
           {/* Columna Derecha: Resumen de Contenido y Acciones de Descarga */}
-          <View style={styles.previewCol}>
+          <View style={[styles.previewCol, isMobile && styles.previewColMobile]}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryCardTitle}>Resumen del documento</Text>
               <Text style={styles.summaryCardDesc}>
@@ -657,8 +663,9 @@ export function ReportsPage() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.canvas },
-  content: { padding: 32, paddingBottom: 64 },
+  root: { flex: 1, backgroundColor: theme.color.canvas, width: '100%' },
+  content: { padding: 32, paddingBottom: 64, width: '100%', maxWidth: '100%' },
+  contentMobile: { paddingHorizontal: 12, paddingTop: 14, paddingBottom: 40 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -679,6 +686,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.8,
   },
+  titleMobile: {
+    fontSize: 22,
+    letterSpacing: -0.4,
+  },
   subtitle: { marginTop: 4, color: theme.color.muted, fontSize: theme.font.size.md },
   loadingBox: {
     padding: 60,
@@ -692,14 +703,31 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 20,
     alignItems: 'flex-start',
+    width: '100%',
+  },
+  layoutMobile: {
+    flexDirection: 'column',
+    gap: 14,
   },
   formCol: {
     flex: 1,
     minWidth: 380,
     gap: 16,
+    width: '100%',
+  },
+  formColMobile: {
+    minWidth: 0,
+    width: '100%',
   },
   previewCol: {
     width: 360,
+  },
+  previewColMobile: {
+    width: '100%',
+  },
+  dateRowMobile: {
+    flexDirection: 'column',
+    gap: 10,
   },
   card: {
     backgroundColor: theme.color.surface,
@@ -708,6 +736,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     padding: 20,
     ...theme.shadow.soft,
+    width: '100%',
+    maxWidth: '100%',
   },
   cardHead: {
     flexDirection: 'row',
