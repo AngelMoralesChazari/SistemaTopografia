@@ -1494,8 +1494,8 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 640,
-    maxHeight: '90%',
+    maxWidth: 680,
+    maxHeight: '92%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
@@ -1523,7 +1523,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F3F7',
   },
   modalBody: {
-    maxHeight: 460,
+    maxHeight: 560,
   },
   modalRow: {
     flexDirection: 'row',
