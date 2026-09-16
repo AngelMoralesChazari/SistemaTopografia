@@ -91,7 +91,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
+    width: '100%',
+    maxWidth: '100%',
   },
   pageInfo: {
     color: theme.color.muted,
