@@ -134,17 +134,29 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
             : 'Gestión del laboratorio';
 
   const navSpacing = React.useMemo(() => {
+    // Para perfiles con pocas opciones (alumnos, profesores, particulares):
+    // Se usan EXACTAMENTE las medidas y tamaños del commit a1409dd
     if (items.length <= 6) {
       return {
-        sidebarPaddingTop: 20,
-        sidebarPaddingBottom: 16,
-        logoMarginBottom: 16,
-        userBoxPadding: 10,
-        userBoxMarginBottom: 14,
-        navLabelMarginBottom: 8,
-        itemPaddingVertical: 10,
-        itemGap: 5,
-        footerPaddingTop: 12,
+        sidebarPaddingTop: 28,
+        sidebarPaddingBottom: 20,
+        sidebarPaddingHorizontal: 18,
+        logoSize: 42,
+        logoMarginBottom: 22,
+        logoPaddingHorizontal: 10,
+        avatarSize: 36,
+        userBoxPadding: 12,
+        userBoxMarginBottom: 20,
+        navLabelMarginBottom: 10,
+        navLabelPaddingHorizontal: 11,
+        listPaddingBottom: 12,
+        itemPaddingVertical: 13,
+        itemPaddingHorizontal: 12,
+        itemGap: 4,
+        iconSize: 22 as const,
+        footerPaddingTop: 14,
+        footerGap: 10,
+        footerTextMarginBottom: 4,
       };
     }
 
@@ -157,15 +169,25 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
     const factor = (clampedH - minH) / (maxH - minH);
 
     return {
-      sidebarPaddingTop: Math.round(14 + factor * 8),
-      sidebarPaddingBottom: Math.round(12 + factor * 8),
-      logoMarginBottom: Math.round(10 + factor * 8),
-      userBoxPadding: Math.round(8 + factor * 3),
-      userBoxMarginBottom: Math.round(10 + factor * 6),
-      navLabelMarginBottom: Math.round(6 + factor * 4),
-      itemPaddingVertical: Math.round((7.5 + factor * 5.5) * 10) / 10,
-      itemGap: Math.round((2.5 + factor * 5.5) * 10) / 10,
-      footerPaddingTop: Math.round(10 + factor * 6),
+      sidebarPaddingTop: Math.round(14 + factor * 14), // 14px a 28px
+      sidebarPaddingBottom: Math.round(12 + factor * 8), // 12px a 20px
+      sidebarPaddingHorizontal: Math.round(14 + factor * 4), // 14px a 18px
+      logoSize: Math.round(38 + factor * 4), // 38px a 42px
+      logoMarginBottom: Math.round(10 + factor * 12), // 10px a 22px
+      logoPaddingHorizontal: Math.round(6 + factor * 4), // 6px a 10px
+      avatarSize: Math.round(32 + factor * 4), // 32px a 36px
+      userBoxPadding: Math.round(8 + factor * 4), // 8px a 12px
+      userBoxMarginBottom: Math.round(10 + factor * 10), // 10px a 20px
+      navLabelMarginBottom: Math.round(6 + factor * 4), // 6px a 10px
+      navLabelPaddingHorizontal: Math.round(8 + factor * 3), // 8px a 11px
+      listPaddingBottom: Math.round(6 + factor * 6), // 6px a 12px
+      itemPaddingVertical: Math.round((7.5 + factor * 5.5) * 10) / 10, // 7.5px a 13px
+      itemPaddingHorizontal: 12,
+      itemGap: Math.round((2.5 + factor * 5.5) * 10) / 10, // 2.5px a 8px
+      iconSize: (factor > 0.6 ? 22 : 20) as 22 | 20,
+      footerPaddingTop: Math.round(10 + factor * 4), // 10px a 14px
+      footerGap: Math.round(6 + factor * 4), // 6px a 10px
+      footerTextMarginBottom: Math.round(2 + factor * 2), // 2px a 4px
     };
   }, [height, items.length]);
 
@@ -178,11 +200,25 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           {
             paddingTop: navSpacing.sidebarPaddingTop,
             paddingBottom: navSpacing.sidebarPaddingBottom,
+            paddingHorizontal: navSpacing.sidebarPaddingHorizontal,
           },
         ]}
       >
-        <View style={[styles.logoRow, { marginBottom: navSpacing.logoMarginBottom }]}>
-          <View style={styles.logoMark}>
+        <View
+          style={[
+            styles.logoRow,
+            {
+              marginBottom: navSpacing.logoMarginBottom,
+              paddingHorizontal: navSpacing.logoPaddingHorizontal,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.logoMark,
+              { width: navSpacing.logoSize, height: navSpacing.logoSize },
+            ]}
+          >
             <Text style={styles.logoText}>LT</Text>
           </View>
           {!compact ? (
@@ -202,7 +238,7 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
             },
           ]}
         >
-          <Avatar initials={getInitials(user.displayName)} size={34} />
+          <Avatar initials={getInitials(user.displayName)} size={navSpacing.avatarSize} />
           {!compact ? (
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>
@@ -214,14 +250,28 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
         </View>
 
         {!compact ? (
-          <Text style={[styles.navLabel, { marginBottom: navSpacing.navLabelMarginBottom }]}>
+          <Text
+            style={[
+              styles.navLabel,
+              {
+                marginBottom: navSpacing.navLabelMarginBottom,
+                paddingHorizontal: navSpacing.navLabelPaddingHorizontal,
+              },
+            ]}
+          >
             {navLabel}
           </Text>
         ) : null}
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.navList, { gap: navSpacing.itemGap }]}
+          contentContainerStyle={[
+            styles.navList,
+            {
+              gap: navSpacing.itemGap,
+              paddingBottom: navSpacing.listPaddingBottom,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {items.map((item) => {
@@ -232,13 +282,16 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
                 onPress={() => onSectionChange(item.id)}
                 style={[
                   styles.navItem,
-                  { paddingVertical: navSpacing.itemPaddingVertical },
+                  {
+                    paddingVertical: navSpacing.itemPaddingVertical,
+                    paddingHorizontal: navSpacing.itemPaddingHorizontal,
+                  },
                   active && styles.navItemActive,
                 ]}
               >
                 <MaterialIcons
                   name={item.icon}
-                  size={20}
+                  size={navSpacing.iconSize}
                   color={active ? '#fff' : theme.color.sidebarText}
                 />
                 {!compact ? (
@@ -249,9 +302,22 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           })}
         </ScrollView>
 
-        <View style={[styles.footer, { paddingTop: navSpacing.footerPaddingTop }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingTop: navSpacing.footerPaddingTop,
+              gap: navSpacing.footerGap,
+            },
+          ]}
+        >
           {!compact ? (
-            <Text style={styles.footerText}>
+            <Text
+              style={[
+                styles.footerText,
+                { marginBottom: navSpacing.footerTextMarginBottom },
+              ]}
+            >
               Sesión: <Text style={styles.footerBold}>{formatRole(user.role)}</Text>
             </Text>
           ) : null}
