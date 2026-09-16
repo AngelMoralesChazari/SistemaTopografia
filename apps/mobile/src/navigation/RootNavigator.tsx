@@ -9,6 +9,8 @@ import { RenterPendingScreen } from '../screens/RenterPendingScreen';
 import { RenterRegisterScreen } from '../screens/RenterRegisterScreen';
 import { RoleTabs } from './RoleTabs';
 
+import { StudentGroupOnboardingModal } from '../components/StudentGroupOnboardingModal';
+
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -38,25 +40,28 @@ export function RootNavigator() {
     user?.role === 'renter' && user.renterStatus !== 'approved';
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          renterBlocked ? (
-            <Stack.Screen name="Pending" component={RenterPendingScreen} />
+    <>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {user ? (
+            renterBlocked ? (
+              <Stack.Screen name="Pending" component={RenterPendingScreen} />
+            ) : (
+              <Stack.Screen name="App">{() => <RoleTabs role={user.role} />}</Stack.Screen>
+            )
+          ) : authView === 'register' ? (
+            <Stack.Screen name="Register">
+              {() => <RenterRegisterScreen onBack={() => setAuthView('login')} />}
+            </Stack.Screen>
           ) : (
-            <Stack.Screen name="App">{() => <RoleTabs role={user.role} />}</Stack.Screen>
-          )
-        ) : authView === 'register' ? (
-          <Stack.Screen name="Register">
-            {() => <RenterRegisterScreen onBack={() => setAuthView('login')} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Login">
-            {() => <LoginScreen onGoRegister={() => setAuthView('register')} />}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+            <Stack.Screen name="Login">
+              {() => <LoginScreen onGoRegister={() => setAuthView('register')} />}
+            </Stack.Screen>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+      <StudentGroupOnboardingModal />
+    </>
   );
 }
 
