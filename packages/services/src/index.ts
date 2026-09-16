@@ -13,7 +13,9 @@ export {
   updateEquipment,
   setEquipmentStatus,
 } from './equipmentService';
-export { listTeachers, watchLabUsers } from './userService';
+export { listTeachers, watchLabUsers, createTeacher } from './userService';
+export type { CreateTeacherInput } from './userService';
+export { listGroups, ensureDefaultGroups, watchGroups } from './groupService';
 export {
   registerRenter,
   watchPendingRenters,
