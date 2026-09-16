@@ -6,6 +6,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -126,3 +127,120 @@ export async function createTeacher(
 
   return uid;
 }
+
+export type UpdateTeacherInput = {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  email?: string | null;
+  phone?: string | null;
+  groupIds?: string[];
+  employeeId?: string | null;
+  active?: boolean;
+  labId?: string;
+};
+
+/** Actualiza los datos de un maestro existente en Firestore */
+export async function updateTeacher(
+  teacherId: string,
+  input: UpdateTeacherInput,
+  actor?: { uid: string; email?: string | null; displayName?: string | null; role?: UserRole }
+): Promise<void> {
+  const labId = input.labId || getLabId();
+  const db = getDb();
+  const userRef = doc(db, 'users', teacherId);
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (input.firstName !== undefined || input.lastName !== undefined) {
+    const parts = [input.firstName?.trim(), input.lastName?.trim()].filter(Boolean);
+    if (parts.length > 0) {
+      updateData.displayName = parts.join(' ');
+    }
+  } else if (input.displayName !== undefined) {
+    updateData.displayName = input.displayName.trim();
+  }
+
+  if (input.email !== undefined) {
+    updateData.email = input.email ? input.email.trim().toLowerCase() : '';
+  }
+
+  if (input.phone !== undefined) {
+    updateData.phone = input.phone ? input.phone.trim() : null;
+  }
+
+  if (input.groupIds !== undefined) {
+    updateData.groupIds = input.groupIds;
+  }
+
+  if (input.employeeId !== undefined) {
+    updateData.employeeId = input.employeeId ? input.employeeId.trim() : null;
+  }
+
+  if (input.active !== undefined) {
+    updateData.active = input.active;
+  }
+
+  await updateDoc(userRef, updateData);
+
+  if (actor) {
+    try {
+      const summaryParts: string[] = [];
+      if (updateData.displayName) summaryParts.push(`Nombre: ${updateData.displayName}`);
+      if (input.groupIds) summaryParts.push(`Grupos: ${input.groupIds.join(', ') || 'ninguno'}`);
+      if (input.active !== undefined) summaryParts.push(`Estado: ${input.active ? 'Activo' : 'Inactivo'}`);
+
+      await writeAuditLog({
+        labId,
+        actorId: actor.uid,
+        actorEmail: actor.email ?? '',
+        actorName: actor.displayName ?? 'Administrador',
+        actorRole: actor.role ?? 'admin',
+        action: 'USER_UPDATE',
+        targetType: 'user',
+        targetId: teacherId,
+        summary: `Edición de maestro (${teacherId}): ${summaryParts.join(' | ') || 'Actualización de perfil'}`,
+      });
+    } catch {
+      // Ignorar fallo de auditoría secundaria
+    }
+  }
+}
+
+/** Cambia el estado de activación de un maestro (baja lógica / reactivación) */
+export async function setTeacherActiveStatus(
+  teacherId: string,
+  active: boolean,
+  teacherName?: string,
+  actor?: { uid: string; email?: string | null; displayName?: string | null; role?: UserRole },
+  labId = getLabId()
+): Promise<void> {
+  const db = getDb();
+  const userRef = doc(db, 'users', teacherId);
+
+  await updateDoc(userRef, {
+    active,
+    updatedAt: serverTimestamp(),
+  });
+
+  if (actor) {
+    try {
+      await writeAuditLog({
+        labId,
+        actorId: actor.uid,
+        actorEmail: actor.email ?? '',
+        actorName: actor.displayName ?? 'Administrador',
+        actorRole: actor.role ?? 'admin',
+        action: 'USER_UPDATE',
+        targetType: 'user',
+        targetId: teacherId,
+        summary: `${active ? 'Reactivación' : 'Desactivación (baja)'} de maestro: ${teacherName || teacherId}`,
+      });
+    } catch {
+      // Ignorar fallo de auditoría secundaria
+    }
+  }
+}
+

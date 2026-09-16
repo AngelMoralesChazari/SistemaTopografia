@@ -23,6 +23,8 @@ import {
   createTeacher,
   ensureDefaultGroups,
   listGroups,
+  setTeacherActiveStatus,
+  updateTeacher,
   watchGroups,
   watchLabUsers,
 } from '@lab-topo/services';
@@ -71,6 +73,20 @@ export function UsersPage() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Modal Edición de Maestro
+  const [editingTeacher, setEditingTeacher] = useState<AppUser | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editGroupIds, setEditGroupIds] = useState<string[]>([]);
+  const [editActive, setEditActive] = useState(true);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Indicador de estado de activación/desactivación en proceso
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -212,6 +228,104 @@ export function UsersPage() {
     }
   };
 
+  const openEditTeacher = (teacher: AppUser) => {
+    setEditError(null);
+    setEditingTeacher(teacher);
+    const parts = teacher.displayName.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const mid = Math.floor(parts.length / 2);
+      setEditFirstName(parts.slice(0, mid).join(' '));
+      setEditLastName(parts.slice(mid).join(' '));
+    } else if (parts.length === 2) {
+      setEditFirstName(parts[0]);
+      setEditLastName(parts[1]);
+    } else {
+      setEditFirstName(teacher.displayName);
+      setEditLastName('');
+    }
+    setEditEmail(teacher.email || '');
+    setEditPhone(teacher.phone || '');
+    setEditGroupIds(teacher.groupIds || []);
+    setEditActive(teacher.active !== false);
+  };
+
+  const toggleEditGroupSelection = (code: string) => {
+    setEditGroupIds((prev) =>
+      prev.includes(code) ? prev.filter((id) => id !== code) : [...prev, code].sort()
+    );
+  };
+
+  const handleUpdateTeacher = async () => {
+    if (!user || !isAdminRole(user.role) || !editingTeacher) return;
+    setEditError(null);
+
+    const fName = editFirstName.trim();
+    const lName = editLastName.trim();
+    if (!fName && !lName) {
+      setEditError('Debes ingresar al menos un nombre o apellido.');
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await updateTeacher(
+        editingTeacher.uid,
+        {
+          firstName: fName,
+          lastName: lName,
+          email: editEmail.trim() || null,
+          phone: editPhone.trim() || null,
+          groupIds: editGroupIds,
+          active: editActive,
+          labId: user.labId,
+        },
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          role: user.role,
+        }
+      );
+
+      const fullName = `${fName} ${lName}`.trim();
+      showToast(`Maestro "${fullName}" actualizado con éxito.`);
+      setEditingTeacher(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'No se pudieron guardar los cambios.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleToggleActiveStatus = async (teacher: AppUser) => {
+    if (!user || !isAdminRole(user.role)) return;
+    const targetState = !teacher.active;
+    setTogglingActiveId(teacher.uid);
+    try {
+      await setTeacherActiveStatus(
+        teacher.uid,
+        targetState,
+        teacher.displayName,
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          role: user.role,
+        },
+        user.labId
+      );
+      showToast(
+        targetState
+          ? `Maestro "${teacher.displayName}" reactivado con éxito.`
+          : `Maestro "${teacher.displayName}" desactivado (baja temporal).`
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Error al cambiar estado.');
+    } finally {
+      setTogglingActiveId(null);
+    }
+  };
+
   const canCreateTeacher = user ? isAdminRole(user.role) : false;
 
   return (
@@ -266,46 +380,115 @@ export function UsersPage() {
         ) : (
           <>
             {/* Lista de usuarios */}
-            {paging.pageItems.map((u) => (
-              <View key={u.uid} style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.name}>{u.displayName}</Text>
-                    <Text style={styles.email}>
-                      {u.email ? u.email : 'Sin correo registrado'}
-                      {u.phone ? ` · Tel: ${u.phone}` : ''}
-                    </Text>
-                  </View>
-                  <View style={[styles.pill, u.role === 'teacher' && styles.pillTeacher]}>
-                    <Text style={[styles.pillText, u.role === 'teacher' && styles.pillTextTeacher]}>
-                      {formatRole(u.role)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Grupos asignados al maestro */}
-                {u.role === 'teacher' && u.groupIds && u.groupIds.length > 0 ? (
-                  <View style={styles.assignedGroupsRow}>
-                    <Text style={styles.assignedGroupsLabel}>Grupos asignados:</Text>
-                    <View style={styles.assignedGroupsList}>
-                      {u.groupIds.map((gid) => (
-                        <View key={gid} style={styles.assignedGroupBadge}>
-                          <Text style={styles.assignedGroupBadgeText}>G-{gid}</Text>
-                        </View>
-                      ))}
+            {paging.pageItems.map((u) => {
+              const isTeacher = u.role === 'teacher';
+              return (
+                <View key={u.uid} style={[styles.card, !u.active && styles.cardInactive]}>
+                  <View style={styles.cardTop}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <Text style={styles.name}>{u.displayName}</Text>
+                        {u.active ? (
+                          <View style={styles.statusActiveBadge}>
+                            <Text style={styles.statusActiveText}>Activo</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.statusInactiveBadge}>
+                            <Text style={styles.statusInactiveText}>Desactivado</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.email}>
+                        {u.email ? u.email : 'Sin correo registrado'}
+                        {u.phone ? ` · Tel: ${u.phone}` : ''}
+                      </Text>
+                    </View>
+                    <View style={[styles.pill, isTeacher && styles.pillTeacher]}>
+                      <Text style={[styles.pillText, isTeacher && styles.pillTextTeacher]}>
+                        {formatRole(u.role)}
+                      </Text>
                     </View>
                   </View>
-                ) : null}
 
-                <Text style={styles.meta}>
-                  {u.active ? 'Activo' : 'Inactivo'}
-                  {u.employeeId ? ` · Empleado: ${u.employeeId}` : ''}
-                  {u.studentId ? ` · Mat. ${u.studentId}` : ''}
-                  {u.teacherName ? ` · Prof. ${u.teacherName}` : ''}
-                  {u.renterStatus ? ` · Renta: ${u.renterStatus}` : ''}
-                </Text>
-              </View>
-            ))}
+                  {/* Grupos asignados al maestro */}
+                  {isTeacher && u.groupIds && u.groupIds.length > 0 ? (
+                    <View style={styles.assignedGroupsRow}>
+                      <Text style={styles.assignedGroupsLabel}>Grupos asignados:</Text>
+                      <View style={styles.assignedGroupsList}>
+                        {u.groupIds.map((gid) => (
+                          <View key={gid} style={styles.assignedGroupBadge}>
+                            <Text style={styles.assignedGroupBadgeText}>G-{gid}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.cardBottomRow}>
+                    <Text style={styles.meta}>
+                      {u.active ? 'Activo' : 'Inactivo (Baja)'}
+                      {u.employeeId ? ` · Empleado: ${u.employeeId}` : ''}
+                      {u.studentId ? ` · Mat. ${u.studentId}` : ''}
+                      {u.teacherName ? ` · Prof. ${u.teacherName}` : ''}
+                      {u.renterStatus ? ` · Renta: ${u.renterStatus}` : ''}
+                    </Text>
+
+                    {/* Acciones para maestros (solo administradores) */}
+                    {isTeacher && canCreateTeacher ? (
+                      <View style={styles.teacherCardActions}>
+                        <Pressable
+                          style={styles.actionBtnSmall}
+                          onPress={() => openEditTeacher(u)}
+                        >
+                          <MaterialIcons
+                            name="edit"
+                            size={14}
+                            color={theme.color.navy}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={styles.actionBtnSmallText}>Editar</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[
+                            styles.actionBtnSmall,
+                            u.active ? styles.actionBtnDanger : styles.actionBtnSuccess,
+                          ]}
+                          disabled={togglingActiveId === u.uid}
+                          onPress={() => handleToggleActiveStatus(u)}
+                        >
+                          {togglingActiveId === u.uid ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={u.active ? '#C62828' : '#2E7D32'}
+                            />
+                          ) : (
+                            <>
+                              <MaterialIcons
+                                name={u.active ? 'person-off' : 'check-circle'}
+                                size={14}
+                                color={u.active ? '#C62828' : '#2E7D32'}
+                                style={{ marginRight: 4 }}
+                              />
+                              <Text
+                                style={[
+                                  styles.actionBtnSmallText,
+                                  u.active
+                                    ? styles.actionBtnDangerText
+                                    : styles.actionBtnSuccessText,
+                                ]}
+                              >
+                                {u.active ? 'Desactivar' : 'Reactivar'}
+                              </Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
 
             <ListPagination
               page={paging.page}
@@ -335,15 +518,21 @@ export function UsersPage() {
                   <Pressable
                     key={t.uid}
                     onPress={() => setSelectedTeacherId(t.uid)}
-                    style={[styles.chip, selectedTeacherId === t.uid && styles.chipActive]}
+                    style={[
+                      styles.chip,
+                      selectedTeacherId === t.uid && styles.chipActive,
+                      !t.active && styles.chipInactive,
+                    ]}
                   >
                     <Text
                       style={[
                         styles.chipText,
                         selectedTeacherId === t.uid && styles.chipTextActive,
+                        !t.active && styles.chipTextInactive,
                       ]}
                     >
                       {t.displayName}
+                      {!t.active ? ' [Inactivo]' : ''}
                       {t.groupIds && t.groupIds.length > 0 ? ` (${t.groupIds.join(', ')})` : ''}
                     </Text>
                   </Pressable>
@@ -352,10 +541,21 @@ export function UsersPage() {
             </View>
 
             {selectedTeacher ? (
-              <View style={styles.card}>
+              <View style={[styles.card, !selectedTeacher.active && styles.cardInactive]}>
                 <View style={styles.cardTop}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>{selectedTeacher.displayName}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Text style={styles.name}>{selectedTeacher.displayName}</Text>
+                      {selectedTeacher.active ? (
+                        <View style={styles.statusActiveBadge}>
+                          <Text style={styles.statusActiveText}>Activo</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.statusInactiveBadge}>
+                          <Text style={styles.statusInactiveText}>Desactivado</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.email}>
                       {selectedTeacher.email || 'Sin correo registrado'}
                       {selectedTeacher.phone ? ` · Tel: ${selectedTeacher.phone}` : ''}
@@ -366,8 +566,63 @@ export function UsersPage() {
                   </View>
                 </View>
 
+                {/* Acciones de administración para el maestro seleccionado */}
+                {canCreateTeacher ? (
+                  <View style={[styles.teacherCardActions, { marginTop: 10, justifyContent: 'flex-start' }]}>
+                    <Pressable
+                      style={styles.actionBtnSmall}
+                      onPress={() => openEditTeacher(selectedTeacher)}
+                    >
+                      <MaterialIcons
+                        name="edit"
+                        size={14}
+                        color={theme.color.navy}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.actionBtnSmallText}>Editar datos y grupos</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.actionBtnSmall,
+                        selectedTeacher.active
+                          ? styles.actionBtnDanger
+                          : styles.actionBtnSuccess,
+                      ]}
+                      disabled={togglingActiveId === selectedTeacher.uid}
+                      onPress={() => handleToggleActiveStatus(selectedTeacher)}
+                    >
+                      {togglingActiveId === selectedTeacher.uid ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={selectedTeacher.active ? '#C62828' : '#2E7D32'}
+                        />
+                      ) : (
+                        <>
+                          <MaterialIcons
+                            name={selectedTeacher.active ? 'person-off' : 'check-circle'}
+                            size={14}
+                            color={selectedTeacher.active ? '#C62828' : '#2E7D32'}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text
+                            style={[
+                              styles.actionBtnSmallText,
+                              selectedTeacher.active
+                                ? styles.actionBtnDangerText
+                                : styles.actionBtnSuccessText,
+                            ]}
+                          >
+                            {selectedTeacher.active ? 'Desactivar maestro' : 'Reactivar maestro'}
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : null}
+
                 {selectedTeacher.groupIds && selectedTeacher.groupIds.length > 0 ? (
-                  <View style={[styles.assignedGroupsRow, { marginTop: 10 }]}>
+                  <View style={[styles.assignedGroupsRow, { marginTop: 12 }]}>
                     <Text style={styles.assignedGroupsLabel}>Grupos a su cargo:</Text>
                     <View style={styles.assignedGroupsList}>
                       {selectedTeacher.groupIds.map((gid) => (
@@ -538,6 +793,202 @@ export function UsersPage() {
         </View>
       </Modal>
 
+      {/* Pop-up Modal: Editar datos del maestro */}
+      <Modal
+        visible={editingTeacher !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!editSaving) setEditingTeacher(null);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalTitle}>Editar maestro</Text>
+                <Text style={styles.modalSub}>
+                  Modifica la información del docente, su estado o los grupos de Topografía asignados.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!editSaving) setEditingTeacher(null);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialIcons name="close" size={20} color={theme.color.muted} />
+              </Pressable>
+            </View>
+
+            {editError ? <Notice tone="danger" title={editError} /> : null}
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Datos personales */}
+              <View style={styles.formGrid}>
+                <TextField
+                  label="Nombre(s) *"
+                  value={editFirstName}
+                  onChangeText={setEditFirstName}
+                  placeholder="Ej: Carlos Alberto"
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Apellidos *"
+                  value={editLastName}
+                  onChangeText={setEditLastName}
+                  placeholder="Ej: Hernández Morales"
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Correo electrónico (opcional)"
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  placeholder="profesor@uagro.mx"
+                  keyboardType="email-address"
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Número de teléfono (opcional)"
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  placeholder="Ej: 747 123 4567"
+                  keyboardType="phone-pad"
+                  containerStyle={styles.formField}
+                />
+              </View>
+
+              {/* Estado de activación en el laboratorio (Baja lógica / Activo) */}
+              <View style={styles.statusToggleContainer}>
+                <Text style={styles.statusToggleLabel}>Estado en el laboratorio</Text>
+                <View style={styles.statusToggleRow}>
+                  <Pressable
+                    onPress={() => setEditActive(true)}
+                    style={[
+                      styles.statusToggleOption,
+                      editActive && styles.statusToggleOptionActive,
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="check-circle"
+                      size={18}
+                      color={editActive ? '#2E7D32' : theme.color.muted}
+                      style={{ marginRight: 8 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.statusToggleOptionText,
+                          editActive && styles.statusToggleOptionTextActive,
+                        ]}
+                      >
+                        Activo
+                      </Text>
+                      <Text style={styles.statusToggleOptionSub}>Habilitado para prácticas</Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setEditActive(false)}
+                    style={[
+                      styles.statusToggleOption,
+                      !editActive && styles.statusToggleOptionInactive,
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="person-off"
+                      size={18}
+                      color={!editActive ? '#C62828' : theme.color.muted}
+                      style={{ marginRight: 8 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.statusToggleOptionText,
+                          !editActive && styles.statusToggleOptionTextInactive,
+                        ]}
+                      >
+                        Desactivado
+                      </Text>
+                      <Text style={styles.statusToggleOptionSub}>Baja temporal / En pausa</Text>
+                    </View>
+                  </Pressable>
+                </View>
+                <Text style={styles.statusToggleHint}>
+                  {editActive
+                    ? 'El maestro aparecerá disponible en el catálogo de profesores para los alumnos.'
+                    : 'El maestro no estará disponible para nuevos alumnos, pero conservará su historial y datos intactos.'}
+                </Text>
+              </View>
+
+              {/* Selector de Grupos asignados */}
+              <View style={styles.groupSection}>
+                <View style={styles.groupSectionHeader}>
+                  <Text style={styles.groupSectionTitle}>Grupos asignados (Topografía)</Text>
+                  <Text style={styles.groupSectionCount}>
+                    {editGroupIds.length === 0
+                      ? 'Ningún grupo seleccionado'
+                      : `${editGroupIds.length} grupo(s) asignado(s)`}
+                  </Text>
+                </View>
+                <Text style={styles.groupSectionHint}>
+                  Selecciona los grupos que tiene a cargo este maestro. Puedes agregar nuevos grupos o retirar los que ya no imparta.
+                </Text>
+
+                <View style={styles.groupGrid}>
+                  {availableGroupCodes.map((code) => {
+                    const isSelected = editGroupIds.includes(code);
+                    return (
+                      <Pressable
+                        key={code}
+                        onPress={() => toggleEditGroupSelection(code)}
+                        style={[
+                          styles.groupPill,
+                          isSelected && styles.groupPillActive,
+                        ]}
+                      >
+                        <MaterialIcons
+                          name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
+                          size={16}
+                          color={isSelected ? '#fff' : theme.color.muted}
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text
+                          style={[
+                            styles.groupPillText,
+                            isSelected && styles.groupPillTextActive,
+                          ]}
+                        >
+                          Grupo {code}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Modal Actions */}
+            <View style={styles.modalActions}>
+              <Button
+                title="Guardar cambios"
+                loading={editSaving}
+                onPress={handleUpdateTeacher}
+                style={styles.modalSaveBtn}
+              />
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                disabled={editSaving}
+                onPress={() => setEditingTeacher(null)}
+                fullWidth={false}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Toast message={toast ?? ''} visible={toastVisible} />
     </View>
   );
@@ -608,8 +1059,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.surface,
   },
   chipActive: { backgroundColor: theme.color.infoSoft, borderColor: theme.color.navy },
+  chipInactive: { opacity: 0.65, backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' },
   chipText: { color: theme.color.muted, fontWeight: '700', fontSize: 12 },
   chipTextActive: { color: theme.color.navy },
+  chipTextInactive: { color: '#64748B' },
 
   card: {
     backgroundColor: theme.color.surface,
@@ -619,6 +1072,37 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     ...theme.shadow.soft,
+  },
+  cardInactive: {
+    opacity: 0.85,
+    backgroundColor: '#FAFBFD',
+    borderColor: '#E2E8F0',
+  },
+  statusActiveBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  statusActiveText: {
+    color: '#2E7D32',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  statusInactiveBadge: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  statusInactiveText: {
+    color: '#C62828',
+    fontSize: 10,
+    fontWeight: '800',
   },
   cardTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   name: { color: theme.color.navy, fontWeight: '800', fontSize: theme.font.size.md },
@@ -682,6 +1166,115 @@ const styles = StyleSheet.create({
   },
   studentName: { color: theme.color.ink, fontWeight: '700' },
   studentMeta: { color: theme.color.muted, fontSize: 12, marginTop: 2 },
+
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  teacherCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  actionBtnSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4F8',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#D0D9E4',
+  },
+  actionBtnSmallText: {
+    color: theme.color.navy,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  actionBtnDanger: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+  },
+  actionBtnDangerText: {
+    color: '#C62828',
+  },
+  actionBtnSuccess: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#C8E6C9',
+  },
+  actionBtnSuccessText: {
+    color: '#2E7D32',
+  },
+
+  statusToggleContainer: {
+    marginTop: 4,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statusToggleLabel: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+  statusToggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  statusToggleOption: {
+    flex: 1,
+    minWidth: 160,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#fff',
+  },
+  statusToggleOptionActive: {
+    borderColor: '#2E7D32',
+    backgroundColor: '#F1F8F3',
+  },
+  statusToggleOptionInactive: {
+    borderColor: '#C62828',
+    backgroundColor: '#FFF5F5',
+  },
+  statusToggleOptionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: theme.color.ink,
+  },
+  statusToggleOptionTextActive: {
+    color: '#2E7D32',
+  },
+  statusToggleOptionTextInactive: {
+    color: '#C62828',
+  },
+  statusToggleOptionSub: {
+    fontSize: 10,
+    color: theme.color.muted,
+    marginTop: 1,
+  },
+  statusToggleHint: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 8,
+    lineHeight: 15,
+  },
 
   // Modal styles
   modalBackdrop: {
