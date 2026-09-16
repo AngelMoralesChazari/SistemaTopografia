@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   StyleSheet,
@@ -7,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '@lab-topo/config';
@@ -18,13 +20,27 @@ type LoginPageProps = {
 };
 
 export function LoginPage({ onGoRegister }: LoginPageProps) {
-  const { login, loading, error, clearError, firebaseReady, firebaseMessage } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, firebaseReady, firebaseMessage } =
+    useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { width, height } = useWindowDimensions();
   const cardWidth = Math.min(420, width - 32);
   // Más grande que la tarjeta para que el anillo se vea a los lados.
-  const logoSize = Math.max(width, height) * .75;
+  const logoSize = Math.max(width, height) * 0.75;
+
+  const onGoogleSubmit = async () => {
+    clearError();
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch {
+      // error handled in context
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const onSubmit = async () => {
     clearError();
@@ -93,6 +109,31 @@ export function LoginPage({ onGoRegister }: LoginPageProps) {
             disabled={!firebaseReady || !email.trim() || !password}
             onPress={onSubmit}
           />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>o con cuenta institucional</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Botón de acceso institucional con Google */}
+          <Pressable
+            style={[
+              styles.googleBtn,
+              (!firebaseReady || loading || googleLoading) && styles.googleBtnDisabled,
+            ]}
+            disabled={!firebaseReady || loading || googleLoading}
+            onPress={onGoogleSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Continuar con cuenta Google de la UAGro"
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#4285F4" style={{ marginRight: 10 }} />
+            ) : (
+              <FontAwesome name="google" size={18} color="#4285F4" style={{ marginRight: 10 }} />
+            )}
+            <Text style={styles.googleBtnText}>Continuar con Google</Text>
+          </Pressable>
 
           {onGoRegister ? (
             <Pressable
@@ -172,5 +213,43 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.sm,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#DADCE0',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 6,
+    ...theme.shadow.soft,
+  },
+  googleBtnDisabled: {
+    opacity: 0.6,
+  },
+  googleBtnText: {
+    color: '#3C4043',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    color: theme.color.muted,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
