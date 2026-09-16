@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { AppUser } from '@lab-topo/domain';
-import { checkFirebaseReady, signIn, signOut, watchAuth } from '@lab-topo/services';
+import {
+  checkFirebaseReady,
+  refreshCurrentUser,
+  signIn,
+  signInWithGoogle,
+  signOut,
+  watchAuth,
+} from '@lab-topo/services';
 
 type AuthContextValue = {
   user: AppUser | null;
@@ -9,7 +16,9 @@ type AuthContextValue = {
   firebaseMessage: string;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken?: string) => Promise<void>;
   logout: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   clearError: () => void;
   setSessionUser: (user: AppUser | null) => void;
 };
@@ -66,9 +75,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       },
+      loginWithGoogle: async (idToken?: string) => {
+        setError(null);
+        setLoading(true);
+        try {
+          const profile = await signInWithGoogle(idToken);
+          setUser(profile);
+        } catch (err) {
+          const message =
+            err instanceof Error ? mapAuthError(err.message) : 'No se pudo iniciar sesión con Google';
+          setError(message);
+          throw err;
+        } finally {
+          setLoading(false);
+        }
+      },
       logout: async () => {
         await signOut();
         setUser(null);
+      },
+      reloadUser: async () => {
+        const profile = await refreshCurrentUser();
+        if (profile) setUser(profile);
       },
     }),
     [user, loading, ready.ok, ready.message, error]
@@ -84,6 +112,7 @@ export function useAuth(): AuthContextValue {
 }
 
 function mapAuthError(raw: string): string {
+  console.warn('[Auth Error Detail]:', raw);
   if (raw.includes('auth/invalid-credential') || raw.includes('auth/wrong-password')) {
     return 'Correo o contraseña incorrectos.';
   }
@@ -93,11 +122,34 @@ function mapAuthError(raw: string): string {
   if (raw.includes('auth/too-many-requests')) {
     return 'Demasiados intentos. Intenta más tarde.';
   }
-  if (raw.includes('auth/user-token-expired') || raw.includes('auth/id-token-expired')) {
+  if (raw.includes('auth/user-token-expired') || raw.includes('auth/id-token-expired') || raw.includes('sesión expiró')) {
     return 'Tu sesión expiró. Vuelve a iniciar sesión.';
   }
   if (raw.includes('Firebase no está configurado') || raw.includes('EXPO_PUBLIC_FIREBASE')) {
     return 'Firebase no está configurado. Revisa tu archivo .env.';
+  }
+  if (raw.includes('auth/popup-closed-by-user')) {
+    return 'Ventana de inicio de sesión con Google cerrada.';
+  }
+  if (raw.includes('auth/cancelled-popup-request')) {
+    return 'Solicitud de inicio de sesión cancelada.';
+  }
+  if (raw.includes('auth/unauthorized-domain')) {
+    return 'Dominio no autorizado en Firebase. Agrégalo en Firebase Console > Authentication > Settings > Authorized domains.';
+  }
+  if (raw.includes('auth/popup-blocked')) {
+    return 'Ventana emergente bloqueada por el navegador. Habilita las ventanas emergentes.';
+  }
+  if (raw.includes('auth/operation-not-supported-in-this-environment')) {
+    return 'El inicio con Google en móvil nativo requiere credenciales OAuth de Google Cloud. Por favor ingresa con tu correo y contraseña en la app, o usa el navegador web.';
+  }
+  if (
+    raw.includes('Acceso restringido') ||
+    raw.includes('Acceso institucional') ||
+    raw.includes('cuenta especial') ||
+    raw.includes('excepción institucional')
+  ) {
+    return raw;
   }
   if (
     raw.includes('perfil') ||
@@ -108,5 +160,5 @@ function mapAuthError(raw: string): string {
   ) {
     return raw;
   }
-  return 'No se pudo iniciar sesión. Verifica tus datos.';
+  return raw || 'No se pudo iniciar sesión. Verifica tus datos.';
 }
