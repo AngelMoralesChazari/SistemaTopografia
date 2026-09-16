@@ -116,7 +116,7 @@ type AppShellProps = {
 
 export function AppShell({ section, onSectionChange, children }: AppShellProps) {
   const { user, logout } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const compact = width < 900;
 
   if (!user) return null;
@@ -133,10 +133,55 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
             ? 'Administración'
             : 'Gestión del laboratorio';
 
+  const navSpacing = React.useMemo(() => {
+    if (items.length <= 6) {
+      return {
+        sidebarPaddingTop: 20,
+        sidebarPaddingBottom: 16,
+        logoMarginBottom: 16,
+        userBoxPadding: 10,
+        userBoxMarginBottom: 14,
+        navLabelMarginBottom: 8,
+        itemPaddingVertical: 10,
+        itemGap: 5,
+        footerPaddingTop: 12,
+      };
+    }
+
+    // Para administrador (11 o 12 secciones):
+    // Se adapta suavemente entre la altura de una laptop (~640px-740px) y un monitor de escritorio (~900px-1080px)
+    // De esta manera no se ve ni muy pequeño en pantallas grandes, ni desborda con scroll en laptop.
+    const minH = 640;
+    const maxH = 1050;
+    const clampedH = Math.min(maxH, Math.max(minH, height));
+    const factor = (clampedH - minH) / (maxH - minH);
+
+    return {
+      sidebarPaddingTop: Math.round(14 + factor * 8),
+      sidebarPaddingBottom: Math.round(12 + factor * 8),
+      logoMarginBottom: Math.round(10 + factor * 8),
+      userBoxPadding: Math.round(8 + factor * 3),
+      userBoxMarginBottom: Math.round(10 + factor * 6),
+      navLabelMarginBottom: Math.round(6 + factor * 4),
+      itemPaddingVertical: Math.round((7.5 + factor * 5.5) * 10) / 10,
+      itemGap: Math.round((2.5 + factor * 5.5) * 10) / 10,
+      footerPaddingTop: Math.round(10 + factor * 6),
+    };
+  }, [height, items.length]);
+
   return (
     <View style={[styles.shell, compact && styles.shellCompact]}>
-      <View style={[styles.sidebar, compact && styles.sidebarCompact]}>
-        <View style={styles.logoRow}>
+      <View
+        style={[
+          styles.sidebar,
+          compact && styles.sidebarCompact,
+          {
+            paddingTop: navSpacing.sidebarPaddingTop,
+            paddingBottom: navSpacing.sidebarPaddingBottom,
+          },
+        ]}
+      >
+        <View style={[styles.logoRow, { marginBottom: navSpacing.logoMarginBottom }]}>
           <View style={styles.logoMark}>
             <Text style={styles.logoText}>LT</Text>
           </View>
@@ -148,8 +193,16 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           ) : null}
         </View>
 
-        <View style={styles.userBox}>
-          <Avatar initials={getInitials(user.displayName)} size={36} />
+        <View
+          style={[
+            styles.userBox,
+            {
+              padding: navSpacing.userBoxPadding,
+              marginBottom: navSpacing.userBoxMarginBottom,
+            },
+          ]}
+        >
+          <Avatar initials={getInitials(user.displayName)} size={34} />
           {!compact ? (
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>
@@ -160,20 +213,32 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           ) : null}
         </View>
 
-        {!compact ? <Text style={styles.navLabel}>{navLabel}</Text> : null}
+        {!compact ? (
+          <Text style={[styles.navLabel, { marginBottom: navSpacing.navLabelMarginBottom }]}>
+            {navLabel}
+          </Text>
+        ) : null}
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.navList}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.navList, { gap: navSpacing.itemGap }]}
+          showsVerticalScrollIndicator={false}
+        >
           {items.map((item) => {
             const active = item.id === section;
             return (
               <Pressable
                 key={`${item.id}-${item.label}`}
                 onPress={() => onSectionChange(item.id)}
-                style={[styles.navItem, active && styles.navItemActive]}
+                style={[
+                  styles.navItem,
+                  { paddingVertical: navSpacing.itemPaddingVertical },
+                  active && styles.navItemActive,
+                ]}
               >
                 <MaterialIcons
                   name={item.icon}
-                  size={22}
+                  size={20}
                   color={active ? '#fff' : theme.color.sidebarText}
                 />
                 {!compact ? (
@@ -184,7 +249,7 @@ export function AppShell({ section, onSectionChange, children }: AppShellProps) 
           })}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingTop: navSpacing.footerPaddingTop }]}>
           {!compact ? (
             <Text style={styles.footerText}>
               Sesión: <Text style={styles.footerBold}>{formatRole(user.role)}</Text>
@@ -212,9 +277,9 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 280,
     backgroundColor: theme.color.navy,
-    paddingTop: 28,
-    paddingHorizontal: 18,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   sidebarCompact: {
     width: '100%',
@@ -224,13 +289,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 10,
-    marginBottom: 22,
+    paddingHorizontal: 6,
+    marginBottom: 14,
   },
   logoMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -246,7 +311,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   brandSub: {
-    marginTop: 3,
+    marginTop: 2,
     color: '#9EB1C7',
     fontSize: theme.font.size.sm,
   },
@@ -254,8 +319,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 12,
-    marginBottom: 20,
+    padding: 8,
+    marginBottom: 12,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.13)',
@@ -267,13 +332,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   userRole: {
-    marginTop: 3,
+    marginTop: 2,
     color: '#AFC0D4',
     fontSize: theme.font.size.sm,
   },
   navLabel: {
-    paddingHorizontal: 11,
-    marginBottom: 10,
+    paddingHorizontal: 8,
+    marginBottom: 6,
     color: theme.color.sidebarMuted,
     fontSize: theme.font.size.xs,
     fontWeight: '800',
@@ -281,14 +346,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   navList: {
-    gap: 4,
-    paddingBottom: 12,
+    gap: 2.5,
+    paddingBottom: 6,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 13,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 9,
   },
@@ -307,15 +372,15 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto' as unknown as number,
-    paddingTop: 14,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.12)',
-    gap: 10,
+    gap: 6,
   },
   footerText: {
     color: '#8197B0',
     fontSize: theme.font.size.sm,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   footerBold: {
     color: '#C3D1DF',

@@ -71,7 +71,7 @@ export function ManageEquipmentPage() {
   const { width } = useWindowDimensions();
   const compact = width < 900;
   const availableWidth = Math.max(300, width - (compact ? 0 : 280) - 56);
-  const numColumns = availableWidth > 1200 ? 4 : availableWidth > 820 ? 3 : availableWidth > 500 ? 2 : 1;
+  const numColumns = availableWidth > 1150 ? 4 : availableWidth > 720 ? 3 : availableWidth > 460 ? 2 : 1;
   const gridGap = 14;
   const cardWidth = Math.floor((availableWidth - gridGap * (numColumns - 1)) / numColumns);
 
@@ -673,7 +673,6 @@ export function ManageEquipmentPage() {
                 <Text style={styles.backText}>Grupos de material</Text>
               </Pressable>
               <View style={styles.groupTitleBlock}>
-                <Text style={styles.groupEyebrow}>Grupo seleccionado</Text>
                 <Text style={styles.groupTitle}>{selectedCategory?.name ?? 'Material'}</Text>
               </View>
               <View style={styles.groupBadge}>
