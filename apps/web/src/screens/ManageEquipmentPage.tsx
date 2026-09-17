@@ -1241,6 +1241,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: theme.color.ink,
     fontSize: theme.font.size.md,
+    outlineStyle: 'none' as unknown as undefined,
+    outlineWidth: 0,
   },
 
   sectionTitle: {

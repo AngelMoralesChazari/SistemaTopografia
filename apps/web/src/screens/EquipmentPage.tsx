@@ -632,7 +632,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 16,
   },
-  searchInput: { flex: 1, color: theme.color.ink, fontSize: theme.font.size.md },
+  searchInput: {
+    flex: 1,
+    color: theme.color.ink,
+    fontSize: theme.font.size.md,
+    outlineStyle: 'none' as unknown as undefined,
+    outlineWidth: 0,
+  },
   sectionTitle: {
     color: theme.color.navy,
     fontSize: theme.font.size.lg,
