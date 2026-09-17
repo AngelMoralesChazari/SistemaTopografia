@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "web": {
-      "favicon": "./assets/favicon.svg",
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     }
   }
