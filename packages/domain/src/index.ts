@@ -4,3 +4,4 @@ export * from './user';
 export * from './equipment';
 export * from './equipmentGroups';
 export * from './loan';
+export * from './equipmentKit';

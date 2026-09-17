@@ -30,6 +30,8 @@ export type Loan = {
   deliveryNotes: string | null;
   damageNotes: string | null;
   notes: string | null;
+  kitItems?: string[] | null;
+  extraItems?: import('./equipmentKit').LoanExtraItem[] | null;
   approvedBy: string | null;
   deliveredBy: string | null;
   returnedBy: string | null;
@@ -49,6 +51,8 @@ export type CreateLoanInput = {
   dueAt: string;
   loanType?: LoanType;
   notes?: string | null;
+  kitItems?: string[] | null;
+  extraItems?: import('./equipmentKit').LoanExtraItem[] | null;
 };
 
 export function loanStatusLabel(status: LoanStatus): string {
