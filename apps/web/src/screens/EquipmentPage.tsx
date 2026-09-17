@@ -50,6 +50,7 @@ export function EquipmentPage() {
     user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'lab_manager';
   const { width } = useWindowDimensions();
   const compact = width < 900;
+  const isMobile = width < 860;
   const [containerWidth, setContainerWidth] = useState(0);
   const availableWidth =
     containerWidth > 0
@@ -222,7 +223,7 @@ export function EquipmentPage() {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, isMobile && styles.contentMobile]} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.title}>Catálogo de equipos</Text>
@@ -364,28 +365,54 @@ export function EquipmentPage() {
               ]}
             />
 
-            <View style={styles.card}>
+            <View style={[styles.card, isMobile && styles.cardMobile]}>
               {categoryItems.length === 0 ? (
                 <Notice title="Sin equipos" description="No hay material con esos filtros." />
               ) : (
                 <>
-                  {paging.pageItems.map((item) => (
-                    <View key={item.id} style={styles.row}>
-                      <View style={styles.rowMain}>
-                        <Text style={styles.rowCode}>{item.internalCode}</Text>
-                        <Text style={styles.rowName}>{item.name}</Text>
-                        <Text style={styles.rowMeta}>
-                          {item.brand ? `${item.brand}` : ''}
-                          {item.model ? ` ${item.model}` : ''}
-                          {!item.brand && !item.model ? item.categoryName : ''}
+                  {paging.pageItems.map((item) => {
+                    if (isMobile) {
+                      return (
+                        <View key={item.id} style={styles.mobileCard}>
+                          <View style={styles.mobileTopRow}>
+                            <View style={styles.codeBadge}>
+                              <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
+                            </View>
+                            <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
+                          </View>
+                          <Text style={styles.mobileName}>{item.name}</Text>
+                          <View style={styles.mobileMetaRow}>
+                            <Text style={styles.mobileMeta}>
+                              {item.brand ? `${item.brand}` : ''}
+                              {item.model ? ` · ${item.model}` : ''}
+                              {!item.brand && !item.model ? item.categoryName : ''}
+                            </Text>
+                            <Text style={styles.mobileQty}>
+                              Stock: {item.qtyAvailable}/{item.qtyTotal}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    }
+
+                    return (
+                      <View key={item.id} style={styles.row}>
+                        <View style={styles.rowMain}>
+                          <Text style={styles.rowCode}>{item.internalCode}</Text>
+                          <Text style={styles.rowName}>{item.name}</Text>
+                          <Text style={styles.rowMeta}>
+                            {item.brand ? `${item.brand}` : ''}
+                            {item.model ? ` ${item.model}` : ''}
+                            {!item.brand && !item.model ? item.categoryName : ''}
+                          </Text>
+                        </View>
+                        <Text style={styles.rowQty}>
+                          {item.qtyAvailable}/{item.qtyTotal}
                         </Text>
+                        <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
                       </View>
-                      <Text style={styles.rowQty}>
-                        {item.qtyAvailable}/{item.qtyTotal}
-                      </Text>
-                      <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
-                    </View>
-                  ))}
+                    );
+                  })}
 
                   <ListPagination
                     page={paging.page}
@@ -545,6 +572,7 @@ export function EquipmentPage() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.canvas },
   content: { padding: 28, paddingBottom: 48 },
+  contentMobile: { padding: 14, paddingBottom: 48 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -681,6 +709,56 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 18,
     ...theme.shadow.soft,
+  },
+  cardMobile: {
+    padding: 12,
+  },
+  mobileCard: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF0F3',
+    gap: 6,
+  },
+  mobileTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  codeBadge: {
+    backgroundColor: '#EBF1F7',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+  },
+  codeBadgeText: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  mobileName: {
+    color: theme.color.ink,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  mobileMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  mobileMeta: {
+    color: theme.color.muted,
+    fontSize: 12,
+  },
+  mobileQty: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardTitle: {
     color: theme.color.navy,
