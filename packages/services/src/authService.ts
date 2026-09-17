@@ -35,7 +35,10 @@ function mapRenterStatus(value: unknown): RenterStatus | null {
 }
 
 /** Correos institucionales @uagro.mx excluidos de asignación automática de rol alumno */
-export const EXCEPTION_STAFF_EMAILS = ['19258@uagro.mx'];
+export const EXCEPTION_STAFF_EMAILS = [
+  '19258@uagro.mx',
+  '17651@uagro.mx'
+];
 
 /** Determina si un correo pertenece al dominio institucional @uagro.mx */
 export function isUagroEmail(email: string): boolean {
