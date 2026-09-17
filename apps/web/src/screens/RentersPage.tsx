@@ -69,7 +69,7 @@ export function RentersPage() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Particulares (renta)</Text>
+        <Text style={styles.title}>Particulares</Text>
         <Text style={styles.subtitle}>
           Aprueba o rechaza registros de terceros que quieren rentar equipo.
         </Text>
