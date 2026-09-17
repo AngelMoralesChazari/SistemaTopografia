@@ -70,6 +70,7 @@ export function ManageEquipmentPage() {
 
   const { width } = useWindowDimensions();
   const compact = width < 900;
+  const isMobile = width < 860;
   const [containerWidth, setContainerWidth] = useState(0);
   const availableWidth =
     containerWidth > 0
@@ -429,7 +430,7 @@ export function ManageEquipmentPage() {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, isMobile && styles.contentMobile]} showsVerticalScrollIndicator={false}>
         {/* Encabezado */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -594,7 +595,7 @@ export function ManageEquipmentPage() {
               ]}
             />
 
-            <View style={styles.card}>
+            <View style={[styles.card, isMobile && styles.cardMobile]}>
               {categoryItems.length === 0 ? (
                 <Notice
                   title="Sin equipos en este filtro"
@@ -602,22 +603,111 @@ export function ManageEquipmentPage() {
                 />
               ) : (
                 <>
-                  <View style={styles.tableHeader}>
-                    <Text style={[styles.th, { flex: 2 }]}>Equipo / Código</Text>
-                    <Text style={[styles.th, { flex: 1.2 }]}>Categoría / Marca</Text>
-                    <Text style={[styles.th, { width: 90, textAlign: 'center' }]}>Stock</Text>
-                    <Text style={[styles.th, { width: 130, textAlign: 'center' }]}>Estatus</Text>
-                    <Text style={[styles.th, { width: 140, textAlign: 'right' }]}>Acciones</Text>
-                  </View>
+                  {!isMobile && (
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.th, { flex: 2, minWidth: 160 }]}>Equipo / Código</Text>
+                      <Text style={[styles.th, { flex: 1.2, minWidth: 120 }]}>Categoría / Marca</Text>
+                      <Text style={[styles.th, { width: 90, textAlign: 'center' }]}>Stock</Text>
+                      <Text style={[styles.th, { width: 130, textAlign: 'center' }]}>Estatus</Text>
+                      <Text style={[styles.th, { width: 140, textAlign: 'right' }]}>Acciones</Text>
+                    </View>
+                  )}
 
                   {paging.pageItems.map((item) => {
                     const isMaint = item.status === 'maintenance';
                     const isAvail = item.status === 'available';
 
+                    if (isMobile) {
+                      return (
+                        <View key={item.id} style={styles.mobileCard}>
+                          {/* Fila superior: Código interno + Estatus */}
+                          <View style={styles.mobileTopRow}>
+                            <View style={styles.codeRow}>
+                              <View style={styles.codeBadge}>
+                                <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
+                              </View>
+                              {item.active === false ? (
+                                <View style={styles.inactiveBadge}>
+                                  <Text style={styles.inactiveBadgeText}>Baja</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            <Badge
+                              label={EQUIPMENT_STATUS_LABELS[item.status] ?? item.status}
+                              tone={statusTone(item.status)}
+                            />
+                          </View>
+
+                          {/* Nombre del equipo completo y legible */}
+                          <Text style={styles.mobileName}>{item.name}</Text>
+
+                          {/* Categoría y Marca/Modelo */}
+                          <View style={styles.mobileMetaRow}>
+                            <Text style={styles.mobileCategory}>{item.categoryName}</Text>
+                            {item.brand || item.model ? (
+                              <Text style={styles.mobileBrandModel}>
+                                {item.brand ? ` · ${item.brand}` : ''}
+                                {item.model ? ` · ${item.model}` : ''}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {item.notes ? (
+                            <Text style={styles.mobileNotes}>
+                              Obs: {item.notes}
+                            </Text>
+                          ) : null}
+
+                          {/* Fila inferior: Stock disponible y Botones de acción */}
+                          <View style={styles.mobileBottomRow}>
+                            <View style={styles.mobileStockWrap}>
+                              <View style={styles.stockPill}>
+                                <Text style={styles.stockAvail}>{item.qtyAvailable}</Text>
+                                <Text style={styles.stockDivider}>/</Text>
+                                <Text style={styles.stockTotal}>{item.qtyTotal}</Text>
+                              </View>
+                              <Text style={styles.stockLabel}>disp / total</Text>
+                            </View>
+
+                            <View style={styles.mobileActions}>
+                              {/* Cambio rápido de estatus */}
+                              {isAvail ? (
+                                <Pressable
+                                  style={styles.quickMaintBtn}
+                                  onPress={() => onQuickStatusChange(item, 'maintenance')}
+                                  accessibilityLabel="Poner en mantenimiento"
+                                >
+                                  <MaterialIcons name="build" size={15} color="#A76A00" />
+                                </Pressable>
+                              ) : null}
+
+                              {isMaint ? (
+                                <Pressable
+                                  style={styles.quickAvailBtn}
+                                  onPress={() => onQuickStatusChange(item, 'available')}
+                                  accessibilityLabel="Reactivar a disponible"
+                                >
+                                  <MaterialIcons name="check" size={15} color="#16855B" />
+                                </Pressable>
+                              ) : null}
+
+                              <Pressable
+                                style={styles.editBtn}
+                                onPress={() => openEditModal(item)}
+                              >
+                                <MaterialIcons name="edit" size={15} color={theme.color.navy} />
+                                <Text style={styles.editBtnText}>Editar</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    }
+
                     return (
                       <View key={item.id} style={styles.row}>
                         {/* Información principal */}
-                        <View style={{ flex: 2, minWidth: 0, paddingRight: 8 }}>
+                        <View style={{ flex: 2, minWidth: 160, paddingRight: 8 }}>
                           <View style={styles.codeRow}>
                             <View style={styles.codeBadge}>
                               <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
@@ -637,7 +727,7 @@ export function ManageEquipmentPage() {
                         </View>
 
                         {/* Categoría y Marca */}
-                        <View style={{ flex: 1.2, minWidth: 0, paddingRight: 8 }}>
+                        <View style={{ flex: 1.2, minWidth: 120, paddingRight: 8 }}>
                           <Text style={styles.rowCategory} numberOfLines={1}>
                             {item.categoryName}
                           </Text>
@@ -1369,6 +1459,72 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     fontSize: 12,
     marginTop: 2,
+  },
+
+  // Estilos responsivos para móvil
+  cardMobile: {
+    padding: 12,
+  },
+  contentMobile: {
+    padding: 14,
+    paddingBottom: 64,
+  },
+  mobileCard: {
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F3F6',
+    gap: 6,
+  },
+  mobileTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mobileName: {
+    color: theme.color.ink,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  mobileMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  mobileCategory: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mobileBrandModel: {
+    color: theme.color.muted,
+    fontSize: 12,
+  },
+  mobileNotes: {
+    color: theme.color.muted,
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  mobileBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+    marginTop: 4,
+  },
+  mobileStockWrap: {
+    alignItems: 'flex-start',
+  },
+  mobileActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 
   stockPill: {
