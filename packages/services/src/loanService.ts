@@ -18,6 +18,7 @@ import {
   loanStatusLabel,
   type CreateLoanInput,
   type Loan,
+  type LoanExtraItem,
   type LoanStatus,
   type UserRole,
 } from '@lab-topo/domain';
@@ -65,6 +66,8 @@ function mapLoan(id: string, data: Record<string, unknown>): Loan {
     deliveryNotes: (data.deliveryNotes as string | null) ?? null,
     damageNotes: (data.damageNotes as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
+    kitItems: Array.isArray(data.kitItems) ? (data.kitItems as string[]) : null,
+    extraItems: Array.isArray(data.extraItems) ? (data.extraItems as LoanExtraItem[]) : null,
     approvedBy: (data.approvedBy as string | null) ?? null,
     deliveredBy: (data.deliveredBy as string | null) ?? null,
     returnedBy: (data.returnedBy as string | null) ?? null,
@@ -98,6 +101,40 @@ export async function createLoanRequest(
       throw new Error('La fecha de devolución debe ser posterior a ahora.');
     }
 
+    // Validar y descontar extras del inventario en tiempo real
+    const validatedExtras: LoanExtraItem[] = [];
+    if (input.extraItems && input.extraItems.length > 0) {
+      for (const extra of input.extraItems) {
+        if (!extra.equipmentId || extra.quantity <= 0) continue;
+        const extraRef = doc(db, 'equipment', extra.equipmentId);
+        const extraSnap = await tx.get(extraRef);
+        if (!extraSnap.exists()) {
+          throw new Error(`El material extra "${extra.name}" no existe en el inventario.`);
+        }
+        const extraData = extraSnap.data();
+        const extraAvail = Number(extraData.qtyAvailable ?? 0);
+        const extraLoaned = Number(extraData.qtyLoaned ?? 0);
+        if (!extraData.active || extraAvail < extra.quantity) {
+          throw new Error(
+            `No hay suficiente existencia de "${extraData.name}". Disponibles: ${extraAvail}, solicitados: ${extra.quantity}.`
+          );
+        }
+        const nextExtraAvail = extraAvail - extra.quantity;
+        tx.update(extraRef, {
+          qtyAvailable: nextExtraAvail,
+          qtyLoaned: extraLoaned + extra.quantity,
+          status: nextExtraAvail <= 0 ? 'loaned' : extraData.status,
+          updatedAt: serverTimestamp(),
+        });
+        validatedExtras.push({
+          equipmentId: extra.equipmentId,
+          name: (extraData.name as string) ?? extra.name,
+          internalCode: (extraData.internalCode as string) ?? extra.internalCode,
+          quantity: extra.quantity,
+        });
+      }
+    }
+
     tx.set(loanRef, {
       folio,
       labId: input.labId || getLabId(),
@@ -126,6 +163,8 @@ export async function createLoanRequest(
       deliveryNotes: null,
       damageNotes: null,
       notes: input.notes ?? null,
+      kitItems: input.kitItems ?? null,
+      extraItems: validatedExtras.length > 0 ? validatedExtras : null,
       approvedBy: null,
       deliveredBy: null,
       returnedBy: null,
@@ -248,6 +287,30 @@ export async function adminOverrideLoanStatus(
     patch.approvedBy = actor.uid;
   }
 
+  // Si un administrador anula/rechaza una solicitud activa, reintegrar extras al inventario
+  if (
+    nextStatus === 'rejected' &&
+    current.status !== 'rejected' &&
+    current.extraItems &&
+    current.extraItems.length > 0
+  ) {
+    for (const extra of current.extraItems) {
+      const extraRef = doc(getDb(), 'equipment', extra.equipmentId);
+      const extraSnap = await getDoc(extraRef);
+      if (extraSnap.exists()) {
+        const data = extraSnap.data();
+        const avail = Number(data.qtyAvailable ?? 0) + extra.quantity;
+        const loaned = Math.max(0, Number(data.qtyLoaned ?? 0) - extra.quantity);
+        await updateDoc(extraRef, {
+          qtyAvailable: avail,
+          qtyLoaned: loaned,
+          status: 'available',
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+  }
+
   await updateDoc(ref, patch);
 
   await writeAuditLog({
@@ -294,19 +357,43 @@ export async function rejectLoan(
   actorId: string,
   reason: string
 ): Promise<void> {
-  const ref = doc(getDb(), 'loans', loanId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Solicitud no encontrada.');
-  const current = mapLoan(snap.id, snap.data());
-  if (!canTransitionLoan(current.status, 'rejected')) {
-    throw new Error('No se puede rechazar en este estado.');
-  }
-  await updateDoc(ref, {
-    status: 'rejected',
-    rejectedAt: serverTimestamp(),
-    rejectionReason: reason.trim() || 'Sin motivo',
-    updatedAt: serverTimestamp(),
-    approvedBy: actorId,
+  const db = getDb();
+  const ref = doc(db, 'loans', loanId);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('Solicitud no encontrada.');
+    const current = mapLoan(snap.id, snap.data());
+    if (!canTransitionLoan(current.status, 'rejected')) {
+      throw new Error('No se puede rechazar en este estado.');
+    }
+
+    // Revertir extras descontados al solicitar
+    if (current.extraItems && current.extraItems.length > 0) {
+      for (const extra of current.extraItems) {
+        const extraRef = doc(db, 'equipment', extra.equipmentId);
+        const extraSnap = await tx.get(extraRef);
+        if (extraSnap.exists()) {
+          const data = extraSnap.data();
+          const avail = Number(data.qtyAvailable ?? 0) + extra.quantity;
+          const loaned = Math.max(0, Number(data.qtyLoaned ?? 0) - extra.quantity);
+          tx.update(extraRef, {
+            qtyAvailable: avail,
+            qtyLoaned: loaned,
+            status: 'available',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+    }
+
+    tx.update(ref, {
+      status: 'rejected',
+      rejectedAt: serverTimestamp(),
+      rejectionReason: reason.trim() || 'Sin motivo',
+      updatedAt: serverTimestamp(),
+      approvedBy: actorId,
+    });
   });
 }
 
@@ -407,5 +494,24 @@ export async function returnLoan(
       status: 'available',
       updatedAt: serverTimestamp(),
     });
+
+    // Reintegrar también los extras devueltos al inventario
+    if (loan.extraItems && loan.extraItems.length > 0) {
+      for (const extra of loan.extraItems) {
+        const extraRef = doc(db, 'equipment', extra.equipmentId);
+        const extraSnap = await tx.get(extraRef);
+        if (extraSnap.exists()) {
+          const data = extraSnap.data();
+          const avail = Number(data.qtyAvailable ?? 0) + extra.quantity;
+          const exLoaned = Math.max(0, Number(data.qtyLoaned ?? 0) - extra.quantity);
+          tx.update(extraRef, {
+            qtyAvailable: avail,
+            qtyLoaned: exLoaned,
+            status: 'available',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+    }
   });
 }
