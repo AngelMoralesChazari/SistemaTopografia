@@ -16,10 +16,13 @@ import {
   buildCategoryGroups,
   categoryIdOf,
   getInitials,
+  isTotalStation,
   RENTAL_TEACHER_ID,
   RENTAL_TEACHER_NAME,
+  TOTAL_STATION_KIT_ITEMS,
   type CategoryGroup,
   type Equipment,
+  type LoanExtraItem,
 } from '@lab-topo/domain';
 import { createLoanRequest, watchEquipment } from '@lab-topo/services';
 import { Avatar, Button, MaterialCard, Notice, Toast } from '@lab-topo/ui';
@@ -75,7 +78,7 @@ function parseDisplayDateWithTime(value: string, timeSource: Date): Date | null 
 
 export function StudentCatalogPage() {
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const compact = width < 900;
   const [containerWidth, setContainerWidth] = useState(0);
   const availableWidth =
@@ -102,6 +105,10 @@ export function StudentCatalogPage() {
   const [defaultDueAt, setDefaultDueAt] = useState(() => new Date(Date.now() + MS_24H));
   const [extendTime, setExtendTime] = useState(false);
   const [customDueDisplay, setCustomDueDisplay] = useState('');
+  const [showKitDetails, setShowKitDetails] = useState(true);
+  const [selectedExtras, setSelectedExtras] = useState<LoanExtraItem[]>([]);
+  const [extraPickerOpen, setExtraPickerOpen] = useState(false);
+  const [extraSearch, setExtraSearch] = useState('');
   const [successOpen, setSuccessOpen] = useState(false);
   const [successFolio, setSuccessFolio] = useState<string | null>(null);
 
@@ -201,6 +208,55 @@ export function StudentCatalogPage() {
     setSelectedEquipmentId(null);
   };
 
+  const isSelectedStation = isTotalStation(selectedEquipment);
+
+  const selectableExtras = useMemo(() => {
+    const q = extraSearch.trim().toLowerCase();
+    const alreadySelectedIds = new Set(selectedExtras.map((e) => e.equipmentId));
+    return availableItems.filter((item) => {
+      if (item.id === selectedEquipment?.id) return false;
+      if (alreadySelectedIds.has(item.id)) return false;
+      if (item.qtyAvailable <= 0) return false;
+      if (!q) return true;
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.internalCode.toLowerCase().includes(q) ||
+        (item.brand ?? '').toLowerCase().includes(q) ||
+        (item.model ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [availableItems, selectedEquipment?.id, selectedExtras, extraSearch]);
+
+  const addExtra = (item: Equipment) => {
+    setSelectedExtras((prev) => [
+      ...prev,
+      {
+        equipmentId: item.id,
+        name: item.name,
+        internalCode: item.internalCode,
+        quantity: 1,
+      },
+    ]);
+    setExtraPickerOpen(false);
+    setExtraSearch('');
+  };
+
+  const removeExtra = (equipmentId: string) => {
+    setSelectedExtras((prev) => prev.filter((e) => e.equipmentId !== equipmentId));
+  };
+
+  const updateExtraQty = (equipmentId: string, delta: number) => {
+    const targetItem = items.find((i) => i.id === equipmentId);
+    const maxAvailable = targetItem?.qtyAvailable ?? 99;
+    setSelectedExtras((prev) =>
+      prev.map((e) => {
+        if (e.equipmentId !== equipmentId) return e;
+        const nextQty = Math.max(1, Math.min(maxAvailable, e.quantity + delta));
+        return { ...e, quantity: nextQty };
+      })
+    );
+  };
+
   const openConfirm = () => {
     if (!selectedEquipment) {
       showToast('Selecciona un equipo de la lista antes de continuar.');
@@ -228,6 +284,8 @@ export function StudentCatalogPage() {
     setDefaultDueAt(due);
     setExtendTime(false);
     setCustomDueDisplay(toDisplayDate(due));
+    setSelectedExtras([]);
+    setShowKitDetails(true);
     setConfirmOpen(true);
   };
 
@@ -292,6 +350,8 @@ export function StudentCatalogPage() {
         teacherName: teacher.teacherName,
         dueAt: resolvedDueAt.toISOString(),
         loanType: user.role === 'renter' ? 'rental' : 'academic',
+        kitItems: isSelectedStation ? [...TOTAL_STATION_KIT_ITEMS] : null,
+        extraItems: selectedExtras.length > 0 ? selectedExtras : null,
       });
       setConfirmOpen(false);
       setSuccessFolio(created.folio);
@@ -454,6 +514,11 @@ export function StudentCatalogPage() {
                 <Text style={styles.requestValue} numberOfLines={1}>
                   {selectedEquipment?.name ?? 'Ninguno'}
                 </Text>
+                {isSelectedStation ? (
+                  <Text style={{ fontSize: 11, color: theme.color.info, fontWeight: '700', marginTop: 2 }}>
+                    ✓ Incluye kit básico (12 piezas) y opción de añadir extras
+                  </Text>
+                ) : null}
               </View>
               <Button
                 title="Solicitar material"
@@ -469,88 +534,295 @@ export function StudentCatalogPage() {
 
       <Modal visible={confirmOpen} transparent animationType="fade" onRequestClose={closeConfirm}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Confirmar solicitud</Text>
-            <Text style={styles.modalSubtitle}>
-              Revisa el material y el plazo de devolución antes de enviar.
-            </Text>
-
-            <View style={styles.summaryBox}>
-              {[
-                ['Material', selectedEquipment?.name ?? '—'],
-                ['Código', selectedEquipment?.internalCode ?? '—'],
-                [
-                  user?.role === 'renter' ? 'Tipo' : 'Profesor',
-                  user?.role === 'renter'
-                    ? 'Renta particular'
-                    : user?.role === 'teacher'
-                      ? user.displayName
-                      : (user?.teacherName ?? '—'),
-                ],
-                ['Fecha de solicitud', formatDateTime(requestAt)],
-                [
-                  'Fecha de devolución',
-                  resolvedDueAt ? formatDateTime(resolvedDueAt) : 'Fecha inválida',
-                ],
-              ].map(([label, value], index, arr) => (
-                <View
-                  key={label}
-                  style={[styles.summaryRow, index === arr.length - 1 && styles.summaryRowLast]}
-                >
-                  <Text style={styles.summaryLabel}>{label}</Text>
-                  <Text style={styles.summaryValue}>{value}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.defaultHint}>
-              <MaterialIcons name="schedule" size={18} color={theme.color.info} />
-              <Text style={styles.defaultHintText}>El plazo de préstamo es de 24 hrs.</Text>
-            </View>
-
-            <Pressable
-              onPress={() => setExtendTime((v) => !v)}
-              style={styles.checkRow}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: extendTime }}
+          <View style={[styles.modalCard, { maxHeight: Math.min(740, height - 32) }]}>
+            <ScrollView
+              style={{ maxHeight: '100%' }}
+              contentContainerStyle={{ paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}
             >
-              <MaterialIcons
-                name={extendTime ? 'check-box' : 'check-box-outline-blank'}
-                size={24}
-                color={extendTime ? theme.color.navy : theme.color.muted}
-              />
-              <Text style={styles.checkLabel}>Solicitar por más tiempo</Text>
-            </Pressable>
+              <Text style={styles.modalTitle}>Confirmar solicitud</Text>
+              <Text style={styles.modalSubtitle}>
+                Revisa el material y el plazo de devolución antes de enviar.
+              </Text>
 
-            {extendTime ? (
-              <View style={styles.extendBlock}>
-                <Text style={styles.fieldLabel}>Nueva fecha de devolución</Text>
-                <AppDatePicker
-                  value={resolvedDueAt ?? defaultDueAt}
-                  minimumDate={defaultDueAt}
-                  displayValue={customDueDisplay}
-                  onChange={onPickCustomDate}
+              <View style={styles.summaryBox}>
+                {[
+                  ['Material', selectedEquipment?.name ?? '—'],
+                  ['Código', selectedEquipment?.internalCode ?? '—'],
+                  [
+                    user?.role === 'renter' ? 'Tipo' : 'Profesor',
+                    user?.role === 'renter'
+                      ? 'Renta particular'
+                      : user?.role === 'teacher'
+                        ? user.displayName
+                        : (user?.teacherName ?? '—'),
+                  ],
+                  ['Fecha de solicitud', formatDateTime(requestAt)],
+                  [
+                    'Fecha de devolución',
+                    resolvedDueAt ? formatDateTime(resolvedDueAt) : 'Fecha inválida',
+                  ],
+                ].map(([label, value], index, arr) => (
+                  <View
+                    key={label}
+                    style={[styles.summaryRow, index === arr.length - 1 && styles.summaryRowLast]}
+                  >
+                    <Text style={styles.summaryLabel}>{label}</Text>
+                    <Text style={styles.summaryValue}>{value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {isSelectedStation ? (
+                <View style={styles.kitCard}>
+                  <Pressable
+                    onPress={() => setShowKitDetails((v) => !v)}
+                    style={styles.kitHead}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.kitHeadLeft}>
+                      <View style={styles.kitIconWrap}>
+                        <MaterialIcons name="inventory-2" size={18} color={theme.color.navy} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.kitTitle}>Kit de Estación Total</Text>
+                        <Text style={styles.kitSubtitle}>
+                          {TOTAL_STATION_KIT_ITEMS.length} accesorios incluidos en el préstamo
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.kitToggleBtn}>
+                      <Text style={styles.kitToggleText}>
+                        {showKitDetails ? 'Ocultar' : 'Ver detalles'}
+                      </Text>
+                      <MaterialIcons
+                        name={showKitDetails ? 'expand-less' : 'expand-more'}
+                        size={18}
+                        color={theme.color.navy}
+                      />
+                    </View>
+                  </Pressable>
+
+                  {showKitDetails ? (
+                    <View style={styles.kitBody}>
+                      <View style={styles.kitGrid}>
+                        {TOTAL_STATION_KIT_ITEMS.map((acc, idx) => (
+                          <View key={idx} style={styles.kitItem}>
+                            <MaterialIcons name="check-circle" size={15} color={theme.color.success} />
+                            <Text style={styles.kitItemText}>{acc}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={styles.kitNote}>
+                        * Estos artículos se entregan y deben devolverse completos junto con el equipo.
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {isSelectedStation ? (
+                <View style={styles.extrasCard}>
+                  <View style={styles.extrasHead}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.extrasTitle}>Materiales extras (opcional)</Text>
+                      <Text style={styles.extrasSubtitle}>
+                        Pide materiales adicionales del inventario para tu práctica.
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setExtraPickerOpen(true)}
+                      style={styles.addExtraBtn}
+                    >
+                      <MaterialIcons name="add" size={16} color={theme.color.navy} />
+                      <Text style={styles.addExtraBtnText}>Añadir extra</Text>
+                    </Pressable>
+                  </View>
+
+                  {selectedExtras.length === 0 ? (
+                    <View style={styles.extrasEmpty}>
+                      <Text style={styles.extrasEmptyText}>
+                        Sin extras agregados. Si requieres cinta de 30 m u otro material, pulsa “Añadir extra”.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.extrasList}>
+                      {selectedExtras.map((extra) => (
+                        <View key={extra.equipmentId} style={styles.extraItemRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.extraItemName} numberOfLines={1}>
+                              {extra.name}
+                            </Text>
+                            <Text style={styles.extraItemCode}>{extra.internalCode}</Text>
+                          </View>
+                          <View style={styles.extraQtyWrap}>
+                            <Pressable
+                              style={styles.extraQtyBtn}
+                              onPress={() => updateExtraQty(extra.equipmentId, -1)}
+                            >
+                              <MaterialIcons name="remove" size={14} color={theme.color.navy} />
+                            </Pressable>
+                            <Text style={styles.extraQtyText}>{extra.quantity}</Text>
+                            <Pressable
+                              style={styles.extraQtyBtn}
+                              onPress={() => updateExtraQty(extra.equipmentId, 1)}
+                            >
+                              <MaterialIcons name="add" size={14} color={theme.color.navy} />
+                            </Pressable>
+                          </View>
+                          <Pressable
+                            onPress={() => removeExtra(extra.equipmentId)}
+                            style={styles.removeExtraBtn}
+                            hitSlop={6}
+                          >
+                            <MaterialIcons name="close" size={16} color={theme.color.red} />
+                          </Pressable>
+                        </View>
+                      ))}
+                      <View style={styles.extraNotice}>
+                        <MaterialIcons name="sync" size={14} color="#92400E" />
+                        <Text style={styles.extraNoticeText}>
+                          Los extras se descontarán en tiempo real del inventario al confirmar.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
+              <View style={styles.defaultHint}>
+                <MaterialIcons name="schedule" size={18} color={theme.color.info} />
+                <Text style={styles.defaultHintText}>El plazo de préstamo es de 24 hrs.</Text>
+              </View>
+
+              <Pressable
+                onPress={() => setExtendTime((v) => !v)}
+                style={styles.checkRow}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: extendTime }}
+              >
+                <MaterialIcons
+                  name={extendTime ? 'check-box' : 'check-box-outline-blank'}
+                  size={24}
+                  color={extendTime ? theme.color.navy : theme.color.muted}
+                />
+                <Text style={styles.checkLabel}>Solicitar por más tiempo</Text>
+              </Pressable>
+
+              {extendTime ? (
+                <View style={styles.extendBlock}>
+                  <Text style={styles.fieldLabel}>Nueva fecha de devolución</Text>
+                  <AppDatePicker
+                    value={resolvedDueAt ?? defaultDueAt}
+                    minimumDate={defaultDueAt}
+                    displayValue={customDueDisplay}
+                    onChange={onPickCustomDate}
+                  />
+                </View>
+              ) : null}
+
+              <View style={styles.modalActions}>
+                <Button
+                  title="Cancelar"
+                  variant="secondary"
+                  fullWidth={false}
+                  style={styles.modalBtn}
+                  disabled={submitting}
+                  onPress={closeConfirm}
+                />
+                <Button
+                  title="Confirmar"
+                  loading={submitting}
+                  fullWidth={false}
+                  style={styles.modalBtn}
+                  onPress={onConfirmRequest}
                 />
               </View>
-            ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
-            <View style={styles.modalActions}>
-              <Button
-                title="Cancelar"
-                variant="secondary"
-                fullWidth={false}
-                style={styles.modalBtn}
-                disabled={submitting}
-                onPress={closeConfirm}
-              />
-              <Button
-                title="Confirmar"
-                loading={submitting}
-                fullWidth={false}
-                style={styles.modalBtn}
-                onPress={onConfirmRequest}
-              />
+      {/* Submodal selector de materiales extras */}
+      <Modal
+        visible={extraPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExtraPickerOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxHeight: Math.min(560, height - 40) }]}>
+            <View style={styles.pickerHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Añadir material extra</Text>
+                <Text style={styles.modalSubtitle}>
+                  Elige un artículo disponible en el inventario
+                </Text>
+              </View>
+              <Pressable onPress={() => setExtraPickerOpen(false)} hitSlop={8}>
+                <MaterialIcons name="close" size={22} color={theme.color.muted} />
+              </Pressable>
             </View>
+
+            <View style={styles.pickerSearch}>
+              <MaterialIcons name="search" size={18} color={theme.color.muted} />
+              <TextInput
+                value={extraSearch}
+                onChangeText={setExtraSearch}
+                placeholder="Buscar cinta, prisma, flexómetro..."
+                placeholderTextColor={theme.color.muted}
+                style={styles.pickerSearchInput}
+                autoFocus
+              />
+              {extraSearch ? (
+                <Pressable onPress={() => setExtraSearch('')} hitSlop={6}>
+                  <MaterialIcons name="clear" size={16} color={theme.color.muted} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
+              {selectableExtras.length === 0 ? (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: theme.color.muted, fontSize: 13, textAlign: 'center' }}>
+                    No se encontraron materiales disponibles para agregar como extra.
+                  </Text>
+                </View>
+              ) : (
+                selectableExtras.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => addExtra(item)}
+                    style={({ pressed }) => [
+                      styles.pickerItemRow,
+                      pressed && { backgroundColor: theme.color.infoSoft },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pickerItemName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.pickerItemMeta}>
+                        {item.internalCode} {item.brand ? `· ${item.brand}` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.pickerStockBadge}>
+                      <Text style={styles.pickerStockText}>{item.qtyAvailable} disp.</Text>
+                    </View>
+                    <View style={styles.pickerAddBtn}>
+                      <MaterialIcons name="add" size={18} color={theme.color.navy} />
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+
+            <Button
+              title="Cerrar"
+              variant="secondary"
+              onPress={() => setExtraPickerOpen(false)}
+              style={{ marginTop: 12 }}
+            />
           </View>
         </View>
       </Modal>
@@ -753,9 +1025,9 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 480,
+    maxWidth: 540,
     backgroundColor: theme.color.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 24,
     borderWidth: 1,
     borderColor: theme.color.line,
@@ -770,6 +1042,287 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: theme.color.muted,
     fontSize: theme.font.size.md,
+  },
+  kitCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  kitHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#F1F5F9',
+    gap: 8,
+  },
+  kitHeadLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  kitIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: theme.color.infoSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kitTitle: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.md,
+    fontWeight: '800',
+  },
+  kitSubtitle: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  kitToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: theme.color.surface,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+  },
+  kitToggleText: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  kitBody: {
+    padding: 12,
+    backgroundColor: theme.color.surface,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  kitGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  kitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    width: '48%',
+    minWidth: 180,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#EEF2F6',
+  },
+  kitItemText: {
+    flex: 1,
+    color: theme.color.ink,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  kitNote: {
+    marginTop: 10,
+    color: theme.color.muted,
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  extrasCard: {
+    backgroundColor: theme.color.surface,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 10,
+    marginBottom: 12,
+    padding: 12,
+  },
+  extrasHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
+  },
+  extrasTitle: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.md,
+    fontWeight: '800',
+  },
+  extrasSubtitle: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  addExtraBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: theme.color.infoSoft,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  addExtraBtnText: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  extrasEmpty: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  extrasEmptyText: {
+    color: theme.color.muted,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  extrasList: {
+    gap: 8,
+  },
+  extraItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  extraItemName: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  extraItemCode: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  extraQtyWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.color.surface,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+  },
+  extraQtyBtn: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+  },
+  extraQtyText: {
+    color: theme.color.ink,
+    fontSize: 12,
+    fontWeight: '800',
+    minWidth: 16,
+    textAlign: 'center',
+  },
+  removeExtraBtn: {
+    padding: 4,
+  },
+  extraNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#FEF3C7',
+  },
+  extraNoticeText: {
+    flex: 1,
+    color: '#92400E',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  pickerSearch: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: 8,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    color: theme.color.ink,
+    fontSize: 14,
+    outlineStyle: 'none' as unknown as undefined,
+  },
+  pickerList: {
+    maxHeight: 280,
+  },
+  pickerItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 10,
+  },
+  pickerItemName: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pickerItemMeta: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  pickerStockBadge: {
+    backgroundColor: theme.color.successSoft,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  pickerStockText: {
+    color: theme.color.success,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  pickerAddBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.color.infoSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryBox: {
     borderWidth: 1,
