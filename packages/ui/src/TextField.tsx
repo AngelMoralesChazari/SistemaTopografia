@@ -86,6 +86,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     color: theme.color.ink,
     fontSize: theme.font.size.md,
+    outlineStyle: 'none' as unknown as undefined,
+    outlineWidth: 0,
   },
   inputError: {
     borderColor: theme.color.red,
