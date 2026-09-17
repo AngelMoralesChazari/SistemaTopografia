@@ -50,10 +50,10 @@ export function MaterialCard({
         <Text style={styles.thumbText}>[foto]</Text>
       </View>
       <View style={styles.meta}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={styles.name} numberOfLines={2}>
           {equipment.name}
         </Text>
-        <Text style={styles.sub} numberOfLines={1}>
+        <Text style={styles.sub} numberOfLines={2}>
           {equipment.categoryName} · {conditionLabel(equipment)}
         </Text>
         {showStatusBadge ? (
