@@ -385,6 +385,40 @@ export function StudentRequestsPage() {
                     <Text style={styles.detailValue}>{value}</Text>
                   </View>
                 ))}
+
+                {selected.kitItems && selected.kitItems.length > 0 ? (
+                  <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
+                      Kit incluido ({selected.kitItems.length} artículos):
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {selected.kitItems.map((k, i) => (
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', minWidth: 140 }}>
+                          <MaterialIcons name="check" size={14} color={theme.color.success} />
+                          <Text style={{ fontSize: 11, color: theme.color.ink }}>{k}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {selected.extraItems && selected.extraItems.length > 0 ? (
+                  <View style={{ marginTop: 10, padding: 10, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
+                      Materiales extras solicitados:
+                    </Text>
+                    {selected.extraItems.map((ex, i) => (
+                      <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 }}>
+                        <Text style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600' }}>
+                          • {ex.name} ({ex.internalCode})
+                        </Text>
+                        <Text style={{ fontSize: 12, color: theme.color.navy, fontWeight: '800' }}>
+                          Cant: {ex.quantity}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             ) : null}
           </View>
