@@ -70,7 +70,8 @@ service cloud.firestore {
           && uid() == userId
           && request.resource.data.role == 'student'
           && request.resource.data.active == true
-          && sameLab(request.resource.data)
+          && ('labId' in request.resource.data)
+          && request.resource.data.email.matches('.*@uagro[.]mx$')
         ) || (
           isAdmin()
           && sameLab(request.resource.data)
@@ -82,7 +83,7 @@ service cloud.firestore {
         && uid() == userId
         && resource.data.role == 'student'
         && request.resource.data.role == 'student'
-        && sameLab(resource.data)
+        && request.resource.data.labId == resource.data.labId
       );
 
       allow delete: if false;
