@@ -105,7 +105,7 @@ export function StudentCatalogPage() {
   const [defaultDueAt, setDefaultDueAt] = useState(() => new Date(Date.now() + MS_24H));
   const [extendTime, setExtendTime] = useState(false);
   const [customDueDisplay, setCustomDueDisplay] = useState('');
-  const [showKitDetails, setShowKitDetails] = useState(true);
+  const [showKitDetails, setShowKitDetails] = useState(false);
   const [selectedExtras, setSelectedExtras] = useState<LoanExtraItem[]>([]);
   const [extraPickerOpen, setExtraPickerOpen] = useState(false);
   const [extraSearch, setExtraSearch] = useState('');
@@ -285,7 +285,7 @@ export function StudentCatalogPage() {
     setExtendTime(false);
     setCustomDueDisplay(toDisplayDate(due));
     setSelectedExtras([]);
-    setShowKitDetails(true);
+    setShowKitDetails(false);
     setConfirmOpen(true);
   };
 
