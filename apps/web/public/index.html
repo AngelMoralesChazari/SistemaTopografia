@@ -35,6 +35,28 @@
         height: 100%;
         flex: 1;
       }
+      /* Quitar contorno/borde azul o negro por defecto del navegador en inputs y buscadores */
+      input,
+      textarea,
+      select,
+      [contenteditable],
+      [tabindex] {
+        outline: none !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus,
+      [contenteditable]:focus,
+      [tabindex]:focus {
+        outline: none !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        box-shadow: none !important;
+      }
     </style>
   </head>
 
