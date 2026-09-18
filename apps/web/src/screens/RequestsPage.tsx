@@ -17,6 +17,8 @@ import {
   loanStatusLabel,
   type Loan,
   type LoanStatus,
+  type RequestBatch,
+  buildRequestBatches,
 } from '@lab-topo/domain';
 import {
   adminOverrideLoanStatus,
@@ -98,10 +100,6 @@ export function RequestsPage() {
         setLoans(next);
         setLoading(false);
         setError(null);
-        setSelectedId((current) => {
-          if (current && next.some((l) => l.id === current)) return current;
-          return next[0]?.id ?? null;
-        });
       },
       (err) => {
         setError(err.message);
@@ -111,24 +109,33 @@ export function RequestsPage() {
     return unsub;
   }, [user]);
 
-  const paging = useMemo(() => paginate(loans, page), [loans, page]);
+  const batches = useMemo(() => buildRequestBatches(loans), [loans]);
+
+  const paging = useMemo(() => paginate(batches, page), [batches, page]);
 
   useEffect(() => {
     if (page !== paging.page) setPage(paging.page);
   }, [page, paging.page]);
 
   useEffect(() => {
-    if (!selectedId) return;
-    const visible = paging.pageItems.some((l) => l.id === selectedId);
-    if (!visible && paging.pageItems[0]) {
+    if (!selectedId) {
+      if (paging.pageItems[0]) {
+        setSelectedId(paging.pageItems[0].id);
+      }
+      return;
+    }
+    const exists = batches.some((b) => b.id === selectedId);
+    if (!exists && paging.pageItems[0]) {
       setSelectedId(paging.pageItems[0].id);
     }
-  }, [paging.pageItems, selectedId]);
+  }, [batches, paging.pageItems, selectedId]);
 
-  const selected = useMemo(
-    () => loans.find((l) => l.id === selectedId) ?? null,
-    [loans, selectedId]
+  const selectedBatch = useMemo(
+    () => batches.find((b) => b.id === selectedId) ?? batches[0] ?? null,
+    [batches, selectedId]
   );
+
+  const selected = useMemo(() => selectedBatch?.loans[0] ?? null, [selectedBatch]);
 
   const kpis = useMemo(() => {
     const pending = loans.filter((l) => l.status === 'pending').length;
@@ -230,7 +237,7 @@ export function RequestsPage() {
       {error ? <Notice tone="danger" title="Error al cargar" description={error} /> : null}
       {loading ? <ActivityIndicator color={theme.color.navy} /> : null}
 
-      {!loading && loans.length === 0 ? (
+      {!loading && batches.length === 0 ? (
         <Notice
           title="Sin solicitudes activas"
           description="Cuando un alumno solicite material desde el teléfono, aparecerá aquí."
@@ -240,13 +247,14 @@ export function RequestsPage() {
       <View style={[styles.workspace, isMobile && styles.workspaceMobile]}>
         <View style={[styles.listCard, isMobile && styles.cardMobile]}>
           <Text style={styles.cardTitle}>Cola operativa</Text>
-          {paging.pageItems.map((loan) => {
-            const active = loan.id === selectedId;
+          {paging.pageItems.map((batch) => {
+            const active = batch.id === selectedId;
+            const isMulti = batch.loans.length > 1;
             return (
               <Pressable
-                key={loan.id}
+                key={batch.id}
                 onPress={() => {
-                  setSelectedId(loan.id);
+                  setSelectedId(batch.id);
                   if (isMobile && detailCardY.current > 0) {
                     scrollViewRef.current?.scrollTo({
                       y: detailCardY.current - 12,
@@ -256,24 +264,70 @@ export function RequestsPage() {
                 }}
                 style={[styles.row, active && styles.rowActive]}
               >
-                <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.rowFolio}>#{loan.folio}</Text>
-                    {isMobile && active && (
-                      <View style={styles.activePill}>
-                        <Text style={styles.activePillText}>Activa</Text>
-                      </View>
-                    )}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.rowTopBar}>
+                    <View style={styles.rowFolioWrap}>
+                      <Text style={styles.rowFolio}>
+                        {isMulti
+                          ? `#${batch.loans[0].folio} (+${batch.loans.length - 1})`
+                          : `#${batch.loans[0].folio}`}
+                      </Text>
+                      {isMobile && active && (
+                        <View style={styles.activePill}>
+                          <Text style={styles.activePillText}>Activa</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={{ flexShrink: 0, marginLeft: 'auto' }}>
+                      <Badge
+                        label={loanStatusLabel(batch.status)}
+                        tone={toneForStatus(batch.status)}
+                      />
+                    </View>
                   </View>
+
+                  {/* Nombre del alumno mostrado una única vez */}
                   <Text style={styles.rowName} numberOfLines={1}>
-                    {loan.studentName}
+                    {batch.studentName}
                   </Text>
+
+                  {/* Indicador de cantidad si es un pedido con múltiples materiales */}
+                  {isMulti && (
+                    <View style={styles.batchPillRow}>
+                      <View style={styles.batchCountPill}>
+                        <MaterialIcons name="layers" size={12} color={theme.color.navy} />
+                        <Text style={styles.batchCountPillText}>
+                          {batch.loans.length} materiales solicitados
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Resumen de materiales abarcados en este pedido */}
+                  <View style={styles.rowMaterialsList}>
+                    {batch.loans.map((loan) => (
+                      <View key={loan.id} style={styles.rowMaterialItem}>
+                        <MaterialIcons
+                          name="arrow-right"
+                          size={15}
+                          color={active ? theme.color.navy : theme.color.muted}
+                        />
+                        <Text style={styles.rowMaterialText} numberOfLines={1}>
+                          <Text style={{ fontWeight: '600', color: theme.color.ink }}>
+                            {loan.equipmentName}
+                          </Text>
+                          {' · '}
+                          <Text style={{ color: theme.color.muted, fontSize: 12 }}>
+                            {loan.equipmentCode}
+                          </Text>
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
                   <Text style={styles.rowMeta} numberOfLines={1}>
-                    {loan.equipmentName} · {formatDate(loan.requestedAt)}
+                    {formatDate(batch.requestedAt)} · Prof. {batch.teacherName}
                   </Text>
-                </View>
-                <View style={{ flexShrink: 0 }}>
-                  <Badge label={loanStatusLabel(loan.status)} tone={toneForStatus(loan.status)} />
                 </View>
               </Pressable>
             );
@@ -288,7 +342,7 @@ export function RequestsPage() {
             onChange={setPage}
           />
 
-          {isMobile && selected && (
+          {isMobile && selectedBatch && (
             <Pressable
               style={styles.jumpToDetailBtn}
               onPress={() => {
@@ -302,7 +356,9 @@ export function RequestsPage() {
             >
               <MaterialIcons name="arrow-downward" size={16} color={theme.color.navy} />
               <Text style={styles.jumpToDetailText}>
-                Ver detalle de #{selected.folio} abajo
+                {selectedBatch.loans.length > 1
+                  ? `Ver detalle (${selectedBatch.loans.length} materiales) abajo`
+                  : `Ver detalle de #${selectedBatch.loans[0].folio} abajo`}
               </Text>
             </Pressable>
           )}
@@ -326,33 +382,37 @@ export function RequestsPage() {
             </Pressable>
           )}
           <Text style={styles.cardTitle}>Detalle</Text>
-          {!selected ? (
+          {!selectedBatch ? (
             <Text style={styles.emptyDetail}>Selecciona una solicitud de la cola.</Text>
           ) : (
             <>
               <View style={styles.detailHead}>
-                <Text style={styles.detailFolio}>#{selected.folio}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.detailFolio}>
+                    {selectedBatch.loans.length > 1
+                      ? `Pedido (${selectedBatch.loans.length} materiales)`
+                      : `#${selectedBatch.loans[0].folio}`}
+                  </Text>
+                  {selectedBatch.loans.length > 1 && (
+                    <Text style={styles.detailFolioSub}>
+                      Folios: {selectedBatch.loans.map((l) => `#${l.folio}`).join(', ')}
+                    </Text>
+                  )}
+                </View>
                 <View style={{ flexShrink: 0 }}>
                   <Badge
-                    label={loanStatusLabel(selected.status)}
-                    tone={toneForStatus(selected.status)}
+                    label={loanStatusLabel(selectedBatch.status)}
+                    tone={toneForStatus(selectedBatch.status)}
                   />
                 </View>
               </View>
 
               {[
-                ['Alumno', selected.studentName],
-                ['Matrícula', selected.studentNumber ?? '—'],
-                ['Profesor', selected.teacherName],
-                ['Equipo', selected.equipmentName],
-                ['Código', selected.equipmentCode],
-                ['Solicitada', formatDate(selected.requestedAt)],
-                ['Fecha límite', formatDate(selected.dueAt)],
-                ...(selected.deliveryNotes
-                  ? [['Estado al entregar', selected.deliveryNotes]]
-                  : selected.status === 'delivered'
-                    ? [['Estado al entregar', 'Sin observaciones (perfecto estado)']]
-                    : []),
+                ['Alumno', selectedBatch.studentName],
+                ['Matrícula', selectedBatch.studentNumber ?? '—'],
+                ['Profesor', selectedBatch.teacherName],
+                ['Solicitada', formatDate(selectedBatch.requestedAt)],
+                ['Fecha límite', formatDate(selectedBatch.dueAt)],
               ].map(([label, value]) => (
                 <View key={label} style={styles.detailRow}>
                   <Text style={styles.detailLabel}>{label}</Text>
@@ -360,41 +420,71 @@ export function RequestsPage() {
                 </View>
               ))}
 
-              {selected.kitItems && selected.kitItems.length > 0 ? (
-                <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
-                    Kit incluido ({selected.kitItems.length} artículos):
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {selected.kitItems.map((k, i) => (
-                      <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', minWidth: 140 }}>
-                        <MaterialIcons name="check" size={14} color={theme.color.success} />
-                        <Text style={{ fontSize: 11, color: theme.color.ink }}>{k}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
+              <View style={styles.batchSectionHead}>
+                <Text style={styles.batchSectionTitle}>
+                  Materiales solicitados ({selectedBatch.loans.length}):
+                </Text>
+              </View>
 
-              {selected.extraItems && selected.extraItems.length > 0 ? (
-                <View style={{ marginTop: 10, padding: 10, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
-                    Materiales extras solicitados:
-                  </Text>
-                  {selected.extraItems.map((ex, i) => (
-                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 }}>
-                      <Text style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600' }}>
-                        • {ex.name} ({ex.internalCode})
-                      </Text>
-                      <Text style={{ fontSize: 12, color: theme.color.navy, fontWeight: '800' }}>
-                        Cant: {ex.quantity}
+              {selectedBatch.loans.map((item, idx) => (
+                <View key={item.id} style={styles.batchItemCard}>
+                  <View style={styles.batchItemHeader}>
+                    <View style={styles.batchItemNumberWrap}>
+                      <Text style={styles.batchItemNumber}>{idx + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.batchItemName}>{item.equipmentName}</Text>
+                      <Text style={styles.batchItemMeta}>
+                        Código: {item.equipmentCode} · Folio #{item.folio}
                       </Text>
                     </View>
-                  ))}
-                </View>
-              ) : null}
+                  </View>
 
-              {canManage && (selected.status === 'pending' || selected.status === 'approved') ? (
+                  {item.kitItems && item.kitItems.length > 0 ? (
+                    <View style={styles.kitBox}>
+                      <Text style={styles.kitBoxTitle}>
+                        Kit incluido ({item.kitItems.length} artículos):
+                      </Text>
+                      <View style={styles.kitBoxGrid}>
+                        {item.kitItems.map((k, i) => (
+                          <View key={i} style={styles.kitItemRow}>
+                            <MaterialIcons name="check" size={13} color={theme.color.success} />
+                            <Text style={styles.kitItemText}>{k}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {item.extraItems && item.extraItems.length > 0 ? (
+                    <View style={styles.extraBox}>
+                      <Text style={styles.extraBoxTitle}>Materiales extras solicitados:</Text>
+                      {item.extraItems.map((ex, i) => (
+                        <View key={i} style={styles.extraRow}>
+                          <Text style={styles.extraName}>
+                            • {ex.name} ({ex.internalCode})
+                          </Text>
+                          <Text style={styles.extraQty}>Cant: {ex.quantity}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {item.deliveryNotes ? (
+                    <View style={styles.notesBox}>
+                      <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
+                      <Text style={styles.notesBoxText}>{item.deliveryNotes}</Text>
+                    </View>
+                  ) : item.status === 'delivered' ? (
+                    <View style={styles.notesBox}>
+                      <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
+                      <Text style={styles.notesBoxText}>Sin observaciones (perfecto estado)</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ))}
+
+              {canManage && (selectedBatch.status === 'pending' || selectedBatch.status === 'approved') ? (
                 <View style={styles.actions}>
                   <Text style={styles.fieldLabel}>Fecha límite de devolución</Text>
                   <TextInput
@@ -405,7 +495,11 @@ export function RequestsPage() {
                   />
                   <View style={styles.actionRow}>
                     <Button
-                      title="Entregar equipo"
+                      title={
+                        selectedBatch.loans.length > 1
+                          ? `Entregar ${selectedBatch.loans.length} materiales`
+                          : 'Entregar equipo'
+                      }
                       loading={busy}
                       fullWidth={false}
                       style={{ flex: 1 }}
@@ -416,20 +510,30 @@ export function RequestsPage() {
                         setDeliverError(null);
                       }}
                     />
-                    {selected.status === 'pending' ? (
+                    {selectedBatch.status === 'pending' ? (
                       <Button
-                        title="Rechazar"
+                        title={
+                          selectedBatch.loans.length > 1
+                            ? 'Rechazar pedido'
+                            : 'Rechazar'
+                        }
                         variant="danger"
                         loading={busy}
                         fullWidth={false}
                         style={{ flex: 1 }}
                         onPress={() =>
                           runManagedAction(
-                            () => rejectLoan(selected.id, user!.uid, 'Rechazada desde web'),
-                            'Solicitud rechazada.',
+                            async () => {
+                              for (const loan of selectedBatch.loans) {
+                                await rejectLoan(loan.id, user!.uid, 'Rechazada desde web');
+                              }
+                            },
+                            selectedBatch.loans.length > 1
+                              ? `Pedido de ${selectedBatch.loans.length} materiales rechazado.`
+                              : 'Solicitud rechazada.',
                             {
-                              action: 'loan.reject',
-                              summary: `Rechazó #${selected.folio}`,
+                              action: 'loan.reject_batch',
+                              summary: `Rechazó pedido de ${selectedBatch.studentName} (${selectedBatch.loans.map((l) => '#' + l.folio).join(', ')})`,
                               before: 'pending',
                               after: 'rejected',
                             }
@@ -441,21 +545,31 @@ export function RequestsPage() {
                 </View>
               ) : null}
 
-              {canManage && selected.status === 'delivered' ? (
+              {canManage && selectedBatch.status === 'delivered' ? (
                 <View style={styles.actions}>
                   <Button
-                    title="Registrar devolución"
+                    title={
+                      selectedBatch.loans.length > 1
+                        ? `Registrar devolución (${selectedBatch.loans.length} materiales)`
+                        : 'Registrar devolución'
+                    }
                     loading={busy}
                     onPress={() => {
-                      const late = selected.dueAt
-                        ? new Date(selected.dueAt).getTime() < Date.now()
+                      const late = selectedBatch.dueAt
+                        ? new Date(selectedBatch.dueAt).getTime() < Date.now()
                         : false;
                       return runManagedAction(
-                        () => returnLoan(selected.id, user!.uid, { late }),
-                        late ? 'Devuelto con retraso.' : 'Devolución registrada.',
+                        async () => {
+                          for (const loan of selectedBatch.loans) {
+                            await returnLoan(loan.id, user!.uid, { late });
+                          }
+                        },
+                        late
+                          ? 'Materiales devueltos con retraso.'
+                          : 'Devolución de materiales registrada.',
                         {
-                          action: 'loan.return',
-                          summary: `Devolvió #${selected.folio}`,
+                          action: 'loan.return_batch',
+                          summary: `Devolvió pedido de ${selectedBatch.studentName} (${selectedBatch.loans.map((l) => '#' + l.folio).join(', ')})`,
                           before: 'delivered',
                           after: late ? 'returned_late' : 'returned',
                         }
@@ -466,81 +580,90 @@ export function RequestsPage() {
               ) : null}
 
               {canOverride &&
-              (selected.status === 'pending' ||
-                selected.status === 'approved' ||
-                selected.status === 'rejected') ? (
+              (selectedBatch.status === 'pending' ||
+                selectedBatch.status === 'approved' ||
+                selectedBatch.status === 'rejected') ? (
                 <View style={styles.actions}>
                   <Text style={styles.fieldLabel}>Corrección administrativa</Text>
                   <Text style={styles.overrideHint}>
                     Puedes modificar una decisión del encargado (aceptar, rechazar o reabrir).
                   </Text>
                   <View style={styles.actionRow}>
-                    {selected.status !== 'approved' ? (
+                    {selectedBatch.status !== 'approved' ? (
                       <Button
-                        title="Marcar aprobada"
+                        title="Marcar aprobadas"
                         loading={busy}
                         fullWidth={false}
                         style={{ flex: 1 }}
                         onPress={() =>
                           runAction(
-                            () =>
-                              adminOverrideLoanStatus(selected.id, 'approved', {
-                                uid: user!.uid,
-                                email: user!.email,
-                                displayName: user!.displayName,
-                                role: user!.role,
-                                labId: user!.labId,
-                              }),
-                            'Solicitud marcada como aprobada.'
+                            async () => {
+                              for (const loan of selectedBatch.loans) {
+                                await adminOverrideLoanStatus(loan.id, 'approved', {
+                                  uid: user!.uid,
+                                  email: user!.email,
+                                  displayName: user!.displayName,
+                                  role: user!.role,
+                                  labId: user!.labId,
+                                });
+                              }
+                            },
+                            'Solicitudes marcadas como aprobadas.'
                           )
                         }
                       />
                     ) : null}
-                    {selected.status !== 'rejected' ? (
+                    {selectedBatch.status !== 'rejected' ? (
                       <Button
-                        title="Marcar rechazada"
+                        title="Marcar rechazadas"
                         variant="danger"
                         loading={busy}
                         fullWidth={false}
                         style={{ flex: 1 }}
                         onPress={() =>
                           runAction(
-                            () =>
-                              adminOverrideLoanStatus(
-                                selected.id,
-                                'rejected',
-                                {
-                                  uid: user!.uid,
-                                  email: user!.email,
-                                  displayName: user!.displayName,
-                                  role: user!.role,
-                                  labId: user!.labId,
-                                },
-                                'Rechazo administrativo'
-                              ),
-                            'Solicitud marcada como rechazada.'
+                            async () => {
+                              for (const loan of selectedBatch.loans) {
+                                await adminOverrideLoanStatus(
+                                  loan.id,
+                                  'rejected',
+                                  {
+                                    uid: user!.uid,
+                                    email: user!.email,
+                                    displayName: user!.displayName,
+                                    role: user!.role,
+                                    labId: user!.labId,
+                                  },
+                                  'Rechazo administrativo'
+                                );
+                              }
+                            },
+                            'Solicitudes marcadas como rechazadas.'
                           )
                         }
                       />
                     ) : null}
-                    {selected.status !== 'pending' ? (
+                    {selectedBatch.status !== 'pending' ? (
                       <Button
-                        title="Reabrir (pendiente)"
+                        title="Reabrir (pendientes)"
                         variant="secondary"
                         loading={busy}
                         fullWidth={false}
                         style={{ flex: 1 }}
                         onPress={() =>
                           runAction(
-                            () =>
-                              adminOverrideLoanStatus(selected.id, 'pending', {
-                                uid: user!.uid,
-                                email: user!.email,
-                                displayName: user!.displayName,
-                                role: user!.role,
-                                labId: user!.labId,
-                              }),
-                            'Solicitud reabierta en pendiente.'
+                            async () => {
+                              for (const loan of selectedBatch.loans) {
+                                await adminOverrideLoanStatus(loan.id, 'pending', {
+                                  uid: user!.uid,
+                                  email: user!.email,
+                                  displayName: user!.displayName,
+                                  role: user!.role,
+                                  labId: user!.labId,
+                                });
+                              }
+                            },
+                            'Solicitudes reabiertas en pendiente.'
                           )
                         }
                       />
@@ -573,25 +696,47 @@ export function RequestsPage() {
               </View>
             </View>
 
-            {selected ? (
+            {selectedBatch ? (
               <View style={styles.summaryBox}>
-                {[
-                  ['Equipo', selected.equipmentName],
-                  ['Código interno', selected.equipmentCode],
-                  [
-                    'Alumno receptor',
-                    `${selected.studentName}${selected.studentNumber ? ` (${selected.studentNumber})` : ''}`,
-                  ],
-                  ['Fecha límite', dueDate],
-                ].map(([label, value], index, arr) => (
-                  <View
-                    key={label}
-                    style={[styles.summaryRow, index === arr.length - 1 && styles.summaryRowLast]}
-                  >
-                    <Text style={styles.summaryLabel}>{label}</Text>
-                    <Text style={styles.summaryValue}>{value}</Text>
-                  </View>
-                ))}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Alumno receptor</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedBatch.studentName}
+                    {selectedBatch.studentNumber ? ` (${selectedBatch.studentNumber})` : ''}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Profesor</Text>
+                  <Text style={styles.summaryValue}>{selectedBatch.teacherName}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total materiales</Text>
+                  <Text style={[styles.summaryValue, { color: theme.color.navy, fontWeight: '800' }]}>
+                    {selectedBatch.loans.length}{' '}
+                    {selectedBatch.loans.length === 1 ? 'material' : 'materiales'}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Fecha límite</Text>
+                  <Text style={styles.summaryValue}>{dueDate}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.summaryRow,
+                    styles.summaryRowLast,
+                    { flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
+                  ]}
+                >
+                  <Text style={styles.summaryLabel}>Lista a entregar:</Text>
+                  {selectedBatch.loans.map((loan, idx) => (
+                    <Text
+                      key={loan.id}
+                      style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600' }}
+                    >
+                      {idx + 1}. {loan.equipmentName} ({loan.equipmentCode}) · #{loan.folio}
+                    </Text>
+                  ))}
+                </View>
               </View>
             ) : null}
 
@@ -698,7 +843,7 @@ export function RequestsPage() {
                 fullWidth={false}
                 style={styles.modalBtn}
                 onPress={async () => {
-                  if (!selected || !user) return;
+                  if (!selectedBatch || !user) return;
                   if (!isPerfectCondition && !deliveryNotes.trim()) {
                     setDeliverError(
                       'Por favor escribe las observaciones del equipo o marca la casilla de "Equipo en perfecto estado".'
@@ -708,15 +853,20 @@ export function RequestsPage() {
                   setDeliverError(null);
                   const noteToSave = isPerfectCondition ? null : deliveryNotes.trim();
                   await runManagedAction(
-                    () =>
-                      deliverLoan(selected.id, user.uid, dueDate, {
-                        deliveryNotes: noteToSave,
-                      }),
-                    'Equipo entregado correctamente.',
+                    async () => {
+                      for (const loan of selectedBatch.loans) {
+                        await deliverLoan(loan.id, user.uid, dueDate, {
+                          deliveryNotes: noteToSave,
+                        });
+                      }
+                    },
+                    selectedBatch.loans.length > 1
+                      ? `${selectedBatch.loans.length} materiales entregados correctamente.`
+                      : 'Equipo entregado correctamente.',
                     {
-                      action: 'loan.deliver',
-                      summary: `Entregó #${selected.folio}${noteToSave ? ` (${noteToSave})` : ' (perfecto estado)'}`,
-                      before: selected.status,
+                      action: 'loan.deliver_batch',
+                      summary: `Entregó pedido a ${selectedBatch.studentName} (${selectedBatch.loans.map((l) => '#' + l.folio).join(', ')})${noteToSave ? ` (${noteToSave})` : ' (perfecto estado)'}`,
+                      before: selectedBatch.status,
                       after: 'delivered',
                     }
                   );
@@ -873,25 +1023,85 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 8,
     borderTopWidth: 1,
     borderTopColor: '#EDF0F3',
+    marginBottom: 4,
   },
   rowActive: { backgroundColor: '#F5F9FF' },
+  rowTopBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  rowFolioWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flexShrink: 1,
+  },
   rowFolio: { color: theme.color.muted, fontSize: theme.font.size.sm, fontWeight: '700' },
+  batchPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  batchCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  batchCountPillText: {
+    color: theme.color.navy,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   rowName: { color: theme.color.ink, fontSize: theme.font.size.lg, fontWeight: '700', marginTop: 2 },
-  rowMeta: { color: theme.color.muted, fontSize: theme.font.size.md, marginTop: 2 },
+  rowMaterialsList: {
+    marginTop: 4,
+    marginBottom: 6,
+    gap: 3,
+  },
+  rowMaterialItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rowMaterialText: {
+    fontSize: theme.font.size.sm,
+    color: theme.color.ink,
+    flexShrink: 1,
+  },
+  rowMeta: { color: theme.color.muted, fontSize: theme.font.size.sm, marginTop: 2 },
   emptyDetail: { color: theme.color.muted, fontSize: theme.font.size.md },
   detailHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   detailFolio: { color: theme.color.navy, fontSize: theme.font.size.xl, fontWeight: '800' },
+  detailFolioSub: {
+    color: theme.color.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -908,6 +1118,134 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     maxWidth: '65%',
     textAlign: 'right',
+  },
+  batchSectionHead: {
+    marginTop: 14,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+    paddingBottom: 6,
+  },
+  batchSectionTitle: {
+    color: theme.color.navy,
+    fontSize: theme.font.size.sm,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  batchItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+  },
+  batchItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  batchItemNumberWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: theme.color.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  batchItemNumber: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  batchItemName: {
+    fontSize: theme.font.size.sm,
+    fontWeight: '700',
+    color: theme.color.navy,
+  },
+  batchItemMeta: {
+    fontSize: 11,
+    color: theme.color.muted,
+    marginTop: 1,
+  },
+  kitBox: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  kitBoxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.color.navy,
+    marginBottom: 4,
+  },
+  kitBoxGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  kitItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    width: '48%',
+    minWidth: 120,
+  },
+  kitItemText: {
+    fontSize: 11,
+    color: theme.color.ink,
+  },
+  extraBox: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  extraBoxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.color.navy,
+    marginBottom: 4,
+  },
+  extraRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  extraName: {
+    fontSize: 11,
+    color: theme.color.ink,
+    fontWeight: '600',
+  },
+  extraQty: {
+    fontSize: 11,
+    color: theme.color.navy,
+    fontWeight: '800',
+  },
+  notesBox: {
+    marginTop: 6,
+    padding: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
+  },
+  notesBoxLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.color.muted,
+    textTransform: 'uppercase',
+  },
+  notesBoxText: {
+    fontSize: 11,
+    color: theme.color.ink,
+    marginTop: 1,
   },
   modalCardMobile: {
     padding: 16,
