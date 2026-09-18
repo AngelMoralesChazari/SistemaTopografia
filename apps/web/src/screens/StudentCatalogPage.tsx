@@ -1034,12 +1034,6 @@ export function StudentCatalogPage() {
                     {cartItems.length} equipo{cartItems.length === 1 ? '' : 's'}
                   </Text>
                 </View>
-                {/* <View style={styles.cartSummaryNote}>
-                  <MaterialIcons name="info-outline" size={15} color={theme.color.info} />
-                  <Text style={styles.cartSummaryNoteText}>
-                    Se generará una única entrega para que el laboratorio te entregue todo junto.
-                  </Text>
-                </View> */}
               </View>
 
               <View style={styles.cartModalActions}>
