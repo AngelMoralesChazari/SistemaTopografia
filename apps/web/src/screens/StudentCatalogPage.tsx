@@ -1058,7 +1058,7 @@ export function StudentCatalogPage() {
         </View>
       </Modal>
 
-      {/* Submodal selector de materiales extras */}
+      {/* Submodal selector de materiales */}
       <Modal
         visible={extraPickerOpen}
         transparent
