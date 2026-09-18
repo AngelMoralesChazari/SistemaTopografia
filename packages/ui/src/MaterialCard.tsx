@@ -35,6 +35,7 @@ type MaterialCardProps = {
   selected?: boolean;
   showStatusBadge?: boolean;
   style?: StyleProp<ViewStyle>;
+  rightAction?: React.ReactNode;
 };
 
 export function MaterialCard({
@@ -43,6 +44,7 @@ export function MaterialCard({
   selected = false,
   showStatusBadge = false,
   style,
+  rightAction,
 }: MaterialCardProps) {
   const content = (
     <View style={[styles.card, selected && styles.cardSelected, style]}>
@@ -66,6 +68,7 @@ export function MaterialCard({
         <Text style={styles.countValue}>{equipment.qtyAvailable}</Text>
         <Text style={styles.countLabel}>disp.</Text>
       </View>
+      {rightAction ? <View style={styles.rightActionWrap}>{rightAction}</View> : null}
     </View>
   );
 
@@ -145,5 +148,10 @@ const styles = StyleSheet.create({
     color: theme.color.success,
     fontSize: theme.font.size.xs,
     fontWeight: '800',
+  },
+  rightActionWrap: {
+    marginLeft: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

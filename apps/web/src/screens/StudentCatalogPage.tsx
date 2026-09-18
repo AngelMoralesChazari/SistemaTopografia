@@ -275,14 +275,16 @@ export function StudentCatalogPage() {
     );
   };
 
-  const openConfirm = () => {
-    if (!selectedEquipment) {
+  const openConfirmFor = (targetEquipment?: Equipment | null) => {
+    const equip = targetEquipment ?? selectedEquipment;
+    if (!equip) {
       showToast('Selecciona un equipo de la lista antes de continuar.');
       return;
     }
-    const alreadyInCart = cartItems.some((c) => c.equipment.id === selectedEquipment.id);
+    setSelectedEquipmentId(equip.id);
+    const alreadyInCart = cartItems.some((c) => c.equipment.id === equip.id);
     if (alreadyInCart) {
-      showToast(`"${selectedEquipment.name}" ya está añadido en tu pedido.`);
+      showToast(`"${equip.name}" ya está añadido en tu pedido.`);
       return;
     }
     const teacherReady =
@@ -311,6 +313,8 @@ export function StudentCatalogPage() {
     setShowKitDetails(false);
     setConfirmOpen(true);
   };
+
+  const openConfirm = () => openConfirmFor(null);
 
   const closeConfirm = () => {
     if (submitting) return;
@@ -437,11 +441,28 @@ export function StudentCatalogPage() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flex: 1, minWidth: 200 }}>
             <Text style={styles.title}>Catálogo de equipos</Text>
             <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
           </View>
-          <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={40} />
+          <View style={styles.headerRight}>
+            {cartItems.length > 0 ? (
+              <Pressable
+                onPress={() => setCartModalOpen(true)}
+                style={({ pressed }) => [
+                  styles.headerOrderBtn,
+                  pressed && { opacity: 0.9 },
+                ]}
+                accessibilityRole="button"
+              >
+                <MaterialIcons name="shopping-bag" size={18} color="#fff" />
+                <Text style={styles.headerOrderBtnText}>
+                  Solicitar material ({cartItems.length})
+                </Text>
+              </Pressable>
+            ) : null}
+            <Avatar initials={getInitials(user?.displayName ?? 'AL')} size={40} />
+          </View>
         </View>
 
         <View style={styles.kpis}>
@@ -532,31 +553,6 @@ export function StudentCatalogPage() {
                 ))}
               </View>
             )}
-
-            {cartItems.length > 0 ? (
-              <View style={styles.floatingCartBar}>
-                <View style={styles.floatingCartLeft}>
-                  <View style={styles.floatingCartIcon}>
-                    <MaterialIcons name="layers" size={20} color={theme.color.navy} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.floatingCartTitle}>
-                      {cartItems.length}{' '}
-                      {cartItems.length === 1 ? 'material en tu pedido' : 'materiales en tu pedido'}
-                    </Text>
-                    <Text style={styles.floatingCartSub} numberOfLines={1}>
-                      {cartItems.map((c) => c.equipment.name).join(' · ')}
-                    </Text>
-                  </View>
-                </View>
-                <Button
-                  title={`Solicitar material (${cartItems.length})`}
-                  fullWidth={false}
-                  onPress={() => setCartModalOpen(true)}
-                  style={styles.floatingCartBtn}
-                />
-              </View>
-            ) : null}
           </>
         ) : null}
 
@@ -574,6 +570,21 @@ export function StudentCatalogPage() {
               <View style={styles.groupBadge}>
                 <Text style={styles.groupBadgeText}>{categoryItems.length} disp.</Text>
               </View>
+              {cartItems.length > 0 ? (
+                <Pressable
+                  onPress={() => setCartModalOpen(true)}
+                  style={({ pressed }) => [
+                    styles.groupOrderBtn,
+                    pressed && { opacity: 0.9 },
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <MaterialIcons name="shopping-bag" size={16} color="#fff" />
+                  <Text style={styles.groupOrderBtnText}>
+                    Solicitar material ({cartItems.length})
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
 
             {categoryItems.length === 0 ? (
@@ -585,20 +596,58 @@ export function StudentCatalogPage() {
               <View style={styles.list}>
                 {paging.pageItems.map((item) => {
                   const inCart = cartItems.some((c) => c.equipment.id === item.id);
+                  const isAvailable = item.qtyAvailable > 0 && item.status !== 'maintenance';
+
+                  let rightAction: React.ReactNode = null;
+                  if (inCart) {
+                    rightAction = (
+                      <Pressable
+                        onPress={() => setCartModalOpen(true)}
+                        style={styles.rowInCartBadge}
+                        hitSlop={6}
+                      >
+                        <MaterialIcons name="check-circle" size={15} color={theme.color.success} />
+                        <Text style={styles.rowInCartText}>En pedido</Text>
+                      </Pressable>
+                    );
+                  } else if (isAvailable) {
+                    rightAction = (
+                      <Pressable
+                        onPress={() => openConfirmFor(item)}
+                        style={({ pressed }) => [
+                          styles.rowAddBtn,
+                          pressed && { opacity: 0.85 },
+                        ]}
+                        hitSlop={6}
+                      >
+                        <MaterialIcons name="add" size={16} color="#fff" />
+                        <Text style={styles.rowAddBtnText}>Añadir</Text>
+                      </Pressable>
+                    );
+                  } else {
+                    rightAction = (
+                      <View style={styles.rowUnavailableBadge}>
+                        <Text style={styles.rowUnavailableText}>Agotado</Text>
+                      </View>
+                    );
+                  }
+
                   return (
-                    <View key={item.id} style={{ position: 'relative' }}>
-                      <MaterialCard
-                        equipment={item}
-                        selected={item.id === selectedEquipmentId}
-                        onPress={() => setSelectedEquipmentId(item.id)}
-                      />
-                      {inCart ? (
-                        <View style={styles.cardInCartBadge}>
-                          <MaterialIcons name="check" size={11} color="#fff" />
-                          <Text style={styles.cardInCartText}>En pedido</Text>
-                        </View>
-                      ) : null}
-                    </View>
+                    <MaterialCard
+                      key={item.id}
+                      equipment={item}
+                      selected={item.id === selectedEquipmentId}
+                      onPress={() => {
+                        if (inCart) {
+                          setCartModalOpen(true);
+                        } else if (isAvailable) {
+                          openConfirmFor(item);
+                        } else {
+                          showToast('Este material no está disponible para préstamo.');
+                        }
+                      }}
+                      rightAction={rightAction}
+                    />
                   );
                 })}
                 <ListPagination
@@ -612,79 +661,40 @@ export function StudentCatalogPage() {
                 />
               </View>
             )}
-
-            {(() => {
-              const isCurrentInCart = cartItems.some(
-                (c) => c.equipment.id === selectedEquipment?.id
-              );
-              return (
-                <View style={[styles.requestBar, compact && styles.requestBarCompact]}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.requestLabel}>
-                      {isCurrentInCart ? 'Material en tu pedido' : 'Equipo seleccionado'}
-                    </Text>
-                    <Text style={styles.requestValue} numberOfLines={1}>
-                      {selectedEquipment?.name ?? 'Ninguno'}
-                    </Text>
-                    {isCurrentInCart ? (
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: theme.color.success,
-                          fontWeight: '700',
-                          marginTop: 2,
-                        }}
-                      >
-                        ✓ Ya está añadido en tu lista de pedido
-                      </Text>
-                    ) : isSelectedStation ? (
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: theme.color.info,
-                          fontWeight: '700',
-                          marginTop: 2,
-                        }}
-                      >
-                        ✓ Incluye kit básico (12 piezas) y opción de añadir extras
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.requestBarButtons}>
-                    {!isCurrentInCart && selectedEquipment && cartItems.length > 0 ? (
-                      <Button
-                        title="Añadir"
-                        variant="secondary"
-                        fullWidth={false}
-                        disabled={!selectedEquipment}
-                        onPress={openConfirm}
-                        style={styles.addBtn}
-                      />
-                    ) : null}
-                    {cartItems.length > 0 ? (
-                      <Button
-                        title={`Solicitar material (${cartItems.length})`}
-                        fullWidth={false}
-                        onPress={() => setCartModalOpen(true)}
-                        style={styles.requestBtn}
-                      />
-                    ) : (
-                      <Button
-                        title="Solicitar material"
-                        fullWidth={false}
-                        disabled={!selectedEquipment}
-                        onPress={openConfirm}
-                        style={styles.requestBtn}
-                      />
-                    )}
-                  </View>
-                </View>
-              );
-            })()}
           </>
         ) : null}
       </ScrollView>
+
+      {/* Botón flotante para confirmar pedido de todos los materiales */}
+      {cartItems.length > 0 ? (
+        <View
+          style={[
+            styles.floatingPillContainer,
+            compact && styles.floatingPillContainerCompact,
+          ]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            onPress={() => setCartModalOpen(true)}
+            style={({ pressed }) => [
+              styles.floatingCartPill,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
+            accessibilityRole="button"
+          >
+            <View style={styles.floatingPillIconWrap}>
+              <MaterialIcons name="shopping-bag" size={18} color="#fff" />
+              <View style={styles.floatingPillBadge}>
+                <Text style={styles.floatingPillBadgeText}>{cartItems.length}</Text>
+              </View>
+            </View>
+            <Text style={styles.floatingPillTitle}>
+              Solicitar material ({cartItems.length})
+            </Text>
+            <MaterialIcons name="arrow-forward" size={16} color="#93C5FD" />
+          </Pressable>
+        </View>
+      ) : null}
 
       <Modal visible={confirmOpen} transparent animationType="fade" onRequestClose={closeConfirm}>
         <View style={styles.modalBackdrop}>
@@ -1175,13 +1185,14 @@ export function StudentCatalogPage() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.canvas },
-  content: { padding: 28, paddingBottom: 40 },
+  content: { padding: 28, paddingBottom: 100 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 20,
     gap: 16,
+    flexWrap: 'wrap',
   },
   title: {
     color: theme.color.navy,
@@ -1736,80 +1747,6 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.xl,
     fontWeight: '800',
   },
-  cardInCartBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.color.success,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    zIndex: 2,
-    ...theme.shadow.soft,
-  },
-  cardInCartText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  requestBarCompact: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 12,
-  },
-  requestBarButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  addBtn: {
-    paddingHorizontal: 16,
-  },
-  floatingCartBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: theme.color.surface,
-    borderWidth: 1.5,
-    borderColor: theme.color.navy,
-    marginBottom: 20,
-    ...theme.shadow.soft,
-  },
-  floatingCartLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    minWidth: 0,
-  },
-  floatingCartIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: theme.color.infoSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  floatingCartTitle: {
-    color: theme.color.navy,
-    fontSize: theme.font.size.md,
-    fontWeight: '800',
-  },
-  floatingCartSub: {
-    color: theme.color.muted,
-    fontSize: theme.font.size.sm,
-    marginTop: 2,
-  },
-  floatingCartBtn: {
-    minWidth: 160,
-  },
   cartModalCard: {
     width: '100%',
     maxWidth: 560,
@@ -1818,6 +1755,137 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: theme.color.line,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.color.navy,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    ...theme.shadow.soft,
+  },
+  headerOrderBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  groupOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.color.navy,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginLeft: 'auto',
+    ...theme.shadow.soft,
+  },
+  groupOrderBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  rowAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.color.navy,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  rowAddBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  rowInCartBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.color.successSoft,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  rowInCartText: {
+    color: theme.color.success,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  rowUnavailableBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+  },
+  rowUnavailableText: {
+    color: theme.color.muted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  floatingPillContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 28,
+    zIndex: 99,
+  },
+  floatingPillContainerCompact: {
+    bottom: 16,
+    right: 16,
+    left: 16,
+    alignItems: 'stretch',
+  },
+  floatingCartPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: theme.color.navy,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 9999,
+    shadowColor: '#0F294A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  floatingPillIconWrap: {
+    position: 'relative',
+  },
+  floatingPillBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: theme.color.success,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  floatingPillBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  floatingPillTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   cartModalHead: {
     flexDirection: 'row',
