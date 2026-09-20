@@ -10,10 +10,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import {
+  buildRequestBatches,
   getInitials,
   loanStatusLabel,
   type Loan,
   type LoanStatus,
+  type RequestBatch,
 } from '@lab-topo/domain';
 import { watchLoansForStudent } from '@lab-topo/services';
 import { Avatar, Badge, Notice, type BadgeTone } from '@lab-topo/ui';
@@ -149,6 +151,8 @@ export function StudentRequestsPage() {
     return unsub;
   }, [user]);
 
+  const batches = useMemo(() => buildRequestBatches(loans), [loans]);
+
   const counts = useMemo(() => {
     const result: Record<RequestTab, number> = {
       pending: 0,
@@ -156,17 +160,17 @@ export function StudentRequestsPage() {
       returned: 0,
       rejected: 0,
     };
-    for (const loan of loans) {
+    for (const b of batches) {
       (Object.keys(result) as RequestTab[]).forEach((key) => {
-        if (matchesTab(loan.status, key)) result[key] += 1;
+        if (matchesTab(b.status, key)) result[key] += 1;
       });
     }
     return result;
-  }, [loans]);
+  }, [batches]);
 
   const filtered = useMemo(
-    () => loans.filter((loan) => matchesTab(loan.status, tab)),
-    [loans, tab]
+    () => batches.filter((b) => matchesTab(b.status, tab)),
+    [batches, tab]
   );
 
   useEffect(() => {
@@ -182,7 +186,7 @@ export function StudentRequestsPage() {
   }, [page, paging.page]);
 
   const pageItems = paging.pageItems;
-  const selected = filtered.find((l) => l.id === selectedId) ?? null;
+  const selected = filtered.find((b) => b.id === selectedId) ?? null;
   const accent = TAB_COLORS[tab];
 
   const colStyle = (id: TableColumn) => {
@@ -275,13 +279,15 @@ export function StudentRequestsPage() {
                 </Text>
               </View>
             ) : (
-              pageItems.map((loan, index) => {
-                const active = selectedId === loan.id;
+              pageItems.map((batch, index) => {
+                const active = selectedId === batch.id;
+                const isMulti = batch.loans.length > 1;
+                const mainFolio = batch.folio || batch.loans[0]?.folio;
                 return (
                   <Pressable
-                    key={loan.id}
+                    key={batch.id}
                     onPress={() =>
-                      setSelectedId((current) => (current === loan.id ? null : loan.id))
+                      setSelectedId((current) => (current === batch.id ? null : batch.id))
                     }
                     style={[
                       styles.tr,
@@ -296,7 +302,7 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Text style={styles.td} numberOfLines={1}>
-                        #{loan.folio}
+                        #{mainFolio}
                       </Text>
                     </View>
                     <View
@@ -306,7 +312,9 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Text style={[styles.td, styles.tdStrong]} numberOfLines={1}>
-                        {loan.equipmentName}
+                        {isMulti
+                          ? `${batch.loans.length} materiales (${batch.loans.map((l) => l.equipmentName).join(', ')})`
+                          : (batch.loans[0]?.equipmentName ?? '—')}
                       </Text>
                     </View>
                     <View
@@ -316,7 +324,7 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Text style={styles.td} numberOfLines={1}>
-                        {loan.teacherName}
+                        {batch.teacherName}
                       </Text>
                     </View>
                     <View
@@ -326,7 +334,7 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Text style={styles.td} numberOfLines={1}>
-                        {formatDateTime(loan.requestedAt)}
+                        {formatDateTime(batch.requestedAt)}
                       </Text>
                     </View>
                     <View
@@ -336,7 +344,7 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Text style={styles.td} numberOfLines={1}>
-                        {formatDateTime(loan.dueAt)}
+                        {formatDateTime(batch.dueAt)}
                       </Text>
                     </View>
                     <View
@@ -347,8 +355,8 @@ export function StudentRequestsPage() {
                       ]}
                     >
                       <Badge
-                        label={loanStatusLabel(loan.status)}
-                        tone={toneForStatus(loan.status)}
+                        label={loanStatusLabel(batch.status)}
+                        tone={toneForStatus(batch.status)}
                       />
                     </View>
                   </Pressable>
@@ -359,26 +367,26 @@ export function StudentRequestsPage() {
             {selected ? (
               <View style={styles.detailBox}>
                 <View style={styles.detailHead}>
-                  <Text style={styles.detailTitle}>Detalle #{selected.folio}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailTitle}>
+                      Solicitud #{selected.folio || selected.loans[0]?.folio}
+                    </Text>
+                    <Text style={styles.detailSubtitle}>
+                      {selected.loans.length === 1
+                        ? '1 material solicitado'
+                        : `${selected.loans.length} materiales solicitados`}
+                    </Text>
+                  </View>
                   <Pressable onPress={() => setSelectedId(null)} hitSlop={8}>
                     <MaterialIcons name="close" size={20} color={theme.color.muted} />
                   </Pressable>
                 </View>
+
                 {[
-                  ['Equipo', selected.equipmentName],
-                  ['Código', selected.equipmentCode],
                   ['Profesor', selected.teacherName],
                   ['Solicitada', formatDateTime(selected.requestedAt)],
                   ['Devolver antes de', formatDateTime(selected.dueAt)],
-                  ['Estado', loanStatusLabel(selected.status)],
-                  ...(selected.deliveryNotes
-                    ? [['Estado al entregar', selected.deliveryNotes]]
-                    : selected.status !== 'pending' &&
-                        selected.status !== 'approved' &&
-                        selected.status !== 'rejected' &&
-                        selected.status !== 'cancelled'
-                      ? [['Estado al entregar', 'Sin observaciones (perfecto estado)']]
-                      : []),
+                  ['Estado general', loanStatusLabel(selected.status)],
                 ].map(([label, value]) => (
                   <View key={label} style={styles.detailRow}>
                     <Text style={styles.detailLabel}>{label}</Text>
@@ -386,39 +394,86 @@ export function StudentRequestsPage() {
                   </View>
                 ))}
 
-                {selected.kitItems && selected.kitItems.length > 0 ? (
-                  <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
-                      Kit incluido ({selected.kitItems.length} artículos):
-                    </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {selected.kitItems.map((k, i) => (
-                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '48%', minWidth: 140 }}>
-                          <MaterialIcons name="check" size={14} color={theme.color.success} />
-                          <Text style={{ fontSize: 11, color: theme.color.ink }}>{k}</Text>
+                <View style={{ marginTop: 14 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.color.navy, marginBottom: 8 }}>
+                    Materiales en esta solicitud ({selected.loans.length}):
+                  </Text>
+                  {selected.loans.map((item, idx) => (
+                    <View
+                      key={item.id}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            backgroundColor: theme.color.navy,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{idx + 1}</Text>
                         </View>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                {selected.extraItems && selected.extraItems.length > 0 ? (
-                  <View style={{ marginTop: 10, padding: 10, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: theme.color.navy, marginBottom: 6 }}>
-                      Materiales extras solicitados:
-                    </Text>
-                    {selected.extraItems.map((ex, i) => (
-                      <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 }}>
-                        <Text style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600' }}>
-                          • {ex.name} ({ex.internalCode})
-                        </Text>
-                        <Text style={{ fontSize: 12, color: theme.color.navy, fontWeight: '800' }}>
-                          Cant: {ex.quantity}
-                        </Text>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: theme.color.navy }} numberOfLines={1}>
+                            {item.equipmentName}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: theme.color.muted }}>
+                            Código: {item.equipmentCode}
+                          </Text>
+                        </View>
+                        <Badge label={loanStatusLabel(item.status)} tone={toneForStatus(item.status)} />
                       </View>
-                    ))}
-                  </View>
-                ) : null}
+
+                      {item.deliveryNotes ? (
+                        <View style={{ marginTop: 6, padding: 6, backgroundColor: '#FEF3C7', borderRadius: 4 }}>
+                          <Text style={{ fontSize: 11, color: '#92400E' }}>
+                            Nota al entregar: {item.deliveryNotes}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {item.kitItems && item.kitItems.length > 0 ? (
+                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fff', borderRadius: 6, borderWidth: 1, borderColor: '#EEF2F6' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: theme.color.navy, marginBottom: 4 }}>
+                            Kit incluido ({item.kitItems.length} artículos):
+                          </Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {item.kitItems.map((k, i) => (
+                              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 120 }}>
+                                <MaterialIcons name="check" size={12} color={theme.color.success} />
+                                <Text style={{ fontSize: 11, color: theme.color.ink }}>{k}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ) : null}
+
+                      {item.extraItems && item.extraItems.length > 0 ? (
+                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#EFF6FF', borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: theme.color.navy, marginBottom: 4 }}>
+                            Materiales extras:
+                          </Text>
+                          {item.extraItems.map((ex, i) => (
+                            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, color: theme.color.ink }}>• {ex.name}</Text>
+                              <Text style={{ fontSize: 11, color: theme.color.navy, fontWeight: '700' }}>x{ex.quantity}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
               </View>
             ) : null}
           </View>
@@ -587,6 +642,11 @@ const styles = StyleSheet.create({
     color: theme.color.navy,
     fontSize: theme.font.size.lg,
     fontWeight: '800',
+  },
+  detailSubtitle: {
+    color: theme.color.muted,
+    fontSize: 12,
+    marginTop: 2,
   },
   detailRow: {
     flexDirection: 'row',
