@@ -20,6 +20,7 @@ import {
   RENTAL_TEACHER_ID,
   RENTAL_TEACHER_NAME,
   TOTAL_STATION_KIT_ITEMS,
+  generateLoanFolio,
   type CategoryGroup,
   type Equipment,
   type LoanExtraItem,
@@ -404,10 +405,12 @@ export function StudentCatalogPage() {
   const onSubmitCartOrder = async () => {
     if (!user || cartItems.length === 0) return;
     setSubmitting(true);
+    const orderFolio = generateLoanFolio();
     try {
       const created = await Promise.all(
         cartItems.map((c) =>
           createLoanRequest({
+            folio: orderFolio,
             labId: user.labId,
             equipmentId: c.equipment.id,
             equipmentName: c.equipment.name,
@@ -426,7 +429,7 @@ export function StudentCatalogPage() {
       );
 
       setCreatedCount(created.length);
-      setSuccessFolio(created.map((l) => `#${l.folio}`).join(', '));
+      setSuccessFolio(`#${orderFolio}`);
       setCartItems([]);
       setCartModalOpen(false);
       setSuccessOpen(true);
@@ -1174,9 +1177,7 @@ export function StudentCatalogPage() {
                 : 'Tu solicitud se registró correctamente.'}
             </Text>
             <View style={styles.folioBox}>
-              <Text style={styles.folioLabel}>
-                {createdCount > 1 ? 'Folios de solicitud' : 'Número de pedido'}
-              </Text>
+              <Text style={styles.folioLabel}>Folio de solicitud</Text>
               <Text style={styles.folioValue}>{successFolio ?? '—'}</Text>
             </View>
             <Button title="Entendido" onPress={() => setSuccessOpen(false)} style={{ marginTop: 16 }} />
