@@ -672,15 +672,16 @@ export function StudentCatalogPage() {
             styles.floatingPillContainer,
             compact && styles.floatingPillContainerCompact,
           ]}
-          pointerEvents="box-none"
         >
           <Pressable
             onPress={() => setCartModalOpen(true)}
             style={({ pressed }) => [
               styles.floatingCartPill,
+              compact && styles.floatingCartPillCompact,
               pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
             accessibilityRole="button"
+            accessibilityLabel={`Solicitar material, ${cartItems.length} seleccionados`}
           >
             <View style={styles.floatingPillIconWrap}>
               <MaterialIcons name="shopping-bag" size={18} color="#fff" />
@@ -916,8 +917,14 @@ export function StudentCatalogPage() {
           if (!submitting) setCartModalOpen(false);
         }}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.cartModalCard, { maxHeight: Math.min(680, height - 32) }]}>
+        <View style={[styles.modalBackdrop, compact && styles.modalBackdropCompact]}>
+          <View
+            style={[
+              styles.cartModalCard,
+              compact && styles.cartModalCardCompact,
+              { maxHeight: Math.min(680, height - (compact ? 24 : 32)) },
+            ]}
+          >
             <View style={styles.cartModalHead}>
               <View style={styles.cartModalIconWrap}>
                 <MaterialIcons name="shopping-bag" size={24} color={theme.color.navy} />
@@ -942,7 +949,7 @@ export function StudentCatalogPage() {
             </View>
 
             <ScrollView
-              style={{ maxHeight: '100%' }}
+              style={{ maxHeight: '100%', flexShrink: 1 }}
               contentContainerStyle={{ paddingBottom: 12 }}
               showsVerticalScrollIndicator={false}
             >
@@ -1036,20 +1043,25 @@ export function StudentCatalogPage() {
                 </View>
               </View>
 
-              <View style={styles.cartModalActions}>
+              <View
+                style={[
+                  styles.cartModalActions,
+                  compact && styles.cartModalActionsCompact,
+                ]}
+              >
                 <Button
                   title="Añadir más material"
                   variant="secondary"
-                  fullWidth={false}
-                  style={styles.modalBtn}
+                  fullWidth={compact}
+                  style={!compact && styles.modalBtn}
                   disabled={submitting}
                   onPress={() => setCartModalOpen(false)}
                 />
                 <Button
                   title={`Confirmar pedido (${cartItems.length})`}
                   loading={submitting}
-                  fullWidth={false}
-                  style={styles.modalBtn}
+                  fullWidth={compact}
+                  style={!compact && styles.modalBtn}
                   onPress={onSubmitCartOrder}
                 />
               </View>
@@ -1178,7 +1190,7 @@ export function StudentCatalogPage() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.canvas },
+  root: { flex: 1, backgroundColor: theme.color.canvas, position: 'relative' },
   content: { padding: 28, paddingBottom: 100 },
   headerRow: {
     flexDirection: 'row',
@@ -1347,6 +1359,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  modalBackdropCompact: {
+    padding: 12,
+  },
   modalCard: {
     width: '100%',
     maxWidth: 540,
@@ -1355,6 +1370,10 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: theme.color.line,
+  },
+  cartModalCardCompact: {
+    padding: 16,
+    borderRadius: 14,
   },
   modalTitle: {
     color: theme.color.navy,
@@ -1831,13 +1850,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 28,
-    zIndex: 99,
+    zIndex: 999,
   },
   floatingPillContainerCompact: {
     bottom: 16,
     right: 16,
     left: 16,
     alignItems: 'stretch',
+    zIndex: 999,
   },
   floatingCartPill: {
     flexDirection: 'row',
@@ -1845,8 +1865,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     backgroundColor: theme.color.navy,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
     borderRadius: 9999,
     shadowColor: '#0F294A',
     shadowOffset: { width: 0, height: 6 },
@@ -1855,6 +1875,12 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    cursor: 'pointer' as unknown as undefined,
+  },
+  floatingCartPillCompact: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    width: '100%',
   },
   floatingPillIconWrap: {
     position: 'relative',
@@ -2052,5 +2078,10 @@ const styles = StyleSheet.create({
   cartModalActions: {
     flexDirection: 'row',
     gap: 10,
+  },
+  cartModalActionsCompact: {
+    flexDirection: 'column-reverse',
+    gap: 8,
+    width: '100%',
   },
 });
