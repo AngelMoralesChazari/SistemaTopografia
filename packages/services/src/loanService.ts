@@ -80,7 +80,7 @@ export async function createLoanRequest(
   const db = getDb();
   const equipmentRef = doc(db, 'equipment', input.equipmentId);
   const loanRef = doc(collection(db, 'loans'));
-  const folio = generateLoanFolio();
+  const folio = input.folio || generateLoanFolio();
 
   await runTransaction(db, async (tx) => {
     const equipmentSnap = await tx.get(equipmentRef);
