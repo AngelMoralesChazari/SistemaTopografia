@@ -38,6 +38,7 @@ export type Loan = {
 };
 
 export type CreateLoanInput = {
+  folio?: string;
   labId: string;
   equipmentId: string;
   equipmentName: string;
@@ -67,6 +68,7 @@ export function generateLoanFolio(now = new Date()): string {
 
 export type RequestBatch = {
   id: string;
+  folio: string;
   studentId: string;
   studentName: string;
   studentNumber: string | null;
@@ -82,8 +84,8 @@ export const BATCH_TIME_GAP_MS = 60 * 1000; // 60 segundos entre solicitudes con
 export const BATCH_MAX_SPAN_MS = 8 * 60 * 1000; // 8 minutos máximo por lote
 
 /**
- * Agrupa préstamos de un mismo alumno solicitados en el mismo momento/sesión
- * evitando mostrar nombres duplicados fila por fila.
+ * Agrupa préstamos de un mismo alumno solicitados en el mismo momento/sesión o bajo el mismo folio
+ * evitando mostrar nombres duplicados y consolidando la solicitud global.
  */
 export function buildRequestBatches(
   loans: Loan[],
@@ -104,6 +106,17 @@ export function buildRequestBatches(
     const loanTime = loan.requestedAt ? new Date(loan.requestedAt).getTime() : 0;
 
     const match = batches.find((batch) => {
+      // 1. Si comparten exactamente el mismo folio de solicitud y estado, pertenecen al mismo lote
+      if (
+        Boolean(batch.folio) &&
+        Boolean(loan.folio) &&
+        batch.folio === loan.folio &&
+        batch.status === loan.status
+      ) {
+        return true;
+      }
+
+      // 2. Si son del mismo alumno y estado en el rango de tiempo de sesión (retrocompatibilidad)
       const sameStudent =
         (Boolean(batch.studentId) && Boolean(loan.studentId) && batch.studentId === loan.studentId) ||
         (Boolean(loan.studentName) &&
@@ -137,7 +150,8 @@ export function buildRequestBatches(
       }
     } else {
       batches.push({
-        id: loan.id,
+        id: loan.folio ? `batch-${loan.folio}-${loan.status}` : loan.id,
+        folio: loan.folio,
         studentId: loan.studentId,
         studentName: loan.studentName,
         studentNumber: loan.studentNumber,
