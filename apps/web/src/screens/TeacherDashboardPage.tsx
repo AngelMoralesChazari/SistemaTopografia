@@ -9,6 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import {
+  buildRequestBatches,
   getInitials,
   loanStatusLabel,
   type Loan,
@@ -85,14 +86,15 @@ export function TeacherDashboardPage() {
   }, [user]);
 
   const summary = useMemo(() => {
+    const batches = buildRequestBatches(loans);
     const students = new Set(loans.map((l) => l.studentId));
-    const pending = loans.filter((l) => l.status === 'pending' || l.status === 'approved').length;
-    const inProgress = loans.filter((l) => l.status === 'delivered').length;
-    const returned = loans.filter(
-      (l) => l.status === 'returned' || l.status === 'returned_late'
+    const pending = batches.filter((b) => b.status === 'pending' || b.status === 'approved').length;
+    const inProgress = batches.filter((b) => b.status === 'delivered').length;
+    const returned = batches.filter(
+      (b) => b.status === 'returned' || b.status === 'returned_late'
     ).length;
-    const overdue = loans.filter(isOverdue);
-    const rejected = loans.filter((l) => l.status === 'rejected').length;
+    const overdue = batches.filter((b) => b.loans.some(isOverdue));
+    const rejected = batches.filter((b) => b.status === 'rejected').length;
 
     const cards: Metric[] = [
       { key: 'students', label: 'Alumnos', value: students.size, icon: 'groups', tone: 'navy' },
@@ -106,8 +108,8 @@ export function TeacherDashboardPage() {
     return {
       cards,
       studentCount: students.size,
-      total: loans.length,
-      overdue,
+      total: batches.length,
+      overdue: overdue.flatMap((b) => b.loans),
       recent: loans.slice(0, 8),
     };
   }, [loans]);
