@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@lab-topo/config';
-import { isAdminRole, type Equipment, type Loan, type LoanType } from '@lab-topo/domain';
+import { buildRequestBatches, isAdminRole, type Equipment, type Loan, type LoanType } from '@lab-topo/domain';
 import { watchEquipment, watchLabLoans } from '@lab-topo/services';
 import { Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -84,14 +84,15 @@ export function MetricsPage() {
   }, [loans, period, typeFilter]);
 
   const overview = useMemo(() => {
-    const pending = scopedLoans.filter((l) => l.status === 'pending').length;
-    const delivered = scopedLoans.filter((l) => l.status === 'delivered').length;
-    const returned = scopedLoans.filter(
-      (l) => l.status === 'returned' || l.status === 'returned_late'
+    const batches = buildRequestBatches(scopedLoans);
+    const pending = batches.filter((b) => b.status === 'pending').length;
+    const delivered = batches.filter((b) => b.status === 'delivered').length;
+    const returned = batches.filter(
+      (b) => b.status === 'returned' || b.status === 'returned_late'
     ).length;
-    const rejected = scopedLoans.filter((l) => l.status === 'rejected').length;
-    const late = scopedLoans.filter((l) => l.status === 'returned_late').length;
-    return { total: scopedLoans.length, pending, delivered, returned, rejected, late };
+    const rejected = batches.filter((b) => b.status === 'rejected').length;
+    const late = batches.filter((b) => b.loans.some((l) => l.status === 'returned_late')).length;
+    return { total: batches.length, pending, delivered, returned, rejected, late };
   }, [scopedLoans]);
 
   const mostRequested = useMemo(() => {
