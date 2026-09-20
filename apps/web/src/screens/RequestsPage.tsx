@@ -71,7 +71,7 @@ function formatDate(value: string | null): string {
 }
 
 export function RequestsPage() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
   const scrollViewRef = useRef<ScrollView>(null);
   const detailCardY = useRef<number>(0);
@@ -91,6 +91,12 @@ export function RequestsPage() {
   const [isPerfectCondition, setIsPerfectCondition] = useState(true);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [deliverError, setDeliverError] = useState<string | null>(null);
+  const [materialsExpanded, setMaterialsExpanded] = useState(false);
+  const [deliverListExpanded, setDeliverListExpanded] = useState(false);
+
+  useEffect(() => {
+    setMaterialsExpanded(false);
+  }, [selectedId]);
 
   useEffect(() => {
     if (!user) return;
@@ -138,13 +144,13 @@ export function RequestsPage() {
   const selected = useMemo(() => selectedBatch?.loans[0] ?? null, [selectedBatch]);
 
   const kpis = useMemo(() => {
-    const pending = loans.filter((l) => l.status === 'pending').length;
-    const delivered = loans.filter((l) => l.status === 'delivered').length;
-    const overdue = loans.filter(
-      (l) => l.status === 'delivered' && l.dueAt && new Date(l.dueAt).getTime() < Date.now()
+    const pending = batches.filter((b) => b.status === 'pending').length;
+    const delivered = batches.filter((b) => b.status === 'delivered').length;
+    const overdue = batches.filter(
+      (b) => b.status === 'delivered' && b.dueAt && new Date(b.dueAt).getTime() < Date.now()
     ).length;
-    return { pending, delivered, overdue, total: loans.length };
-  }, [loans]);
+    return { pending, delivered, overdue, total: batches.length };
+  }, [batches]);
 
   const runAction = async (action: () => Promise<void>, okMessage: string) => {
     if (!user || !canManage) return;
@@ -268,7 +274,7 @@ export function RequestsPage() {
                   <View style={styles.rowTopBar}>
                     <View style={styles.rowFolioWrap}>
                       <Text style={styles.rowFolio}>
-                        {isMulti
+                        {isMulti && !batch.loans.every((l) => l.folio === batch.loans[0].folio)
                           ? `#${batch.loans[0].folio} (+${batch.loans.length - 1})`
                           : `#${batch.loans[0].folio}`}
                       </Text>
@@ -291,38 +297,31 @@ export function RequestsPage() {
                     {batch.studentName}
                   </Text>
 
-                  {/* Indicador de cantidad si es un pedido con múltiples materiales */}
-                  {isMulti && (
-                    <View style={styles.batchPillRow}>
-                      <View style={styles.batchCountPill}>
-                        <MaterialIcons name="layers" size={12} color={theme.color.navy} />
-                        <Text style={styles.batchCountPillText}>
-                          {batch.loans.length} materiales solicitados
+                  {/* Resumen compacto de materiales en cola */}
+                  <View style={styles.rowCompactLine}>
+                    {isMulti ? (
+                      <View style={styles.rowCompactBadgeWrap}>
+                        <View style={styles.batchCountPill}>
+                          <MaterialIcons name="layers" size={12} color={theme.color.navy} />
+                          <Text style={styles.batchCountPillText}>
+                            {batch.loans.length} materiales
+                          </Text>
+                        </View>
+                        <Text style={styles.rowCompactSnippet} numberOfLines={1}>
+                          {batch.loans[0].equipmentName} +{batch.loans.length - 1} más
                         </Text>
                       </View>
-                    </View>
-                  )}
-
-                  {/* Resumen de materiales abarcados en este pedido */}
-                  <View style={styles.rowMaterialsList}>
-                    {batch.loans.map((loan) => (
-                      <View key={loan.id} style={styles.rowMaterialItem}>
-                        <MaterialIcons
-                          name="arrow-right"
-                          size={15}
-                          color={active ? theme.color.navy : theme.color.muted}
-                        />
-                        <Text style={styles.rowMaterialText} numberOfLines={1}>
-                          <Text style={{ fontWeight: '600', color: theme.color.ink }}>
-                            {loan.equipmentName}
-                          </Text>
-                          {' · '}
-                          <Text style={{ color: theme.color.muted, fontSize: 12 }}>
-                            {loan.equipmentCode}
-                          </Text>
+                    ) : (
+                      <Text style={styles.rowCompactSnippet} numberOfLines={1}>
+                        <Text style={{ fontWeight: '600', color: theme.color.ink }}>
+                          {batch.loans[0].equipmentName}
                         </Text>
-                      </View>
-                    ))}
+                        {' · '}
+                        <Text style={{ color: theme.color.muted, fontSize: 12 }}>
+                          {batch.loans[0].equipmentCode}
+                        </Text>
+                      </Text>
+                    )}
                   </View>
 
                   <Text style={styles.rowMeta} numberOfLines={1}>
@@ -389,13 +388,11 @@ export function RequestsPage() {
               <View style={styles.detailHead}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.detailFolio}>
-                    {selectedBatch.loans.length > 1
-                      ? `Pedido (${selectedBatch.loans.length} materiales)`
-                      : `#${selectedBatch.loans[0].folio}`}
+                    #{selectedBatch.loans[0].folio}
                   </Text>
                   {selectedBatch.loans.length > 1 && (
                     <Text style={styles.detailFolioSub}>
-                      Folios: {selectedBatch.loans.map((l) => `#${l.folio}`).join(', ')}
+                      Solicitud global con {selectedBatch.loans.length} materiales solicitados
                     </Text>
                   )}
                 </View>
@@ -420,69 +417,123 @@ export function RequestsPage() {
                 </View>
               ))}
 
-              <View style={styles.batchSectionHead}>
-                <Text style={styles.batchSectionTitle}>
-                  Materiales solicitados ({selectedBatch.loans.length}):
-                </Text>
-              </View>
+              <Pressable
+                onPress={() => setMaterialsExpanded((prev) => !prev)}
+                style={styles.batchAccordionHeader}
+                accessibilityRole="button"
+                accessibilityLabel="Alternar visualización de materiales"
+              >
+                <View style={styles.batchAccordionTitleWrap}>
+                  <MaterialIcons
+                    name="inventory-2"
+                    size={18}
+                    color={theme.color.navy}
+                  />
+                  <Text style={styles.batchSectionTitle}>
+                    Materiales solicitados ({selectedBatch.loans.length})
+                  </Text>
+                </View>
+                <View style={styles.accordionToggleBadge}>
+                  <Text style={styles.accordionToggleBadgeText}>
+                    {materialsExpanded ? 'Ocultar' : 'Ver detalle'}
+                  </Text>
+                  <MaterialIcons
+                    name={materialsExpanded ? 'expand-less' : 'expand-more'}
+                    size={18}
+                    color={theme.color.navy}
+                  />
+                </View>
+              </Pressable>
 
-              {selectedBatch.loans.map((item, idx) => (
-                <View key={item.id} style={styles.batchItemCard}>
-                  <View style={styles.batchItemHeader}>
-                    <View style={styles.batchItemNumberWrap}>
-                      <Text style={styles.batchItemNumber}>{idx + 1}</Text>
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.batchItemName}>{item.equipmentName}</Text>
-                      <Text style={styles.batchItemMeta}>
-                        Código: {item.equipmentCode} · Folio #{item.folio}
-                      </Text>
-                    </View>
+              {!materialsExpanded ? (
+                <Pressable
+                  onPress={() => setMaterialsExpanded(true)}
+                  style={styles.materialsCompactCard}
+                >
+                  <View style={styles.materialsCompactTop}>
+                    <MaterialIcons name="touch-app" size={15} color={theme.color.navy} />
+                    <Text style={styles.materialsCompactPrompt}>
+                      Toca aquí para ver los {selectedBatch.loans.length} equipos con sus kits y accesorios
+                    </Text>
                   </View>
-
-                  {item.kitItems && item.kitItems.length > 0 ? (
-                    <View style={styles.kitBox}>
-                      <Text style={styles.kitBoxTitle}>
-                        Kit incluido ({item.kitItems.length} artículos):
+                  {/* <View style={styles.materialsCompactList}>
+                    {selectedBatch.loans.slice(0, 3).map((l, i) => (
+                      <View key={l.id} style={styles.materialsCompactRow}>
+                        <Text style={styles.materialsCompactIndex}>{i + 1}.</Text>
+                        <Text style={styles.materialsCompactName} numberOfLines={1}>
+                          {l.equipmentName}{' '}
+                          <Text style={{ color: theme.color.muted, fontSize: 11 }}>
+                            ({l.equipmentCode})
+                          </Text>
+                        </Text>
+                      </View>
+                    ))}
+                    {selectedBatch.loans.length > 3 && (
+                      <Text style={styles.materialsCompactMore}>
+                        + {selectedBatch.loans.length - 3} materiales más en este pedido...
                       </Text>
-                      <View style={styles.kitBoxGrid}>
-                        {item.kitItems.map((k, i) => (
-                          <View key={i} style={styles.kitItemRow}>
-                            <MaterialIcons name="check" size={13} color={theme.color.success} />
-                            <Text style={styles.kitItemText}>{k}</Text>
+                    )}
+                  </View> */}
+                </Pressable>
+              ) : (
+                selectedBatch.loans.map((item, idx) => (
+                  <View key={item.id} style={styles.batchItemCard}>
+                    <View style={styles.batchItemHeader}>
+                      <View style={styles.batchItemNumberWrap}>
+                        <Text style={styles.batchItemNumber}>{idx + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.batchItemName}>{item.equipmentName}</Text>
+                        <Text style={styles.batchItemMeta}>
+                          Código: {item.equipmentCode} · Folio #{item.folio}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {item.kitItems && item.kitItems.length > 0 ? (
+                      <View style={styles.kitBox}>
+                        <Text style={styles.kitBoxTitle}>
+                          Kit incluido ({item.kitItems.length} artículos):
+                        </Text>
+                        <View style={styles.kitBoxGrid}>
+                          {item.kitItems.map((k, i) => (
+                            <View key={i} style={styles.kitItemRow}>
+                              <MaterialIcons name="check" size={13} color={theme.color.success} />
+                              <Text style={styles.kitItemText}>{k}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {item.extraItems && item.extraItems.length > 0 ? (
+                      <View style={styles.extraBox}>
+                        <Text style={styles.extraBoxTitle}>Materiales extras solicitados:</Text>
+                        {item.extraItems.map((ex, i) => (
+                          <View key={i} style={styles.extraRow}>
+                            <Text style={styles.extraName}>
+                              • {ex.name} ({ex.internalCode})
+                            </Text>
+                            <Text style={styles.extraQty}>Cant: {ex.quantity}</Text>
                           </View>
                         ))}
                       </View>
-                    </View>
-                  ) : null}
+                    ) : null}
 
-                  {item.extraItems && item.extraItems.length > 0 ? (
-                    <View style={styles.extraBox}>
-                      <Text style={styles.extraBoxTitle}>Materiales extras solicitados:</Text>
-                      {item.extraItems.map((ex, i) => (
-                        <View key={i} style={styles.extraRow}>
-                          <Text style={styles.extraName}>
-                            • {ex.name} ({ex.internalCode})
-                          </Text>
-                          <Text style={styles.extraQty}>Cant: {ex.quantity}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  {item.deliveryNotes ? (
-                    <View style={styles.notesBox}>
-                      <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
-                      <Text style={styles.notesBoxText}>{item.deliveryNotes}</Text>
-                    </View>
-                  ) : item.status === 'delivered' ? (
-                    <View style={styles.notesBox}>
-                      <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
-                      <Text style={styles.notesBoxText}>Sin observaciones (perfecto estado)</Text>
-                    </View>
-                  ) : null}
-                </View>
-              ))}
+                    {item.deliveryNotes ? (
+                      <View style={styles.notesBox}>
+                        <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
+                        <Text style={styles.notesBoxText}>{item.deliveryNotes}</Text>
+                      </View>
+                    ) : item.status === 'delivered' ? (
+                      <View style={styles.notesBox}>
+                        <Text style={styles.notesBoxLabel}>Estado al entregar:</Text>
+                        <Text style={styles.notesBoxText}>Sin observaciones (perfecto estado)</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))
+              )}
 
               {canManage && (selectedBatch.status === 'pending' || selectedBatch.status === 'approved') ? (
                 <View style={styles.actions}>
@@ -508,6 +559,7 @@ export function RequestsPage() {
                         setIsPerfectCondition(true);
                         setDeliveryNotes('');
                         setDeliverError(null);
+                        setDeliverListExpanded(false);
                       }}
                     />
                     {selectedBatch.status === 'pending' ? (
@@ -683,151 +735,212 @@ export function RequestsPage() {
         onRequestClose={() => setDeliverModalOpen(false)}
       >
         <View style={[styles.modalBackdrop, isMobile && { padding: 12 }]}>
-          <View style={[styles.modalCard, isMobile && styles.modalCardMobile]}>
+          <View
+            style={[
+              styles.modalCard,
+              isMobile && styles.modalCardMobile,
+              { maxHeight: Math.min(680, height - (isMobile ? 24 : 48)) },
+            ]}
+          >
+            {/* Header fijo */}
             <View style={styles.modalHeaderRow}>
               <View style={styles.modalIconWrap}>
                 <MaterialIcons name="assignment-turned-in" size={24} color={theme.color.navy} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Verificación y entrega de equipo</Text>
-                <Text style={styles.modalSubtitle}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  Verificación y entrega
+                </Text>
+                <Text style={styles.modalSubtitle} numberOfLines={2}>
                   Registra el estado del material para proteger al alumno de desperfectos previos.
                 </Text>
               </View>
+              <Pressable
+                onPress={() => setDeliverModalOpen(false)}
+                style={styles.modalCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar modal"
+              >
+                <MaterialIcons name="close" size={20} color={theme.color.muted} />
+              </Pressable>
             </View>
 
-            {selectedBatch ? (
-              <View style={styles.summaryBox}>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Alumno receptor</Text>
-                  <Text style={styles.summaryValue}>
-                    {selectedBatch.studentName}
-                    {selectedBatch.studentNumber ? ` (${selectedBatch.studentNumber})` : ''}
-                  </Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Profesor</Text>
-                  <Text style={styles.summaryValue}>{selectedBatch.teacherName}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total materiales</Text>
-                  <Text style={[styles.summaryValue, { color: theme.color.navy, fontWeight: '800' }]}>
-                    {selectedBatch.loans.length}{' '}
-                    {selectedBatch.loans.length === 1 ? 'material' : 'materiales'}
-                  </Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Fecha límite</Text>
-                  <Text style={styles.summaryValue}>{dueDate}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.summaryRow,
-                    styles.summaryRowLast,
-                    { flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
-                  ]}
-                >
-                  <Text style={styles.summaryLabel}>Lista a entregar:</Text>
-                  {selectedBatch.loans.map((loan, idx) => (
-                    <Text
-                      key={loan.id}
-                      style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600' }}
-                    >
-                      {idx + 1}. {loan.equipmentName} ({loan.equipmentCode}) · #{loan.folio}
+            {/* Cuerpo con scroll independiente */}
+            <ScrollView
+              style={styles.modalScrollBody}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {selectedBatch ? (
+                <View style={styles.summaryBox}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Alumno receptor</Text>
+                    <Text style={styles.summaryValue}>
+                      {selectedBatch.studentName}
+                      {selectedBatch.studentNumber ? ` (${selectedBatch.studentNumber})` : ''}
                     </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Profesor</Text>
+                    <Text style={styles.summaryValue}>{selectedBatch.teacherName}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Total materiales</Text>
+                    <Text style={[styles.summaryValue, { color: theme.color.navy, fontWeight: '800' }]}>
+                      {selectedBatch.loans.length}{' '}
+                      {selectedBatch.loans.length === 1 ? 'material' : 'materiales'}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Fecha límite</Text>
+                    <Text style={styles.summaryValue}>{dueDate}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setDeliverListExpanded((v) => !v)}
+                    style={[
+                      styles.summaryRow,
+                      !deliverListExpanded && styles.summaryRowLast,
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 10,
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={styles.summaryLabel}>Lista a entregar:</Text>
+                      <Text
+                        style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600', marginTop: 2 }}
+                        numberOfLines={1}
+                      >
+                        {selectedBatch.loans.length} equipos · {selectedBatch.loans[0].equipmentName}
+                        {selectedBatch.loans.length > 1 ? ` (+${selectedBatch.loans.length - 1} más)` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.modalListToggleBadge}>
+                      <Text style={styles.modalListToggleBadgeText}>
+                        {deliverListExpanded ? 'Ocultar' : 'Ver lista'}
+                      </Text>
+                      <MaterialIcons
+                        name={deliverListExpanded ? 'expand-less' : 'expand-more'}
+                        size={16}
+                        color={theme.color.navy}
+                      />
+                    </View>
+                  </Pressable>
+
+                  {deliverListExpanded && (
+                    <View style={styles.modalExpandedListContainer}>
+                      {selectedBatch.loans.map((loan, idx) => (
+                        <View key={loan.id} style={styles.modalExpandedListRow}>
+                          <Text style={styles.modalExpandedListNum}>{idx + 1}.</Text>
+                          <Text style={styles.modalExpandedListText}>
+                            <Text style={{ fontWeight: '700', color: theme.color.ink }}>
+                              {loan.equipmentName}
+                            </Text>{' '}
+                            <Text style={{ color: theme.color.muted, fontSize: 11 }}>
+                              ({loan.equipmentCode}) · #{loan.folio}
+                            </Text>
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
+              {deliverError ? (
+                <View style={{ marginBottom: 12 }}>
+                  <Notice tone="danger" title="Atención" description={deliverError} />
+                </View>
+              ) : null}
+
+              {/* Checkbox Perfecto Estado */}
+              <Pressable
+                onPress={() => {
+                  const next = !isPerfectCondition;
+                  setIsPerfectCondition(next);
+                  if (next) {
+                    setDeliverError(null);
+                  }
+                }}
+                style={[styles.checkRow, isPerfectCondition && styles.checkRowActive]}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isPerfectCondition }}
+              >
+                <MaterialIcons
+                  name={isPerfectCondition ? 'check-box' : 'check-box-outline-blank'}
+                  size={24}
+                  color={isPerfectCondition ? theme.color.success : theme.color.muted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.checkLabel, isPerfectCondition && styles.checkLabelActive]}>
+                    Equipo en perfecto estado
+                  </Text>
+                  <Text style={styles.checkHint}>
+                    Sin rayones, roturas, manchas ni fallas previas. Entrega directa sin detalles.
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Quick chips para observaciones comunes */}
+              <View style={styles.quickChipsSection}>
+                <Text style={styles.quickChipsTitle}>
+                  Observaciones rápidas (desmarca "perfecto estado"):
+                </Text>
+                <View style={styles.chipsRow}>
+                  {[
+                    'Rayones leves',
+                    'Desgaste estético',
+                    'Manchas en estuche/equipo',
+                    'Rotura o fisura menor',
+                    'Tornillos/piezas flojas',
+                  ].map((chip) => (
+                    <Pressable
+                      key={chip}
+                      style={styles.chip}
+                      onPress={() => {
+                        setIsPerfectCondition(false);
+                        setDeliveryNotes((prev) => {
+                          const trimmed = prev.trim();
+                          if (!trimmed) return chip;
+                          if (trimmed.includes(chip)) return trimmed;
+                          return `${trimmed}, ${chip}`;
+                        });
+                      }}
+                    >
+                      <MaterialIcons name="add" size={14} color={theme.color.navy} />
+                      <Text style={styles.chipText}>{chip}</Text>
+                    </Pressable>
                   ))}
                 </View>
               </View>
-            ) : null}
 
-            {deliverError ? (
-              <View style={{ marginBottom: 12 }}>
-                <Notice tone="danger" title="Atención" description={deliverError} />
-              </View>
-            ) : null}
-
-            {/* Checkbox Perfecto Estado */}
-            <Pressable
-              onPress={() => {
-                const next = !isPerfectCondition;
-                setIsPerfectCondition(next);
-                if (next) {
-                  setDeliverError(null);
-                }
-              }}
-              style={[styles.checkRow, isPerfectCondition && styles.checkRowActive]}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isPerfectCondition }}
-            >
-              <MaterialIcons
-                name={isPerfectCondition ? 'check-box' : 'check-box-outline-blank'}
-                size={24}
-                color={isPerfectCondition ? theme.color.success : theme.color.muted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.checkLabel, isPerfectCondition && styles.checkLabelActive]}>
-                  Equipo en perfecto estado
+              {/* Textarea de Observaciones */}
+              <View style={styles.notesBlock}>
+                <Text style={styles.fieldLabel}>
+                  Observaciones o desperfectos observados {!isPerfectCondition ? '(requerido)' : '(opcional)'}
                 </Text>
-                <Text style={styles.checkHint}>
-                  Sin rayones, roturas, manchas ni fallas previas. Entrega directa sin detalles.
-                </Text>
-              </View>
-            </Pressable>
-
-            {/* Quick chips para observaciones comunes */}
-            <View style={styles.quickChipsSection}>
-              <Text style={styles.quickChipsTitle}>
-                Observaciones rápidas (desmarca "perfecto estado"):
-              </Text>
-              <View style={styles.chipsRow}>
-                {[
-                  'Rayones leves',
-                  'Desgaste estético',
-                  'Manchas en estuche/equipo',
-                  'Rotura o fisura menor',
-                  'Tornillos/piezas flojas',
-                ].map((chip) => (
-                  <Pressable
-                    key={chip}
-                    style={styles.chip}
-                    onPress={() => {
+                <TextInput
+                  value={deliveryNotes}
+                  onChangeText={(text) => {
+                    setDeliveryNotes(text);
+                    if (text.trim().length > 0) {
                       setIsPerfectCondition(false);
-                      setDeliveryNotes((prev) => {
-                        const trimmed = prev.trim();
-                        if (!trimmed) return chip;
-                        if (trimmed.includes(chip)) return trimmed;
-                        return `${trimmed}, ${chip}`;
-                      });
-                    }}
-                  >
-                    <MaterialIcons name="add" size={14} color={theme.color.navy} />
-                    <Text style={styles.chipText}>{chip}</Text>
-                  </Pressable>
-                ))}
+                    }
+                  }}
+                  placeholder="Ej. Rayones en la base, estuche manchado, pequeña fisura en perilla..."
+                  placeholderTextColor={theme.color.muted}
+                  multiline
+                  numberOfLines={3}
+                  style={styles.textArea}
+                />
               </View>
-            </View>
+            </ScrollView>
 
-            {/* Textarea de Observaciones */}
-            <View style={styles.notesBlock}>
-              <Text style={styles.fieldLabel}>
-                Observaciones o desperfectos observados {!isPerfectCondition ? '(requerido)' : '(opcional)'}
-              </Text>
-              <TextInput
-                value={deliveryNotes}
-                onChangeText={(text) => {
-                  setDeliveryNotes(text);
-                  if (text.trim().length > 0) {
-                    setIsPerfectCondition(false);
-                  }
-                }}
-                placeholder="Ej. Rayones en la base, estuche manchado, pequeña fisura en perilla..."
-                placeholderTextColor={theme.color.muted}
-                multiline
-                numberOfLines={3}
-                style={styles.textArea}
-              />
-            </View>
-
+            {/* Footer con botones de acción fijo abajo */}
             <View style={styles.modalActions}>
               <Button
                 title="Cancelar"
@@ -1069,6 +1182,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  rowCompactLine: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  rowCompactBadgeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  rowCompactSnippet: {
+    fontSize: theme.font.size.sm,
+    color: theme.color.muted,
+    flexShrink: 1,
+  },
   rowName: { color: theme.color.ink, fontSize: theme.font.size.lg, fontWeight: '700', marginTop: 2 },
   rowMaterialsList: {
     marginTop: 4,
@@ -1125,6 +1253,86 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EDF0F3',
     paddingBottom: 6,
+  },
+  batchAccordionHeader: {
+    marginTop: 14,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+    paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  batchAccordionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  accordionToggleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  accordionToggleBadgeText: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  materialsCompactCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+  },
+  materialsCompactTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  materialsCompactPrompt: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.color.navy,
+    flex: 1,
+  },
+  materialsCompactList: {
+    gap: 3,
+    paddingLeft: 4,
+  },
+  materialsCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  materialsCompactIndex: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.color.navy,
+    width: 16,
+  },
+  materialsCompactName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.color.ink,
+    flex: 1,
+  },
+  materialsCompactMore: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.color.muted,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   batchSectionTitle: {
     color: theme.color.navy,
@@ -1248,7 +1456,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   modalCardMobile: {
-    padding: 16,
+    padding: 0,
+    borderRadius: 12,
   },
   actions: { marginTop: 16, gap: 10 },
   fieldLabel: {
@@ -1279,40 +1488,65 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 16,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 540,
     backgroundColor: theme.color.surface,
     borderRadius: 14,
-    padding: 24,
+    padding: 0,
     borderWidth: 1,
     borderColor: theme.color.line,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0F3',
+    backgroundColor: '#fff',
   },
   modalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.color.infoSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     color: theme.color.navy,
-    fontSize: theme.font.size.xl,
+    fontSize: theme.font.size.lg,
     fontWeight: '800',
   },
   modalSubtitle: {
-    marginTop: 4,
+    marginTop: 2,
     color: theme.color.muted,
-    fontSize: theme.font.size.sm,
+    fontSize: theme.font.size.xs,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    marginLeft: 6,
+  },
+  modalScrollBody: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
   summaryBox: {
     borderWidth: 1,
@@ -1338,6 +1572,44 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.sm,
     fontWeight: '700',
     textAlign: 'right',
+  },
+  modalListToggleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  modalListToggleBadgeText: {
+    color: theme.color.navy,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modalExpandedListContainer: {
+    paddingTop: 6,
+    paddingBottom: 8,
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF0F3',
+  },
+  modalExpandedListRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    paddingVertical: 2,
+  },
+  modalExpandedListNum: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.color.navy,
+    width: 18,
+  },
+  modalExpandedListText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.color.ink,
   },
   checkRow: {
     flexDirection: 'row',
@@ -1414,7 +1686,11 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     gap: 10,
-    justifyContent: 'flex-end',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF0F3',
+    backgroundColor: '#FAFCFF',
   },
   modalBtn: {
     flex: 1,
