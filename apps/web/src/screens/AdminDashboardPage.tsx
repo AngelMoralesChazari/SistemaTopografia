@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
-import { isAdminRole, type Loan } from '@lab-topo/domain';
+import { buildRequestBatches, isAdminRole, type Loan } from '@lab-topo/domain';
 import { watchEquipment, watchLabLoans, watchLabUsers } from '@lab-topo/services';
 import { Notice } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
@@ -82,19 +82,21 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
     };
   }, [user]);
 
+  const batches = useMemo(() => buildRequestBatches(loans), [loans]);
+
   const kpis = useMemo(() => {
-    const pending = loans.filter((l) => l.status === 'pending').length;
-    const delivered = loans.filter((l) => l.status === 'delivered').length;
-    const overdue = loans.filter(
-      (l) => l.status === 'delivered' && l.dueAt && new Date(l.dueAt).getTime() < Date.now()
+    const pending = batches.filter((b) => b.status === 'pending').length;
+    const delivered = batches.filter((b) => b.status === 'delivered').length;
+    const overdue = batches.filter(
+      (b) => b.status === 'delivered' && b.dueAt && new Date(b.dueAt).getTime() < Date.now()
     ).length;
-    const rejected = loans.filter((l) => l.status === 'rejected').length;
-    const returned = loans.filter(
-      (l) => l.status === 'returned' || l.status === 'returned_late'
+    const rejected = batches.filter((b) => b.status === 'rejected').length;
+    const returned = batches.filter(
+      (b) => b.status === 'returned' || b.status === 'returned_late'
     ).length;
-    const rental = loans.filter((l) => l.loanType === 'rental').length;
-    return { pending, delivered, overdue, rejected, returned, rental, total: loans.length };
-  }, [loans]);
+    const rental = batches.filter((b) => b.loans.some((l) => l.loanType === 'rental')).length;
+    return { pending, delivered, overdue, rejected, returned, rental, total: batches.length };
+  }, [batches]);
 
   const topRequested = useMemo(() => {
     const map = new Map<string, { label: string; sublabel: string; value: number }>();
