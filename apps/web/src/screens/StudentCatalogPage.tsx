@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -713,6 +714,16 @@ export function StudentCatalogPage() {
                 Revisa el material y el plazo de devolución antes de añadirlo.
               </Text>
 
+              {selectedEquipment?.photoUrl ? (
+                <View style={styles.modalPhotoWrap}>
+                  <Image
+                    source={{ uri: selectedEquipment.photoUrl }}
+                    style={styles.modalPhotoImg}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : null}
+
               <View style={styles.summaryBox}>
                 {[
                   ['Material', selectedEquipment?.name ?? '—'],
@@ -962,6 +973,17 @@ export function StudentCatalogPage() {
                     <View style={styles.cartItemCardHead}>
                       <View style={styles.cartItemIndex}>
                         <Text style={styles.cartItemIndexText}>{index + 1}</Text>
+                      </View>
+                      <View style={styles.cartItemThumb}>
+                        {c.equipment.photoUrl ? (
+                          <Image
+                            source={{ uri: c.equipment.photoUrl }}
+                            style={styles.cartItemThumbImg}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <MaterialIcons name="photo-camera" size={14} color="#94A3B8" />
+                        )}
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.cartItemName} numberOfLines={1}>
@@ -2084,5 +2106,36 @@ const styles = StyleSheet.create({
     flexDirection: 'column-reverse',
     gap: 8,
     width: '100%',
+  },
+  modalPhotoWrap: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalPhotoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  cartItemThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cartItemThumbImg: {
+    width: '100%',
+    height: '100%',
   },
 });
