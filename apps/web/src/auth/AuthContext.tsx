@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       },
       (err) => {
-        setError(err.message);
+        setError(mapAuthError(err.message));
         setLoading(false);
       }
     );
@@ -113,6 +113,13 @@ export function useAuth(): AuthContextValue {
 
 function mapAuthError(raw: string): string {
   console.warn('[Auth Error Detail]:', raw);
+  if (
+    raw.includes('auth/network-request-failed') ||
+    raw.includes('network-request-failed') ||
+    raw.includes('Failed to fetch')
+  ) {
+    return 'Error de conexión con el servidor. Revisa tu conexión a internet o intenta de nuevo.';
+  }
   if (raw.includes('auth/invalid-credential') || raw.includes('auth/wrong-password')) {
     return 'Correo o contraseña incorrectos.';
   }

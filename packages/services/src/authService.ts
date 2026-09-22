@@ -54,16 +54,39 @@ export function extractStudentIdFromEmail(email: string): string | null {
   return null;
 }
 
-async function loadUserProfile(user: User): Promise<AppUser> {
+function isTransientNetworkError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('auth/network-request-failed') ||
+    message.includes('network-request-failed') ||
+    message.includes('Failed to fetch') ||
+    message.includes('NetworkError') ||
+    message.includes('offline') ||
+    message.includes('unavailable') ||
+    message.includes('timeout')
+  );
+}
+
+async function loadUserProfile(user: User, forceRefresh: boolean = false): Promise<AppUser> {
   let token;
   try {
-    token = await user.getIdTokenResult(true);
+    token = await user.getIdTokenResult(forceRefresh);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('auth/user-token-expired') || message.includes('auth/id-token-expired')) {
-      throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+    // Si falló por red con forceRefresh, intentar rescatar con el token en caché local
+    if (forceRefresh) {
+      try {
+        token = await user.getIdTokenResult(false);
+      } catch {
+        // continuar a manejo de error
+      }
     }
-    throw error instanceof Error ? error : new Error(message);
+    if (!token) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('auth/user-token-expired') || message.includes('auth/id-token-expired')) {
+        throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+      }
+      throw error instanceof Error ? error : new Error(message);
+    }
   }
 
   let data: Record<string, unknown> | undefined;
@@ -248,27 +271,52 @@ export function watchAuth(
   onChange: (user: AppUser | null) => void,
   onError?: (error: Error) => void
 ): () => void {
+  let currentUserProfile: AppUser | null = null;
+
   return onAuthStateChanged(
     getFirebaseAuth(),
     async (firebaseUser) => {
       try {
         if (!firebaseUser) {
+          currentUserProfile = null;
           onChange(null);
           return;
         }
-        const profile = await loadUserProfile(firebaseUser);
+        const profile = await loadUserProfile(firebaseUser, false);
+        currentUserProfile = profile;
         onChange(profile);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        // Si es un error transitorio de red / microcorte / reposo del navegador
+        if (isTransientNetworkError(error)) {
+          console.warn('[watchAuth] Error transitorio de red al verificar sesión:', message);
+          // Si el usuario ya tenía su sesión iniciada, NO lo expulsamos ni cerramos sesión
+          if (currentUserProfile) {
+            return;
+          }
+          // Si es carga en frío inicial sin red, emitimos el error sin forzar sign out
+          onError?.(error instanceof Error ? error : new Error(message));
+          return;
+        }
+
         onError?.(error instanceof Error ? error : new Error('Error de sesión'));
         try {
           await firebaseSignOut(getFirebaseAuth());
         } catch {
           // ignore
         }
+        currentUserProfile = null;
         onChange(null);
       }
     },
-    (error) => onError?.(error)
+    (error) => {
+      if (isTransientNetworkError(error)) {
+        console.warn('[watchAuth] Error transitorio de red en onAuthStateChanged:', error);
+        return;
+      }
+      onError?.(error);
+    }
   );
 }
 
@@ -276,5 +324,5 @@ export function watchAuth(
 export async function refreshCurrentUser(): Promise<AppUser | null> {
   const user = getFirebaseAuth().currentUser;
   if (!user) return null;
-  return loadUserProfile(user);
+  return loadUserProfile(user, true);
 }
