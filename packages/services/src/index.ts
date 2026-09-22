@@ -24,6 +24,10 @@ export {
   setEquipmentStatus,
 } from './equipmentService';
 export {
+  uploadEquipmentPhoto,
+  deleteEquipmentPhotoByUrl,
+} from './storageService';
+export {
   listTeachers,
   watchLabUsers,
   createTeacher,
