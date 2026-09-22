@@ -1,0 +1,6 @@
+# Permitir a todos los motores de búsqueda rastrear el sitio
+User-agent: *
+Allow: /
+
+# Ubicación del mapa del sitio
+Sitemap: https://sistema-topografia.vercel.app/sitemap.xml
