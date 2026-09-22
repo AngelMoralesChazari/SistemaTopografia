@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -24,6 +25,7 @@ import {
 import {
   createEquipment,
   updateEquipment,
+  uploadEquipmentPhoto,
   watchEquipment,
   writeAuditLog,
 } from '@lab-topo/services';
@@ -32,6 +34,7 @@ import { useAuth } from '../auth/AuthContext';
 import { FilterChips } from '../components/FilterChips';
 import { ListPagination } from '../components/ListPagination';
 import { paginate } from '../lib/pagination';
+import { formatFileSize, optimizeImageForUpload } from '../lib/imageOptimizer';
 
 function statusTone(status: EquipmentStatus): BadgeTone {
   switch (status) {
@@ -100,6 +103,10 @@ export function ManageEquipmentPage() {
   const [newCategoryName, setNewCategoryName] = useState('Topografía');
   const [newQtyTotal, setNewQtyTotal] = useState('1');
   const [newNotes, setNewNotes] = useState('');
+  const [newPhotoBlob, setNewPhotoBlob] = useState<Blob | null>(null);
+  const [newPhotoPreview, setNewPhotoPreview] = useState<string | null>(null);
+  const [newPhotoOptimizedInfo, setNewPhotoOptimizedInfo] = useState<string | null>(null);
+  const [newPhotoProcessing, setNewPhotoProcessing] = useState(false);
 
   // Modal Edición de equipo
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
@@ -115,6 +122,11 @@ export function ManageEquipmentPage() {
   const [editActive, setEditActive] = useState(true);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editPhotoUrl, setEditPhotoUrl] = useState<string | null>(null);
+  const [editPendingPhotoBlob, setEditPendingPhotoBlob] = useState<Blob | null>(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
+  const [editPhotoOptimizedInfo, setEditPhotoOptimizedInfo] = useState<string | null>(null);
+  const [editPhotoProcessing, setEditPhotoProcessing] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -225,13 +237,89 @@ export function ManageEquipmentPage() {
     setEditStatus(item.status);
     setEditNotes(item.notes ?? '');
     setEditActive(item.active !== false);
+    setEditPhotoUrl(item.photoUrl ?? null);
+    setEditPendingPhotoBlob(null);
+    setEditPhotoPreview(item.photoUrl ?? null);
+    setEditPhotoOptimizedInfo(null);
+    setEditPhotoProcessing(false);
     setEditError(null);
   };
 
   const closeEditModal = () => {
     if (editSaving) return;
     setEditingItem(null);
+    setEditPendingPhotoBlob(null);
+    setEditPhotoPreview(null);
+    setEditPhotoOptimizedInfo(null);
+    setEditPhotoProcessing(false);
     setEditError(null);
+  };
+
+  const pickEditImage = () => {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
+      setEditPhotoProcessing(true);
+      try {
+        const result = await optimizeImageForUpload(file);
+        setEditPendingPhotoBlob(result.blob);
+        const previewUrl = URL.createObjectURL(result.blob);
+        setEditPhotoPreview(previewUrl);
+        setEditPhotoOptimizedInfo(
+          `Optimizada: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.optimizedSize)} (-${result.reductionPercentage}%)`
+        );
+      } catch (err) {
+        setEditError(err instanceof Error ? err.message : 'Error al procesar la imagen.');
+      } finally {
+        setEditPhotoProcessing(false);
+      }
+    };
+    input.click();
+  };
+
+  const removeEditPhoto = () => {
+    setEditPhotoUrl(null);
+    setEditPendingPhotoBlob(null);
+    setEditPhotoPreview(null);
+    setEditPhotoOptimizedInfo(null);
+  };
+
+  const pickNewImage = () => {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
+      setNewPhotoProcessing(true);
+      try {
+        const result = await optimizeImageForUpload(file);
+        setNewPhotoBlob(result.blob);
+        const previewUrl = URL.createObjectURL(result.blob);
+        setNewPhotoPreview(previewUrl);
+        setNewPhotoOptimizedInfo(
+          `Optimizada: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.optimizedSize)} (-${result.reductionPercentage}%)`
+        );
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : 'Error al procesar la imagen.');
+      } finally {
+        setNewPhotoProcessing(false);
+      }
+    };
+    input.click();
+  };
+
+  const removeNewPhoto = () => {
+    setNewPhotoBlob(null);
+    setNewPhotoPreview(null);
+    setNewPhotoOptimizedInfo(null);
   };
 
   // Guardar cambios del equipo editado
@@ -264,6 +352,11 @@ export function ManageEquipmentPage() {
 
     setEditSaving(true);
     try {
+      let finalPhotoUrl = editPhotoUrl;
+      if (editPendingPhotoBlob) {
+        finalPhotoUrl = await uploadEquipmentPhoto(editingItem.id, editPendingPhotoBlob, 'photo.jpg');
+      }
+
       const catId = categoryIdOf({ categoryName: categoryClean, categoryId: '' } as Equipment);
       const patch = {
         name: nameClean,
@@ -276,6 +369,7 @@ export function ManageEquipmentPage() {
         qtyAvailable: availNum,
         status: editStatus,
         notes: editNotes.trim() || null,
+        photoUrl: finalPhotoUrl,
         active: editActive,
       };
 
@@ -292,7 +386,7 @@ export function ManageEquipmentPage() {
           action: 'EQUIPMENT_UPDATE',
           targetType: 'equipment',
           targetId: editingItem.id,
-          summary: `Modificó equipo ${codeClean} (${nameClean}): Stock ${availNum}/${totalNum}, Estatus: ${EQUIPMENT_STATUS_LABELS[editStatus]}`,
+          summary: `Modificó equipo ${codeClean} (${nameClean}): Stock ${availNum}/${totalNum}, Estatus: ${EQUIPMENT_STATUS_LABELS[editStatus]}${editPendingPhotoBlob ? ', Foto actualizada' : ''}`,
           before: JSON.stringify({
             name: editingItem.name,
             code: editingItem.internalCode,
@@ -300,6 +394,7 @@ export function ManageEquipmentPage() {
             qtyAvailable: editingItem.qtyAvailable,
             status: editingItem.status,
             category: editingItem.categoryName,
+            photoUrl: editingItem.photoUrl,
           }),
           after: JSON.stringify({
             name: nameClean,
@@ -308,6 +403,7 @@ export function ManageEquipmentPage() {
             qtyAvailable: availNum,
             status: editStatus,
             category: categoryClean,
+            photoUrl: finalPhotoUrl,
           }),
         });
       }
@@ -321,20 +417,11 @@ export function ManageEquipmentPage() {
     }
   };
 
-  // Cambio rápido de estatus
+  // Cambio rápido de estatus desde la tabla
   const onQuickStatusChange = async (item: Equipment, targetStatus: EquipmentStatus) => {
     if (!canWrite) return;
     try {
-      const nextAvail = targetStatus === 'maintenance' || targetStatus === 'damaged' || targetStatus === 'lost'
-        ? 0
-        : targetStatus === 'available' && item.qtyAvailable === 0
-          ? item.qtyTotal
-          : item.qtyAvailable;
-
-      await updateEquipment(item.id, {
-        status: targetStatus,
-        qtyAvailable: nextAvail,
-      });
+      await updateEquipment(item.id, { status: targetStatus });
 
       if (user) {
         await writeAuditLog({
@@ -346,7 +433,7 @@ export function ManageEquipmentPage() {
           action: 'EQUIPMENT_STATUS_CHANGE',
           targetType: 'equipment',
           targetId: item.id,
-          summary: `Cambio rápido de estatus de ${item.internalCode}: ${EQUIPMENT_STATUS_LABELS[item.status]} → ${EQUIPMENT_STATUS_LABELS[targetStatus]}`,
+          summary: `Cambio rápido de estatus para ${item.internalCode} (${item.name}): de ${EQUIPMENT_STATUS_LABELS[item.status]} a ${EQUIPMENT_STATUS_LABELS[targetStatus]}`,
         });
       }
 
@@ -384,6 +471,11 @@ export function ManageEquipmentPage() {
         active: true,
       });
 
+      if (newPhotoBlob) {
+        const photoUrl = await uploadEquipmentPhoto(newId, newPhotoBlob, 'photo.jpg');
+        await updateEquipment(newId, { photoUrl });
+      }
+
       if (user) {
         await writeAuditLog({
           labId: user.labId || getLabId(),
@@ -406,6 +498,9 @@ export function ManageEquipmentPage() {
       setNewCategoryName('Topografía');
       setNewQtyTotal('1');
       setNewNotes('');
+      setNewPhotoBlob(null);
+      setNewPhotoPreview(null);
+      setNewPhotoOptimizedInfo(null);
       showToast(`Equipo "${newName.trim()}" registrado con éxito.`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'No se pudo registrar el equipo.');
@@ -620,9 +715,20 @@ export function ManageEquipmentPage() {
                     if (isMobile) {
                       return (
                         <View key={item.id} style={styles.mobileCard}>
-                          {/* Fila superior: Código interno + Estatus */}
+                          {/* Fila superior: Foto + Código interno + Estatus */}
                           <View style={styles.mobileTopRow}>
                             <View style={styles.codeRow}>
+                              <View style={styles.tableThumb}>
+                                {item.photoUrl ? (
+                                  <Image
+                                    source={{ uri: item.photoUrl }}
+                                    style={styles.tableThumbImg}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <MaterialIcons name="photo-camera" size={16} color="#94A3B8" />
+                                )}
+                              </View>
                               <View style={styles.codeBadge}>
                                 <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
                               </View>
@@ -706,24 +812,37 @@ export function ManageEquipmentPage() {
 
                     return (
                       <View key={item.id} style={styles.row}>
-                        {/* Información principal */}
-                        <View style={{ flex: 2, minWidth: 160, paddingRight: 8 }}>
-                          <View style={styles.codeRow}>
-                            <View style={styles.codeBadge}>
-                              <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
-                            </View>
-                            {item.active === false ? (
-                              <View style={styles.inactiveBadge}>
-                                <Text style={styles.inactiveBadgeText}>Baja</Text>
+                        {/* Información principal con foto */}
+                        <View style={{ flex: 2, minWidth: 160, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.tableThumb}>
+                            {item.photoUrl ? (
+                              <Image
+                                source={{ uri: item.photoUrl }}
+                                style={styles.tableThumbImg}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <MaterialIcons name="photo-camera" size={18} color="#94A3B8" />
+                            )}
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <View style={styles.codeRow}>
+                              <View style={styles.codeBadge}>
+                                <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
                               </View>
+                              {item.active === false ? (
+                                <View style={styles.inactiveBadge}>
+                                  <Text style={styles.inactiveBadgeText}>Baja</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            <Text style={styles.rowName}>{item.name}</Text>
+                            {item.notes ? (
+                              <Text style={styles.rowNotes} numberOfLines={1}>
+                                Obs: {item.notes}
+                              </Text>
                             ) : null}
                           </View>
-                          <Text style={styles.rowName}>{item.name}</Text>
-                          {item.notes ? (
-                            <Text style={styles.rowNotes} numberOfLines={1}>
-                              Obs: {item.notes}
-                            </Text>
-                          ) : null}
                         </View>
 
                         {/* Categoría y Marca */}
@@ -841,6 +960,85 @@ export function ManageEquipmentPage() {
             {editError ? <Notice tone="danger" title={editError} /> : null}
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Fotografía del equipo */}
+              <View style={styles.photoSection}>
+                <Text style={styles.fieldLabel}>Fotografía del equipo</Text>
+                <View style={styles.photoContainer}>
+                  {editPhotoPreview ? (
+                    <View style={styles.photoPreviewWrap}>
+                      <Image
+                        source={{ uri: editPhotoPreview }}
+                        style={styles.photoPreviewImg}
+                        resizeMode="contain"
+                      />
+                      <View style={styles.photoMetaOverlay}>
+                        <View style={styles.photoBadgeRow}>
+                          <View
+                            style={[
+                              styles.photoTag,
+                              editPendingPhotoBlob ? styles.photoTagNew : styles.photoTagSaved,
+                            ]}
+                          >
+                            <Text style={styles.photoTagText}>
+                              {editPendingPhotoBlob
+                                ? 'Nueva foto (pendiente de guardar)'
+                                : 'Foto actual guardada'}
+                            </Text>
+                          </View>
+                          {editPhotoOptimizedInfo ? (
+                            <View style={styles.photoOptimizedTag}>
+                              <Text style={styles.photoOptimizedTagText}>
+                                {editPhotoOptimizedInfo}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <View style={styles.photoActionsRow}>
+                          <Pressable
+                            style={styles.photoActionBtn}
+                            onPress={pickEditImage}
+                            disabled={editPhotoProcessing || editSaving}
+                          >
+                            <MaterialIcons name="photo-camera" size={16} color={theme.color.navy} />
+                            <Text style={styles.photoActionBtnText}>Cambiar foto</Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.photoActionBtn, styles.photoDeleteBtn]}
+                            onPress={removeEditPhoto}
+                            disabled={editPhotoProcessing || editSaving}
+                          >
+                            <MaterialIcons name="delete-outline" size={16} color="#DC2626" />
+                            <Text style={[styles.photoActionBtnText, { color: '#DC2626' }]}>
+                              Quitar
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.photoDropzone}
+                      onPress={pickEditImage}
+                      disabled={editPhotoProcessing || editSaving}
+                    >
+                      {editPhotoProcessing ? (
+                        <ActivityIndicator color={theme.color.navy} size="small" />
+                      ) : (
+                        <>
+                          <View style={styles.photoDropzoneIcon}>
+                            <MaterialIcons name="add-a-photo" size={24} color={theme.color.navy} />
+                          </View>
+                          <Text style={styles.photoDropzoneTitle}>Subir fotografía del equipo</Text>
+                          <Text style={styles.photoDropzoneHint}>
+                            Haz clic para seleccionar o tomar foto. Se optimiza automáticamente en tamaño y calidad antes de subirse.
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
               {/* Nombre y Código */}
               <View style={styles.modalRow}>
                 <TextField
@@ -1046,6 +1244,76 @@ export function ManageEquipmentPage() {
             {createError ? <Notice tone="danger" title={createError} /> : null}
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Fotografía opcional */}
+              <View style={styles.photoSection}>
+                <Text style={styles.fieldLabel}>Fotografía del equipo (opcional)</Text>
+                <View style={styles.photoContainer}>
+                  {newPhotoPreview ? (
+                    <View style={styles.photoPreviewWrap}>
+                      <Image
+                        source={{ uri: newPhotoPreview }}
+                        style={styles.photoPreviewImg}
+                        resizeMode="contain"
+                      />
+                      <View style={styles.photoMetaOverlay}>
+                        <View style={styles.photoBadgeRow}>
+                          <View style={[styles.photoTag, styles.photoTagNew]}>
+                            <Text style={styles.photoTagText}>Foto lista para registrar</Text>
+                          </View>
+                          {newPhotoOptimizedInfo ? (
+                            <View style={styles.photoOptimizedTag}>
+                              <Text style={styles.photoOptimizedTagText}>
+                                {newPhotoOptimizedInfo}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <View style={styles.photoActionsRow}>
+                          <Pressable
+                            style={styles.photoActionBtn}
+                            onPress={pickNewImage}
+                            disabled={newPhotoProcessing || createSaving}
+                          >
+                            <MaterialIcons name="photo-camera" size={16} color={theme.color.navy} />
+                            <Text style={styles.photoActionBtnText}>Cambiar foto</Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.photoActionBtn, styles.photoDeleteBtn]}
+                            onPress={removeNewPhoto}
+                            disabled={newPhotoProcessing || createSaving}
+                          >
+                            <MaterialIcons name="delete-outline" size={16} color="#DC2626" />
+                            <Text style={[styles.photoActionBtnText, { color: '#DC2626' }]}>
+                              Quitar
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.photoDropzone}
+                      onPress={pickNewImage}
+                      disabled={newPhotoProcessing || createSaving}
+                    >
+                      {newPhotoProcessing ? (
+                        <ActivityIndicator color={theme.color.navy} size="small" />
+                      ) : (
+                        <>
+                          <View style={styles.photoDropzoneIcon}>
+                            <MaterialIcons name="add-a-photo" size={24} color={theme.color.navy} />
+                          </View>
+                          <Text style={styles.photoDropzoneTitle}>Subir fotografía del equipo</Text>
+                          <Text style={styles.photoDropzoneHint}>
+                            Haz clic para seleccionar o tomar foto. Se optimiza automáticamente en tamaño y calidad antes de subirse.
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
               <View style={styles.formGrid}>
                 <TextField
                   label="Código interno *"
@@ -1769,5 +2037,145 @@ const styles = StyleSheet.create({
   },
   modalSaveBtn: {
     flex: 1,
+  },
+
+  // Miniaturas en filas de tabla y tarjetas
+  tableThumb: {
+    width: 44,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#EEF2F6',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  tableThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Sección de fotografía en modales
+  photoSection: {
+    marginBottom: 16,
+  },
+  photoContainer: {
+    marginTop: 6,
+  },
+  photoDropzone: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer' as unknown as undefined,
+  },
+  photoDropzoneIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEF2F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  photoDropzoneTitle: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  photoDropzoneHint: {
+    color: theme.color.muted,
+    fontSize: 11,
+    textAlign: 'center',
+    maxWidth: 360,
+    lineHeight: 15,
+  },
+  photoPreviewWrap: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+  },
+  photoPreviewImg: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#0F172A',
+  },
+  photoMetaOverlay: {
+    padding: 12,
+    backgroundColor: theme.color.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.color.line,
+  },
+  photoBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  photoTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  photoTagNew: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  photoTagSaved: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  photoTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.color.ink,
+  },
+  photoOptimizedTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  photoOptimizedTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  photoActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 6,
+    backgroundColor: '#EEF2F6',
+    borderWidth: 1,
+    borderColor: theme.color.line,
+  },
+  photoActionBtnText: {
+    color: theme.color.navy,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  photoDeleteBtn: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
 });
