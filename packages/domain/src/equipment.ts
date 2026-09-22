@@ -40,6 +40,7 @@ export type EquipmentInput = {
   qtyTotal: number;
   qtyAvailable: number;
   notes?: string | null;
+  photoUrl?: string | null;
   labId: string;
   active?: boolean;
 };
