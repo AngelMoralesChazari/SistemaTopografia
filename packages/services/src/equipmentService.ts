@@ -104,7 +104,7 @@ export async function createEquipment(input: EquipmentInput): Promise<string> {
     qtyReserved: 0,
     qtyLoaned: 0,
     acquisitionDate: null,
-    photoUrl: null,
+    photoUrl: input.photoUrl ?? null,
     manualUrl: null,
     notes: input.notes?.trim() || null,
     labId: input.labId || getLabId(),
@@ -133,6 +133,7 @@ export async function updateEquipment(
       | 'categoryName'
       | 'categoryId'
       | 'internalCode'
+      | 'photoUrl'
     >
   >
 ): Promise<void> {
