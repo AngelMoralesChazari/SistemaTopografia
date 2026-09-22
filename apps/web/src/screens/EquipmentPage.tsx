@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -375,8 +376,21 @@ export function EquipmentPage() {
                       return (
                         <View key={item.id} style={styles.mobileCard}>
                           <View style={styles.mobileTopRow}>
-                            <View style={styles.codeBadge}>
-                              <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
+                            <View style={styles.mobileCardInfoRow}>
+                              <View style={styles.tableThumb}>
+                                {item.photoUrl ? (
+                                  <Image
+                                    source={{ uri: item.photoUrl }}
+                                    style={styles.tableThumbImg}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <MaterialIcons name="photo-camera" size={16} color="#94A3B8" />
+                                )}
+                              </View>
+                              <View style={styles.codeBadge}>
+                                <Text style={styles.codeBadgeText}>{item.internalCode}</Text>
+                              </View>
                             </View>
                             <Badge label={EQUIPMENT_STATUS_LABELS[item.status]} tone={statusTone(item.status)} />
                           </View>
@@ -397,6 +411,17 @@ export function EquipmentPage() {
 
                     return (
                       <View key={item.id} style={styles.row}>
+                        <View style={styles.tableThumb}>
+                          {item.photoUrl ? (
+                            <Image
+                              source={{ uri: item.photoUrl }}
+                              style={styles.tableThumbImg}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <MaterialIcons name="photo-camera" size={18} color="#94A3B8" />
+                          )}
+                        </View>
                         <View style={styles.rowMain}>
                           <Text style={styles.rowCode}>{item.internalCode}</Text>
                           <Text style={styles.rowName}>{item.name}</Text>
@@ -879,5 +904,25 @@ const styles = StyleSheet.create({
   },
   modalSaveBtn: {
     flex: 1,
+  },
+  mobileCardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tableThumb: {
+    width: 44,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#EEF2F6',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  tableThumbImg: {
+    width: '100%',
+    height: '100%',
   },
 });
