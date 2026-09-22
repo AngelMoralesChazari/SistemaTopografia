@@ -44,6 +44,7 @@ type MaterialCardProps = {
   showStatusBadge?: boolean;
   style?: StyleProp<ViewStyle>;
   rightAction?: React.ReactNode;
+  showRentalPrice?: boolean;
 };
 
 export function MaterialCard({
@@ -53,6 +54,7 @@ export function MaterialCard({
   showStatusBadge = false,
   style,
   rightAction,
+  showRentalPrice = false,
 }: MaterialCardProps) {
   const content = (
     <View style={[styles.card, selected && styles.cardSelected, style]}>
@@ -74,6 +76,16 @@ export function MaterialCard({
         <Text style={styles.sub} numberOfLines={2}>
           {equipment.categoryName} · {conditionLabel(equipment)}
         </Text>
+        {showRentalPrice ? (
+          <View style={styles.rentalPriceTag}>
+            <Text style={styles.rentalPriceLabel}>Renta particular:</Text>
+            <Text style={styles.rentalPriceValue}>
+              {equipment.rentalPrice != null && equipment.rentalPrice > 0
+                ? `$${equipment.rentalPrice.toLocaleString('es-MX')} / día`
+                : 'A cotizar'}
+            </Text>
+          </View>
+        ) : null}
         {showStatusBadge ? (
           <View style={styles.badgeWrap}>
             <Badge label={EQUIPMENT_STATUS_LABELS[equipment.status]} tone={statusTone(equipment.status)} />
@@ -177,5 +189,28 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rentalPriceTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 2.5,
+    paddingHorizontal: 7,
+    borderRadius: 5,
+  },
+  rentalPriceLabel: {
+    color: '#065F46',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  rentalPriceValue: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

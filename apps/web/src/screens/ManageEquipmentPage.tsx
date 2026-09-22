@@ -102,6 +102,7 @@ export function ManageEquipmentPage() {
   const [newModel, setNewModel] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('Topografía');
   const [newQtyTotal, setNewQtyTotal] = useState('1');
+  const [newRentalPrice, setNewRentalPrice] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newPhotoBlob, setNewPhotoBlob] = useState<Blob | null>(null);
   const [newPhotoPreview, setNewPhotoPreview] = useState<string | null>(null);
@@ -117,6 +118,7 @@ export function ManageEquipmentPage() {
   const [editCategoryName, setEditCategoryName] = useState('');
   const [editQtyTotal, setEditQtyTotal] = useState('');
   const [editQtyAvailable, setEditQtyAvailable] = useState('');
+  const [editRentalPrice, setEditRentalPrice] = useState('');
   const [editStatus, setEditStatus] = useState<EquipmentStatus>('available');
   const [editNotes, setEditNotes] = useState('');
   const [editActive, setEditActive] = useState(true);
@@ -234,6 +236,7 @@ export function ManageEquipmentPage() {
     setEditCategoryName(item.categoryName);
     setEditQtyTotal(String(item.qtyTotal ?? 1));
     setEditQtyAvailable(String(item.qtyAvailable ?? 1));
+    setEditRentalPrice(item.rentalPrice != null ? String(item.rentalPrice) : '');
     setEditStatus(item.status);
     setEditNotes(item.notes ?? '');
     setEditActive(item.active !== false);
@@ -248,6 +251,7 @@ export function ManageEquipmentPage() {
   const closeEditModal = () => {
     if (editSaving) return;
     setEditingItem(null);
+    setEditRentalPrice('');
     setEditPendingPhotoBlob(null);
     setEditPhotoPreview(null);
     setEditPhotoOptimizedInfo(null);
@@ -358,6 +362,10 @@ export function ManageEquipmentPage() {
       }
 
       const catId = categoryIdOf({ categoryName: categoryClean, categoryId: '' } as Equipment);
+      const cleanPrice = editRentalPrice.trim();
+      const rentalPriceNum =
+        cleanPrice === '' ? null : Math.max(0, parseFloat(cleanPrice.replace(/[^0-9.]/g, '')) || 0);
+
       const patch = {
         name: nameClean,
         internalCode: codeClean,
@@ -371,6 +379,7 @@ export function ManageEquipmentPage() {
         notes: editNotes.trim() || null,
         photoUrl: finalPhotoUrl,
         active: editActive,
+        rentalPrice: rentalPriceNum,
       };
 
       await updateEquipment(editingItem.id, patch);
@@ -386,7 +395,7 @@ export function ManageEquipmentPage() {
           action: 'EQUIPMENT_UPDATE',
           targetType: 'equipment',
           targetId: editingItem.id,
-          summary: `Modificó equipo ${codeClean} (${nameClean}): Stock ${availNum}/${totalNum}, Estatus: ${EQUIPMENT_STATUS_LABELS[editStatus]}${editPendingPhotoBlob ? ', Foto actualizada' : ''}`,
+          summary: `Modificó equipo ${codeClean} (${nameClean}): Stock ${availNum}/${totalNum}, Estatus: ${EQUIPMENT_STATUS_LABELS[editStatus]}${rentalPriceNum != null ? `, Precio renta: $${rentalPriceNum}/día` : ''}${editPendingPhotoBlob ? ', Foto actualizada' : ''}`,
           before: JSON.stringify({
             name: editingItem.name,
             code: editingItem.internalCode,
@@ -395,6 +404,7 @@ export function ManageEquipmentPage() {
             status: editingItem.status,
             category: editingItem.categoryName,
             photoUrl: editingItem.photoUrl,
+            rentalPrice: editingItem.rentalPrice ?? null,
           }),
           after: JSON.stringify({
             name: nameClean,
@@ -404,12 +414,14 @@ export function ManageEquipmentPage() {
             status: editStatus,
             category: categoryClean,
             photoUrl: finalPhotoUrl,
+            rentalPrice: rentalPriceNum,
           }),
         });
       }
 
       showToast(`Equipo "${nameClean}" actualizado correctamente.`);
       setEditingItem(null);
+      setEditRentalPrice('');
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'No se pudieron guardar los cambios.');
     } finally {
@@ -455,6 +467,10 @@ export function ManageEquipmentPage() {
     setCreateSaving(true);
     try {
       const catClean = newCategoryName.trim() || 'Topografía';
+      const cleanNewPrice = newRentalPrice.trim();
+      const newPriceNum =
+        cleanNewPrice === '' ? null : Math.max(0, parseFloat(cleanNewPrice.replace(/[^0-9.]/g, '')) || 0);
+
       const newId = await createEquipment({
         internalCode: newCode.trim(),
         name: newName.trim(),
@@ -467,6 +483,7 @@ export function ManageEquipmentPage() {
         qtyTotal: total,
         qtyAvailable: total,
         notes: newNotes.trim() || null,
+        rentalPrice: newPriceNum,
         labId: user?.labId ?? getLabId(),
         active: true,
       });
@@ -486,7 +503,7 @@ export function ManageEquipmentPage() {
           action: 'EQUIPMENT_CREATE',
           targetType: 'equipment',
           targetId: newId,
-          summary: `Alta de equipo ${newCode.trim()} (${newName.trim()}), cant: ${total}`,
+          summary: `Alta de equipo ${newCode.trim()} (${newName.trim()}), cant: ${total}${newPriceNum != null ? `, Precio renta: $${newPriceNum}/día` : ''}`,
         });
       }
 
@@ -497,6 +514,7 @@ export function ManageEquipmentPage() {
       setNewModel('');
       setNewCategoryName('Topografía');
       setNewQtyTotal('1');
+      setNewRentalPrice('');
       setNewNotes('');
       setNewPhotoBlob(null);
       setNewPhotoPreview(null);
@@ -702,6 +720,7 @@ export function ManageEquipmentPage() {
                     <View style={styles.tableHeader}>
                       <Text style={[styles.th, { flex: 2, minWidth: 160 }]}>Equipo / Código</Text>
                       <Text style={[styles.th, { flex: 1.2, minWidth: 120 }]}>Categoría / Marca</Text>
+                      <Text style={[styles.th, { width: 100, textAlign: 'center' }]}>Precio renta</Text>
                       <Text style={[styles.th, { width: 90, textAlign: 'center' }]}>Stock</Text>
                       <Text style={[styles.th, { width: 130, textAlign: 'center' }]}>Estatus</Text>
                       <Text style={[styles.th, { width: 140, textAlign: 'right' }]}>Acciones</Text>
@@ -762,6 +781,16 @@ export function ManageEquipmentPage() {
                             <Text style={styles.mobileNotes}>
                               Obs: {item.notes}
                             </Text>
+                          ) : null}
+
+                          {/* Precio de renta particular si está asignado */}
+                          {item.rentalPrice != null && item.rentalPrice > 0 ? (
+                            <View style={styles.mobilePriceBadge}>
+                              <MaterialIcons name="sell" size={12} color="#059669" />
+                              <Text style={styles.mobilePriceBadgeText}>
+                                Renta particular: ${item.rentalPrice.toLocaleString('es-MX')} / día
+                              </Text>
+                            </View>
                           ) : null}
 
                           {/* Fila inferior: Stock disponible y Botones de acción */}
@@ -855,6 +884,18 @@ export function ManageEquipmentPage() {
                             {item.model ? ` · ${item.model}` : ''}
                             {!item.brand && !item.model ? '—' : ''}
                           </Text>
+                        </View>
+
+                        {/* Precio renta (Particulares) */}
+                        <View style={{ width: 100, alignItems: 'center', justifyContent: 'center' }}>
+                          {item.rentalPrice != null && item.rentalPrice > 0 ? (
+                            <View style={styles.priceTag}>
+                              <Text style={styles.priceTagValue}>${item.rentalPrice.toLocaleString('es-MX')}</Text>
+                              <Text style={styles.priceTagLabel}>/día</Text>
+                            </View>
+                          ) : (
+                            <Text style={styles.priceTagEmpty}>—</Text>
+                          )}
                         </View>
 
                         {/* Stock (disponible / total) */}
@@ -1030,7 +1071,7 @@ export function ManageEquipmentPage() {
                           </View>
                           <Text style={styles.photoDropzoneTitle}>Subir fotografía del equipo</Text>
                           <Text style={styles.photoDropzoneHint}>
-                            Haz clic para seleccionar o tomar foto. Se optimiza automáticamente en tamaño y calidad antes de subirse.
+                            Haz clic para seleccionar o tomar foto.
                           </Text>
                         </>
                       )}
@@ -1042,13 +1083,13 @@ export function ManageEquipmentPage() {
               {/* Nombre y Código */}
               <View style={styles.modalRow}>
                 <TextField
-                  label="Nombre del equipo *"
+                  label="Nombre del equipo"
                   value={editName}
                   onChangeText={setEditName}
                   containerStyle={{ flex: 2 }}
                 />
                 <TextField
-                  label="Código interno *"
+                  label="Código interno"
                   value={editCode}
                   onChangeText={setEditCode}
                   containerStyle={{ flex: 1 }}
@@ -1058,7 +1099,7 @@ export function ManageEquipmentPage() {
               {/* Categoría con sugerencias */}
               <View style={{ marginBottom: 12 }}>
                 <TextField
-                  label="Categoría *"
+                  label="Categoría"
                   value={editCategoryName}
                   onChangeText={setEditCategoryName}
                   placeholder="Ej. Estación Total, GNSS / GPS, Niveles"
@@ -1125,9 +1166,21 @@ export function ManageEquipmentPage() {
                 />
               </View>
 
+              {/* Precio de renta para particulares */}
+              <View style={{ marginBottom: 14 }}>
+                <TextField
+                  label="Precio de renta por día (MXN)"
+                  value={editRentalPrice}
+                  onChangeText={setEditRentalPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="Ej. 350.00"
+                  helperText="Este precio solo se mostrará a usuarios con rol de particular (renta a terceros). Alumnos y maestros no verán ningún costo."
+                />
+              </View>
+
               {/* Selector de Estatus */}
               <View style={{ marginBottom: 14 }}>
-                <Text style={styles.fieldLabel}>Estatus del equipo *</Text>
+                <Text style={styles.fieldLabel}>Estatus del equipo</Text>
                 <View style={styles.statusChipsWrap}>
                   {ALL_STATUS_OPTIONS.map((opt) => {
                     const active = editStatus === opt.id;
@@ -1305,7 +1358,7 @@ export function ManageEquipmentPage() {
                           </View>
                           <Text style={styles.photoDropzoneTitle}>Subir fotografía del equipo</Text>
                           <Text style={styles.photoDropzoneHint}>
-                            Haz clic para seleccionar o tomar foto. Se optimiza automáticamente en tamaño y calidad antes de subirse.
+                            Haz clic para seleccionar o tomar foto.
                           </Text>
                         </>
                       )}
@@ -1323,7 +1376,7 @@ export function ManageEquipmentPage() {
                   containerStyle={styles.formField}
                 />
                 <TextField
-                  label="Nombre del equipo *"
+                  label="Nombre del equipo"
                   value={newName}
                   onChangeText={setNewName}
                   placeholder="Ej: Estación Total Leica..."
@@ -1356,6 +1409,15 @@ export function ManageEquipmentPage() {
                   onChangeText={setNewQtyTotal}
                   keyboardType="number-pad"
                   placeholder="1"
+                  containerStyle={styles.formField}
+                />
+                <TextField
+                  label="Precio renta / día (MXN) — Particular"
+                  value={newRentalPrice}
+                  onChangeText={setNewRentalPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="Ej: 350.00 (Opcional)"
+                  helperText="Solo visible para particulares"
                   containerStyle={styles.formField}
                 />
               </View>
@@ -1795,6 +1857,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+
+  mobilePriceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  mobilePriceBadgeText: {
+    color: '#047857',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  priceTag: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  priceTagValue: {
+    color: '#047857',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  priceTagLabel: {
+    color: '#065F46',
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 2,
+  },
+  priceTagEmpty: {
+    color: theme.color.muted,
+    fontSize: 13,
   },
 
   stockPill: {

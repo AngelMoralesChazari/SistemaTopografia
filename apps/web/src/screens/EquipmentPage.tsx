@@ -489,14 +489,14 @@ export function EquipmentPage() {
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               <View style={styles.formGrid}>
                 <TextField
-                  label="Código interno *"
+                  label="Código interno"
                   value={code}
                   onChangeText={setCode}
                   placeholder="Ej: EST-03, NIV-01..."
                   containerStyle={styles.formField}
                 />
                 <TextField
-                  label="Nombre del equipo *"
+                  label="Nombre del equipo"
                   value={name}
                   onChangeText={setName}
                   placeholder="Ej: Estación Total Leica..."

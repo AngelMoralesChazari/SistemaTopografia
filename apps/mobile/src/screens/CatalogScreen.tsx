@@ -414,6 +414,7 @@ export function CatalogScreen() {
                   key={item.id}
                   equipment={item}
                   selected={item.id === selectedEquipmentId}
+                  showRentalPrice={user?.role === 'renter'}
                   onPress={() => setSelectedEquipmentId(item.id)}
                 />
               ))
@@ -463,9 +464,23 @@ export function CatalogScreen() {
                   </Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Profesor</Text>
-                  <Text style={styles.summaryValue}>{user?.teacherName ?? '—'}</Text>
+                  <Text style={styles.summaryLabel}>
+                    {user?.role === 'renter' ? 'Tipo' : 'Profesor'}
+                  </Text>
+                  <Text style={styles.summaryValue}>
+                    {user?.role === 'renter' ? 'Renta particular' : (user?.teacherName ?? '—')}
+                  </Text>
                 </View>
+                {user?.role === 'renter' ? (
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Tarifa diaria</Text>
+                    <Text style={[styles.summaryValue, { color: '#059669', fontWeight: '800' }]}>
+                      {selectedEquipment?.rentalPrice != null && selectedEquipment.rentalPrice > 0
+                        ? `$${selectedEquipment.rentalPrice.toLocaleString('es-MX')} MXN`
+                        : 'A cotizar'}
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Fecha de solicitud</Text>
                   <Text style={styles.summaryValue}>{formatDateTime(requestAt)}</Text>

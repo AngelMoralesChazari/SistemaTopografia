@@ -641,6 +641,7 @@ export function StudentCatalogPage() {
                       key={item.id}
                       equipment={item}
                       selected={item.id === selectedEquipmentId}
+                      showRentalPrice={user?.role === 'renter'}
                       onPress={() => {
                         if (inCart) {
                           setCartModalOpen(true);
@@ -736,6 +737,16 @@ export function StudentCatalogPage() {
                         ? user.displayName
                         : (user?.teacherName ?? '—'),
                   ],
+                  ...(user?.role === 'renter'
+                    ? [
+                        [
+                          'Tarifa por día',
+                          selectedEquipment?.rentalPrice != null && selectedEquipment.rentalPrice > 0
+                            ? `$${selectedEquipment.rentalPrice.toLocaleString('es-MX')} MXN`
+                            : 'A cotizar con laboratorio',
+                        ],
+                      ]
+                    : []),
                   ['Fecha de solicitud', formatDateTime(requestAt)],
                   [
                     'Fecha de devolución',
@@ -1014,6 +1025,16 @@ export function StudentCatalogPage() {
                           <Text style={styles.cartItemBadgeText}>Tiempo extendido</Text>
                         </View>
                       ) : null}
+                      {user?.role === 'renter' ? (
+                        <View style={styles.cartItemPriceBadge}>
+                          <MaterialIcons name="sell" size={12} color="#059669" />
+                          <Text style={styles.cartItemPriceBadgeText}>
+                            {c.equipment.rentalPrice != null && c.equipment.rentalPrice > 0
+                              ? `$${c.equipment.rentalPrice.toLocaleString('es-MX')} / día`
+                              : 'Tarifa a cotizar'}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
 
                     {c.kitItems && c.kitItems.length > 0 ? (
@@ -1055,6 +1076,22 @@ export function StudentCatalogPage() {
                         : (user?.teacherName ?? '—')}
                   </Text>
                 </View>
+                {user?.role === 'renter' ? (
+                  <View style={styles.cartSummaryRow}>
+                    <Text style={styles.cartSummaryLabel}>Costo total estimado por día</Text>
+                    <Text
+                      style={[
+                        styles.cartSummaryValue,
+                        { color: '#059669', fontWeight: '800', fontSize: 15 },
+                      ]}
+                    >
+                      ${cartItems
+                        .reduce((acc, curr) => acc + (curr.equipment.rentalPrice || 0), 0)
+                        .toLocaleString('es-MX')}{' '}
+                      MXN
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={[styles.cartSummaryRow, { borderBottomWidth: 0 }]}>
                   <Text style={styles.cartSummaryLabel}>Total de materiales</Text>
                   <Text
@@ -2011,6 +2048,23 @@ const styles = StyleSheet.create({
     color: theme.color.navy,
     fontSize: 10,
     fontWeight: '700',
+  },
+  cartItemPriceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  cartItemPriceBadgeText: {
+    color: '#047857',
+    fontSize: 11,
+    fontWeight: '800',
   },
   cartItemKitBox: {
     flexDirection: 'row',

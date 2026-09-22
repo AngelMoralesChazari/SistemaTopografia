@@ -23,6 +23,7 @@ export type Equipment = {
   notes: string | null;
   labId: string;
   active: boolean;
+  rentalPrice?: number | null;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
@@ -41,6 +42,7 @@ export type EquipmentInput = {
   qtyAvailable: number;
   notes?: string | null;
   photoUrl?: string | null;
+  rentalPrice?: number | null;
   labId: string;
   active?: boolean;
 };

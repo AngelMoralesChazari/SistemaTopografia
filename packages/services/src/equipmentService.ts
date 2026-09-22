@@ -37,6 +37,10 @@ function mapEquipment(id: string, data: Record<string, unknown>): Equipment {
     notes: (data.notes as string | null) ?? null,
     labId: String(data.labId ?? getLabId()),
     active: data.active !== false,
+    rentalPrice:
+      data.rentalPrice != null && !isNaN(Number(data.rentalPrice))
+        ? Number(data.rentalPrice)
+        : null,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
@@ -109,6 +113,10 @@ export async function createEquipment(input: EquipmentInput): Promise<string> {
     notes: input.notes?.trim() || null,
     labId: input.labId || getLabId(),
     active: input.active ?? true,
+    rentalPrice:
+      input.rentalPrice != null && !isNaN(Number(input.rentalPrice))
+        ? Number(input.rentalPrice)
+        : null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -134,6 +142,7 @@ export async function updateEquipment(
       | 'categoryId'
       | 'internalCode'
       | 'photoUrl'
+      | 'rentalPrice'
     >
   >
 ): Promise<void> {
