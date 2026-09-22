@@ -1,5 +1,13 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { theme } from '@lab-topo/config';
 import {
   EQUIPMENT_STATUS_LABELS,
@@ -49,7 +57,15 @@ export function MaterialCard({
   const content = (
     <View style={[styles.card, selected && styles.cardSelected, style]}>
       <View style={styles.thumb}>
-        <Text style={styles.thumbText}>[foto]</Text>
+        {equipment.photoUrl ? (
+          <Image
+            source={{ uri: equipment.photoUrl }}
+            style={styles.thumbImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.thumbText}>[foto]</Text>
+        )}
       </View>
       <View style={styles.meta}>
         <Text style={styles.name} numberOfLines={2}>
@@ -102,17 +118,25 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   thumb: {
-    width: 42,
-    height: 37,
-    borderRadius: 4,
-    backgroundColor: theme.color.grey,
+    width: 48,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: '#EEF2F6',
+    borderWidth: 1,
+    borderColor: theme.color.line,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
   },
   thumbText: {
     color: '#84909C',
     fontSize: 9,
     fontFamily: theme.font.sans,
+    fontWeight: '600',
   },
   meta: {
     flex: 1,
