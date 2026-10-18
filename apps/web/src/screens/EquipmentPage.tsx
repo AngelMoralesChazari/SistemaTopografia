@@ -251,15 +251,15 @@ export function EquipmentPage() {
           </View>
           <View style={styles.kpi}>
             <Text style={styles.kpiLabel}>Disponibles</Text>
-            <Text style={styles.kpiValue}>{kpis.available}</Text>
+            <Text style={[styles.kpiValue, { color: theme.color.success }]}>{kpis.available}</Text>
           </View>
           <View style={styles.kpi}>
             <Text style={styles.kpiLabel}>En préstamo</Text>
-            <Text style={styles.kpiValue}>{kpis.loaned}</Text>
+            <Text style={[styles.kpiValue, { color: '#2563EB' }]}>{kpis.loaned}</Text>
           </View>
           <View style={styles.kpi}>
             <Text style={styles.kpiLabel}>Mantenimiento</Text>
-            <Text style={styles.kpiValue}>{kpis.maintenance}</Text>
+            <Text style={[styles.kpiValue, { color: theme.color.warning }]}>{kpis.maintenance}</Text>
           </View>
         </View>
 
