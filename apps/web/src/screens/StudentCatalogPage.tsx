@@ -471,14 +471,16 @@ export function StudentCatalogPage() {
 
         <View style={styles.kpis}>
           {[
-            { label: 'Total equipos', value: String(kpis.total) },
-            { label: 'Disponibles', value: String(kpis.available) },
-            { label: 'En préstamo', value: String(kpis.loaned) },
-            { label: 'Mantenimiento', value: String(kpis.maintenance) },
+            { label: 'Total equipos', value: String(kpis.total), color: theme.color.navy },
+            { label: 'Disponibles', value: String(kpis.available), color: theme.color.success },
+            { label: 'En préstamo', value: String(kpis.loaned), color: '#2563EB' },
+            { label: 'Mantenimiento', value: String(kpis.maintenance), color: theme.color.warning },
           ].map((kpi) => (
             <View key={kpi.label} style={styles.kpi}>
               <Text style={styles.kpiLabel}>{kpi.label}</Text>
-              <Text style={styles.kpiValue}>{kpi.value}</Text>
+              <Text style={[styles.kpiValue, Boolean(kpi.color) && { color: kpi.color }]}>
+                {kpi.value}
+              </Text>
             </View>
           ))}
         </View>
