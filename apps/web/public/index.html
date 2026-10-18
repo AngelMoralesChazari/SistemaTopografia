@@ -65,12 +65,32 @@
   <meta name="apple-mobile-web-app-title" content="Lab Topografía" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Tipografía moderna Google Fonts: Inter (pesos 400 a 900 para fidelidad idéntica en Linux, Windows y Mac) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
   <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
   <style id="expo-reset">
     /* These styles make the body full-height */
     html,
     body {
       height: 100%;
+    }
+
+    /* Tipografía universal con suavizado para Linux, Windows, macOS y Android */
+    html,
+    body,
+    #root,
+    button,
+    input,
+    textarea,
+    select {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
     }
 
     /* These styles disable body scrolling if you are using <ScrollView> */
