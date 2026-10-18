@@ -92,6 +92,29 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+export const VALID_SECTIONS: WebSection[] = [
+  'dashboard',
+  'equipment',
+  'manageEquipment',
+  'requests',
+  'history',
+  'reports',
+  'users',
+  'metrics',
+  'settings',
+  'catalog',
+  'studentRequests',
+  'teacherStudents',
+  'renters',
+  'audit',
+  'profile',
+];
+
+export function isSectionAllowed(section: WebSection, role: UserRole): boolean {
+  if (section === 'equipment') return isSectionAllowed('manageEquipment', role);
+  return NAV_ITEMS.some((item) => item.id === section && item.roles.includes(role));
+}
+
 export function defaultSectionForRole(role: UserRole): WebSection {
   switch (role) {
     case 'student':
