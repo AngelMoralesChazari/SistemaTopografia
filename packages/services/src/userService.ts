@@ -34,6 +34,10 @@ function mapUser(id: string, data: Record<string, unknown>, labId: string): AppU
     ine: (data.ine as string | null) ?? null,
     rfc: (data.rfc as string | null) ?? null,
     address: (data.address as string | null) ?? null,
+    equipmentEditUntil: (data.equipmentEditUntil as string | null) ?? null,
+    equipmentEditGrantedBy: (data.equipmentEditGrantedBy as string | null) ?? null,
+    equipmentEditGrantedAt: (data.equipmentEditGrantedAt as string | null) ?? null,
+    equipmentEditNotes: (data.equipmentEditNotes as string | null) ?? null,
   };
 }
 
@@ -62,6 +66,27 @@ export function watchLabUsers(
         .map((d) => mapUser(d.id, d.data(), labId))
         .sort((a, b) => a.displayName.localeCompare(b.displayName, 'es'));
       onChange(users);
+    },
+    (error) => onError?.(error)
+  );
+}
+
+/** Escucha cambios en tiempo real del documento de un usuario específico. */
+export function watchUser(
+  uid: string,
+  onChange: (user: AppUser | null) => void,
+  onError?: (error: Error) => void,
+  labId = getLabId()
+): Unsubscribe {
+  const userRef = doc(getDb(), 'users', uid);
+  return onSnapshot(
+    userRef,
+    (snap) => {
+      if (!snap.exists()) {
+        onChange(null);
+        return;
+      }
+      onChange(mapUser(snap.id, snap.data(), labId));
     },
     (error) => onError?.(error)
   );
@@ -396,5 +421,74 @@ export async function syncPendingStudentsForTeacher(
   } catch {
     return 0;
   }
+}
+
+export type SetEquipmentEditPermissionInput = {
+  targetUserId: string;
+  targetUserName: string;
+  targetUserEmail?: string | null;
+  /** ISO Date string YYYY-MM-DD o null para revocar */
+  equipmentEditUntil: string | null;
+  notes?: string | null;
+  actor: {
+    uid: string;
+    email?: string | null;
+    displayName?: string | null;
+    role: UserRole;
+  };
+  labId?: string;
+};
+
+/**
+ * Designa, modifica o revoca el permiso temporal de edición de Gestión de Equipos
+ * a un encargado de laboratorio. Registra automáticamente el evento en la bitácora
+ * de auditoría para la supervisión del superadministrador.
+ */
+export async function setEquipmentEditPermission(
+  input: SetEquipmentEditPermissionInput
+): Promise<void> {
+  const labId = input.labId || getLabId();
+  const db = getDb();
+  const userRef = doc(db, 'users', input.targetUserId);
+
+  const isGranting = !!input.equipmentEditUntil;
+
+  await updateDoc(userRef, {
+    equipmentEditUntil: input.equipmentEditUntil,
+    equipmentEditGrantedBy: isGranting ? input.actor.displayName || input.actor.email : null,
+    equipmentEditGrantedAt: isGranting ? new Date().toISOString() : null,
+    equipmentEditNotes: input.notes?.trim() || null,
+    updatedAt: serverTimestamp(),
+  });
+
+  const formattedDate = input.equipmentEditUntil
+    ? new Date(
+        input.equipmentEditUntil.includes('T')
+          ? input.equipmentEditUntil
+          : `${input.equipmentEditUntil}T12:00:00`
+      ).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      })
+    : 'Revocado';
+
+  await writeAuditLog({
+    labId,
+    actorId: input.actor.uid,
+    actorEmail: input.actor.email ?? '',
+    actorName: input.actor.displayName ?? 'Administrador',
+    actorRole: input.actor.role,
+    action: isGranting ? 'PERMISSION_GRANT_EQUIPMENT_EDIT' : 'PERMISSION_REVOKE_EQUIPMENT_EDIT',
+    targetType: 'user',
+    targetId: input.targetUserId,
+    summary: isGranting
+      ? `Designó permiso de Gestión de Equipos a ${input.targetUserName} (${input.targetUserEmail || 'sin correo'}) hasta el ${formattedDate}${
+          input.notes ? ` · Motivo: ${input.notes}` : ''
+        }`
+      : `Revocó permiso de Gestión de Equipos a ${input.targetUserName} (${input.targetUserEmail || 'sin correo'})`,
+    before: null,
+    after: input.equipmentEditUntil,
+  });
 }
 
