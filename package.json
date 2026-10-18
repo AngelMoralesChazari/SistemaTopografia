@@ -17,6 +17,7 @@
     "seed:users": "node scripts/seed-users.mjs",
     "seed:groups": "node scripts/seed-groups.mjs",
     "seed:equipment": "node scripts/seed-equipment.mjs",
+    "clean:demo": "node scripts/clean-demo.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
