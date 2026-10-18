@@ -41,7 +41,7 @@ export const theme = {
     xxxl: 32,
   },
   font: {
-    sans: 'System',
+    sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     size: {
       xs: 12,
       sm: 13,
