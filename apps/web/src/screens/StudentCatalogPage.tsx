@@ -82,6 +82,7 @@ export function StudentCatalogPage() {
   const { user } = useAuth();
   const { width, height } = useWindowDimensions();
   const compact = width < 900;
+  const isMobile = width < 860;
   const [containerWidth, setContainerWidth] = useState(0);
   const availableWidth =
     containerWidth > 0
@@ -443,13 +444,13 @@ export function StudentCatalogPage() {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1, minWidth: 200 }}>
-            <Text style={styles.title}>Catálogo de equipos</Text>
+      <ScrollView contentContainerStyle={[styles.content, isMobile && styles.contentMobile]} showsVerticalScrollIndicator={false}>
+        <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
+          <View style={[styles.headerTitleWrap, isMobile && styles.headerTitleWrapMobile]}>
+            <Text style={[styles.title, isMobile && styles.titleMobile]}>Catálogo de equipos</Text>
             <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
           </View>
-          <View style={styles.headerRight}>
+          <View style={[styles.headerRight, isMobile && styles.headerRightMobile]}>
             {cartItems.length > 0 ? (
               <Pressable
                 onPress={() => setCartModalOpen(true)}
@@ -1254,6 +1255,7 @@ export function StudentCatalogPage() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.canvas, position: 'relative' },
   content: { padding: 28, paddingBottom: 100 },
+  contentMobile: { padding: 14, paddingBottom: 100 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1262,16 +1264,39 @@ const styles = StyleSheet.create({
     gap: 16,
     flexWrap: 'wrap',
   },
+  headerRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 200,
+  },
+  headerTitleWrapMobile: {
+    flex: 0,
+    width: '100%',
+    minWidth: '100%',
+  },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
   },
+  titleMobile: {
+    fontSize: 24,
+    lineHeight: 30,
+  },
   subtitle: {
     marginTop: 8,
     color: theme.color.muted,
     fontSize: theme.font.size.md,
+  },
+  headerRightMobile: {
+    width: '100%',
+    justifyContent: 'space-between',
   },
   kpis: {
     flexDirection: 'row',
