@@ -17,7 +17,9 @@ import {
   EQUIPMENT_STATUS_LABELS,
   buildCategoryGroups,
   categoryIdOf,
+  hasEquipmentEditPermission,
   isAdminRole,
+  type AppUser,
   type CategoryGroup,
   type Equipment,
   type EquipmentStatus,
@@ -27,11 +29,13 @@ import {
   updateEquipment,
   uploadEquipmentPhoto,
   watchEquipment,
+  watchLabUsers,
   writeAuditLog,
 } from '@lab-topo/services';
 import { Badge, Button, Notice, TextField, Toast, type BadgeTone } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
 import { FilterChips } from '../components/FilterChips';
+import { LabManagerPermissionModal } from '../components/LabManagerPermissionModal';
 import { ListPagination } from '../components/ListPagination';
 import { paginate } from '../lib/pagination';
 import { formatFileSize, optimizeImageForUpload } from '../lib/imageOptimizer';
@@ -69,7 +73,26 @@ const ALL_STATUS_OPTIONS: { id: EquipmentStatus; label: string }[] = [
 
 export function ManageEquipmentPage() {
   const { user } = useAuth();
-  const canWrite = user ? isAdminRole(user.role) : false;
+  const canWrite = user ? (isAdminRole(user.role) || hasEquipmentEditPermission(user)) : false;
+  const isLabManager = user?.role === 'lab_manager';
+
+  const [labManagers, setLabManagers] = useState<AppUser[]>([]);
+  const [selectedLabManagerForModal, setSelectedLabManagerForModal] = useState<AppUser | null>(null);
+  const [showManagerSelectModal, setShowManagerSelectModal] = useState(false);
+
+  useEffect(() => {
+    if (!user || !isAdminRole(user.role)) return;
+    const labId = user.labId ?? getLabId();
+    const unsub = watchLabUsers(
+      (allUsers) => {
+        const managers = allUsers.filter((u) => u.role === 'lab_manager');
+        setLabManagers(managers);
+      },
+      undefined,
+      labId
+    );
+    return () => unsub();
+  }, [user]);
 
   const { width } = useWindowDimensions();
   const compact = width < 900;
@@ -528,14 +551,62 @@ export function ManageEquipmentPage() {
   };
 
   if (!canWrite) {
+    const hasExpiredDate = Boolean(user?.equipmentEditUntil);
+
     return (
       <View style={styles.root}>
-        <View style={styles.content}>
-          <Notice
-            tone="danger"
-            title="Acceso restringido"
-            description="Esta sección es exclusiva para administradores del laboratorio."
-          />
+        <View style={[styles.content, { maxWidth: 640, alignSelf: 'center', width: '100%', paddingTop: 60 }]}>
+          <View style={styles.restrictedCard}>
+            <View style={[styles.restrictedIconWrap, isLabManager && styles.restrictedIconWrapWarning]}>
+              <MaterialIcons
+                name={isLabManager ? (hasExpiredDate ? 'history-toggle-off' : 'lock-clock') : 'lock'}
+                size={40}
+                color={isLabManager ? '#D97706' : '#DC2626'}
+              />
+            </View>
+
+            <Text style={styles.restrictedTitle}>
+              {isLabManager
+                ? hasExpiredDate
+                  ? 'Permiso de edición vencido'
+                  : 'Permiso temporal requerido'
+                : 'Acceso restringido'}
+            </Text>
+
+            <Text style={styles.restrictedDesc}>
+              {isLabManager ? (
+                hasExpiredDate ? (
+                  `Tu permiso temporal para gestionar y editar el catálogo de equipos venció el ${new Date(
+                    user!.equipmentEditUntil!
+                  ).toLocaleDateString('es-MX', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}. Solicita a un administrador una nueva autorización para continuar realizando modificaciones.`
+                ) : (
+                  'Como encargado de laboratorio necesitas una autorización temporal asignada por un administrador para poder agregar, editar o ajustar equipos en el inventario.'
+                )
+              ) : (
+                'Esta sección es exclusiva para administradores y personal con autorización temporal activa.'
+              )}
+            </Text>
+
+            {isLabManager && (
+              <View style={styles.restrictedAdminNote}>
+                <MaterialIcons name="info-outline" size={18} color="#2563EB" style={{ marginRight: 8, marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.restrictedAdminNoteTitle}>
+                    ¿Quién puede asignarte este permiso?
+                  </Text>
+                  <Text style={styles.restrictedAdminNoteText}>
+                    Cualquiera de los dos administradores autorizados:
+                    {'\n'}• Administrador titular: <Text style={{ fontWeight: '700' }}>19258@uagro.mx</Text>
+                    {'\n'}• Segundo administrador: <Text style={{ fontWeight: '700' }}>17651@uagro.mx</Text>
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -544,6 +615,35 @@ export function ManageEquipmentPage() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={[styles.content, isMobile && styles.contentMobile]} showsVerticalScrollIndicator={false}>
+        {/* Banner de permiso activo para encargado de laboratorio */}
+        {isLabManager && user?.equipmentEditUntil && (
+          <View style={styles.permissionActiveBanner}>
+            <View style={styles.permissionActiveIconWrap}>
+              <MaterialIcons name="verified-user" size={22} color="#15803D" />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Text style={styles.permissionActiveTitle}>
+                  Permiso temporal de edición activo
+                </Text>
+                <View style={styles.permissionActiveChip}>
+                  <Text style={styles.permissionActiveChipText}>
+                    Hasta {new Date(user.equipmentEditUntil).toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.permissionActiveDesc}>
+                Tienes autorización para crear nuevos equipos, modificar información y actualizar existencias de stock.
+                {user.equipmentEditNotes ? ` Motivo: "${user.equipmentEditNotes}".` : ''}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Encabezado */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -552,21 +652,44 @@ export function ManageEquipmentPage() {
               Administración directa del catálogo: modifica nombres, stock, categorías y estatus.
             </Text>
           </View>
-          <Pressable
-            style={styles.primaryBtn}
-            onPress={() => {
-              setCreateError(null);
-              setShowCreateForm(true);
-            }}
-          >
-            <MaterialIcons
-              name="add"
-              size={20}
-              color="#fff"
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.primaryBtnText}>Nuevo equipo</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {Boolean(user && isAdminRole(user.role)) && (
+              <Pressable
+                style={styles.adminPermHeaderBtn}
+                onPress={() => {
+                  if (labManagers.length === 0) {
+                    showToast('No hay encargados de laboratorio registrados en este momento.');
+                  } else if (labManagers.length === 1) {
+                    setSelectedLabManagerForModal(labManagers[0]);
+                  } else {
+                    setShowManagerSelectModal(true);
+                  }
+                }}
+              >
+                <MaterialIcons name="security" size={18} color="#0D9488" style={{ marginRight: 6 }} />
+                <Text style={styles.adminPermHeaderBtnText}>
+                  {labManagers.length > 1
+                    ? `Permisos de encargados (${labManagers.length})`
+                    : 'Permiso de encargado'}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={styles.primaryBtn}
+              onPress={() => {
+                setCreateError(null);
+                setShowCreateForm(true);
+              }}
+            >
+              <MaterialIcons
+                name="add"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.primaryBtnText}>Nuevo equipo</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Tarjetas de KPI */}
@@ -1478,6 +1601,58 @@ export function ManageEquipmentPage() {
         </View>
       </Modal>
 
+      {/* Modal de asignación de permisos temporales (Admin -> Encargado) */}
+      {selectedLabManagerForModal && (
+        <LabManagerPermissionModal
+          visible={Boolean(selectedLabManagerForModal)}
+          targetUser={selectedLabManagerForModal}
+          onClose={() => setSelectedLabManagerForModal(null)}
+          onSuccess={(msg) => {
+            showToast(msg);
+          }}
+        />
+      )}
+
+      {/* Selector modal si hay más de 1 encargado */}
+      <Modal
+        visible={showManagerSelectModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowManagerSelectModal(false)}
+      >
+        <Pressable
+          style={styles.managerSelectOverlay}
+          onPress={() => setShowManagerSelectModal(false)}
+        >
+          <Pressable style={styles.managerSelectCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.managerSelectTitle}>Selecciona un encargado</Text>
+            <Text style={styles.managerSelectSubtitle}>
+              Elige al encargado de laboratorio al que deseas otorgar o modificar el permiso temporal:
+            </Text>
+            <View style={{ gap: 8, marginTop: 12 }}>
+              {labManagers.map((lm) => (
+                <Pressable
+                  key={lm.uid}
+                  style={styles.managerSelectItem}
+                  onPress={() => {
+                    setShowManagerSelectModal(false);
+                    setSelectedLabManagerForModal(lm);
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.managerSelectItemName}>
+                      {lm.displayName || lm.email}
+                    </Text>
+                    <Text style={styles.managerSelectItemEmail}>{lm.email}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={theme.color.muted} />
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Toast message={toast ?? ''} visible={toastVisible} />
     </View>
   );
@@ -2285,5 +2460,177 @@ const styles = StyleSheet.create({
   photoDeleteBtn: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
+  },
+
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  adminPermHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1.5,
+    borderColor: '#99F6E4',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    ...theme.shadow.soft,
+  },
+  adminPermHeaderBtnText: {
+    color: '#0F766E',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+
+  permissionActiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    borderRadius: theme.radius.lg,
+    padding: 14,
+    marginBottom: 20,
+    ...theme.shadow.soft,
+  },
+  permissionActiveIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionActiveTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#166534',
+  },
+  permissionActiveChip: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  permissionActiveChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  permissionActiveDesc: {
+    fontSize: 12,
+    color: '#14532D',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+
+  restrictedCard: {
+    backgroundColor: theme.color.surface,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    borderRadius: theme.radius.lg,
+    padding: 28,
+    alignItems: 'center',
+    textAlign: 'center',
+    ...theme.shadow.soft,
+  },
+  restrictedIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  restrictedIconWrapWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  restrictedTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.color.navy,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  restrictedDesc: {
+    fontSize: 14,
+    color: theme.color.muted,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  restrictedAdminNote: {
+    flexDirection: 'row',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 10,
+    padding: 14,
+    textAlign: 'left',
+    width: '100%',
+  },
+  restrictedAdminNoteTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E40AF',
+    marginBottom: 4,
+  },
+  restrictedAdminNoteText: {
+    fontSize: 12,
+    color: '#1E3A8A',
+    lineHeight: 18,
+  },
+
+  managerSelectOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  managerSelectCard: {
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.lg,
+    padding: 22,
+    width: '100%',
+    maxWidth: 460,
+    ...theme.shadow.md,
+  },
+  managerSelectTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: theme.color.navy,
+  },
+  managerSelectSubtitle: {
+    fontSize: 13,
+    color: theme.color.muted,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  managerSelectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    backgroundColor: '#F8FAFC',
+  },
+  managerSelectItemName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.color.navy,
+  },
+  managerSelectItemEmail: {
+    fontSize: 12,
+    color: theme.color.muted,
+    marginTop: 2,
   },
 });
