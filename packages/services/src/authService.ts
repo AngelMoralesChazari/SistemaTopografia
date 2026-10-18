@@ -182,6 +182,10 @@ async function loadUserProfile(user: User, forceRefresh: boolean = false): Promi
     ine: (data.ine as string | null | undefined) ?? null,
     rfc: (data.rfc as string | null | undefined) ?? null,
     address: (data.address as string | null | undefined) ?? null,
+    equipmentEditUntil: (data.equipmentEditUntil as string | null | undefined) ?? null,
+    equipmentEditGrantedBy: (data.equipmentEditGrantedBy as string | null | undefined) ?? null,
+    equipmentEditGrantedAt: (data.equipmentEditGrantedAt as string | null | undefined) ?? null,
+    equipmentEditNotes: (data.equipmentEditNotes as string | null | undefined) ?? null,
   };
 }
 
