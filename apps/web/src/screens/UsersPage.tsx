@@ -14,6 +14,7 @@ import { theme } from '@lab-topo/config';
 import {
   TOPOGRAPHY_GROUPS,
   formatRole,
+  hasEquipmentEditPermission,
   isAdminRole,
   type AcademicGroup,
   type AppUser,
@@ -30,8 +31,10 @@ import {
 } from '@lab-topo/services';
 import { Button, Notice, TextField, Toast } from '@lab-topo/ui';
 import { useAuth } from '../auth/AuthContext';
+import { LabManagerPermissionModal } from '../components/LabManagerPermissionModal';
 import { ListPagination } from '../components/ListPagination';
 import { paginate } from '../lib/pagination';
+import { formatMexicoDate } from '../lib/reportGenerator';
 
 type RoleFilter = 'all' | UserRole;
 
@@ -83,6 +86,10 @@ export function UsersPage() {
   const [editActive, setEditActive] = useState(true);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Modal Permiso de Gestión de Equipos para Encargado de Laboratorio
+  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
+  const [selectedLabManager, setSelectedLabManager] = useState<AppUser | null>(null);
 
   // Indicador de estado de activación/desactivación en proceso
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
@@ -373,6 +380,7 @@ export function UsersPage() {
             {/* Lista de usuarios */}
             {paging.pageItems.map((u) => {
               const isTeacher = u.role === 'teacher';
+              const isLabManager = u.role === 'lab_manager';
               return (
                 <View key={u.uid} style={[styles.card, !u.active && styles.cardInactive]}>
                   <View style={styles.cardTop}>
@@ -415,6 +423,41 @@ export function UsersPage() {
                     </View>
                   ) : null}
 
+                  {/* Estado de permiso para Encargado de Laboratorio */}
+                  {isLabManager ? (
+                    <View style={styles.permissionStatusRow}>
+                      <MaterialIcons
+                        name={hasEquipmentEditPermission(u) ? 'vpn-key' : 'lock-clock'}
+                        size={15}
+                        color={hasEquipmentEditPermission(u) ? theme.color.success : theme.color.muted}
+                      />
+                      <Text style={styles.permissionStatusLabel}>Permiso de edición:</Text>
+                      <View
+                        style={[
+                          styles.permissionBadge,
+                          hasEquipmentEditPermission(u)
+                            ? styles.permissionBadgeActive
+                            : styles.permissionBadgeInactive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.permissionBadgeText,
+                            hasEquipmentEditPermission(u)
+                              ? styles.permissionTextActive
+                              : styles.permissionTextInactive,
+                          ]}
+                        >
+                          {hasEquipmentEditPermission(u)
+                            ? `Habilitado hasta ${formatMexicoDate(u.equipmentEditUntil)}`
+                            : u.equipmentEditUntil
+                            ? `Expiró el ${formatMexicoDate(u.equipmentEditUntil)}`
+                            : 'Acceso restringido (Sin permiso)'}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <View style={styles.cardBottomRow}>
                     <Text style={styles.meta}>
                       {u.active ? 'Activo' : 'Inactivo (Baja)'}
@@ -423,6 +466,34 @@ export function UsersPage() {
                       {u.teacherName ? ` · Prof. ${u.teacherName}` : ''}
                       {u.renterStatus ? ` · Renta: ${u.renterStatus}` : ''}
                     </Text>
+
+                    {/* Acciones para encargados de laboratorio (solo administradores) */}
+                    {isLabManager && user && isAdminRole(user.role) ? (
+                      <View style={styles.teacherCardActions}>
+                        <Pressable
+                          style={[
+                            styles.actionBtnSmall,
+                            hasEquipmentEditPermission(u)
+                              ? { backgroundColor: theme.color.infoSoft, borderColor: theme.color.navy }
+                              : null,
+                          ]}
+                          onPress={() => {
+                            setSelectedLabManager(u);
+                            setPermissionModalOpen(true);
+                          }}
+                        >
+                          <MaterialIcons
+                            name="vpn-key"
+                            size={14}
+                            color={theme.color.navy}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={styles.actionBtnSmallText}>
+                            {hasEquipmentEditPermission(u) ? 'Modificar permiso' : 'Designar permiso'}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
 
                     {/* Acciones para maestros (solo administradores) */}
                     {isTeacher && canCreateTeacher ? (
@@ -823,6 +894,17 @@ export function UsersPage() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de asignación de permisos temporales de gestión de equipos */}
+      <LabManagerPermissionModal
+        visible={permissionModalOpen}
+        targetUser={selectedLabManager}
+        onClose={() => {
+          setPermissionModalOpen(false);
+          setSelectedLabManager(null);
+        }}
+        onSuccess={(msg) => showToast(msg)}
+      />
 
       <Toast message={toast ?? ''} visible={toastVisible} />
     </View>
@@ -1236,5 +1318,39 @@ const styles = StyleSheet.create({
   },
   modalSaveBtn: {
     flex: 1,
+  },
+  permissionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  permissionStatusLabel: {
+    fontSize: 12,
+    color: theme.color.muted,
+    fontWeight: '600',
+  },
+  permissionBadge: {
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  permissionBadgeActive: {
+    backgroundColor: theme.color.successSoft,
+  },
+  permissionBadgeInactive: {
+    backgroundColor: '#F1F5F9',
+  },
+  permissionBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  permissionTextActive: {
+    color: theme.color.success,
+  },
+  permissionTextInactive: {
+    color: theme.color.muted,
   },
 });
