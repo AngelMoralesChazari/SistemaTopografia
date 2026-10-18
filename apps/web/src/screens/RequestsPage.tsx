@@ -70,6 +70,124 @@ function formatDate(value: string | null): string {
   });
 }
 
+const DELIVERY_QUICK_OBSERVATIONS = [
+  {
+    id: 'rayones',
+    title: 'Rayones leves',
+    meta: 'Superficiales · Carcasa, base nivelante o cuerpo',
+    badge: 'Estético',
+    badgeTone: 'neutral',
+  },
+  {
+    id: 'desgaste',
+    title: 'Desgaste por uso',
+    meta: 'Pintura desgastada o marcas normales de fricción',
+    badge: 'Uso normal',
+    badgeTone: 'info',
+  },
+  {
+    id: 'manchas',
+    title: 'Manchas en estuche/equipo',
+    meta: 'Manchas superficiales de lodo o suciedad leve',
+    badge: 'Limpieza',
+    badgeTone: 'neutral',
+  },
+  {
+    id: 'fisura',
+    title: 'Rotura o fisura menor',
+    meta: 'Fisura en mica, bisel o tapa protectora',
+    badge: 'Atención',
+    badgeTone: 'warning',
+  },
+  {
+    id: 'tornillos',
+    title: 'Tornillos o piezas flojas',
+    meta: 'Tornillo de ajuste, freno o nivelación con juego',
+    badge: 'Mecánico',
+    badgeTone: 'warning',
+  },
+] as const;
+
+const RETURN_DAMAGE_CATALOG = [
+  {
+    id: 'golpe',
+    title: 'Golpe o caída',
+    meta: 'Impacto visible en carcasa, base o accesorios',
+    badge: 'Severo',
+    badgeTone: 'danger',
+  },
+  {
+    id: 'lente',
+    title: 'Lente o display rayado',
+    meta: 'Rayón profundo en óptica, pantalla o vidrio',
+    badge: 'Óptica',
+    badgeTone: 'warning',
+  },
+  {
+    id: 'tornillo_roto',
+    title: 'Tornillo o perilla rota',
+    meta: 'Tornillo de presión o perilla barrida o quebrada',
+    badge: 'Mecánico',
+    badgeTone: 'warning',
+  },
+  {
+    id: 'falta_pieza',
+    title: 'Falta pieza o accesorio',
+    meta: 'Falta batería, cable, cargador, tapa o plomada',
+    badge: 'Faltante',
+    badgeTone: 'danger',
+  },
+  {
+    id: 'estuche_roto',
+    title: 'Estuche o maletín roto',
+    meta: 'Broche quebrado, bisagra dañada o maletín fisurado',
+    badge: 'Estuche',
+    badgeTone: 'info',
+  },
+  {
+    id: 'descalibrado',
+    title: 'Equipo descalibrado',
+    meta: 'Error de colimación, nivel de burbuja desajustado',
+    badge: 'Calibración',
+    badgeTone: 'warning',
+  },
+  {
+    id: 'humedad',
+    title: 'Humedad o suciedad severa',
+    meta: 'Filtración de agua, lodo acumulado en botones/óptica',
+    badge: 'Limpieza',
+    badgeTone: 'info',
+  },
+] as const;
+
+function toggleNoteItem(currentText: string, itemTitle: string): string {
+  const trimmed = currentText.trim();
+  if (!trimmed) return itemTitle;
+
+  const parts = trimmed
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const index = parts.findIndex((p) => p.toLowerCase() === itemTitle.toLowerCase());
+  if (index >= 0) {
+    parts.splice(index, 1);
+    return parts.join(', ');
+  } else {
+    parts.push(itemTitle);
+    return parts.join(', ');
+  }
+}
+
+function hasNoteItem(currentText: string, itemTitle: string): boolean {
+  if (!currentText) return false;
+  return currentText
+    .toLowerCase()
+    .split(',')
+    .map((p) => p.trim())
+    .includes(itemTitle.toLowerCase());
+}
+
 export function RequestsPage() {
   const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
@@ -876,36 +994,98 @@ export function RequestsPage() {
                 </View>
               </Pressable>
 
-              {/* Quick chips para observaciones comunes */}
-              <View style={styles.quickChipsSection}>
-                <Text style={styles.quickChipsTitle}>
-                  Observaciones rápidas (desmarca "perfecto estado"):
-                </Text>
-                <View style={styles.chipsRow}>
-                  {[
-                    'Rayones leves',
-                    'Desgaste estético',
-                    'Manchas en estuche/equipo',
-                    'Rotura o fisura menor',
-                    'Tornillos/piezas flojas',
-                  ].map((chip) => (
-                    <Pressable
-                      key={chip}
-                      style={styles.chip}
-                      onPress={() => {
-                        setIsPerfectCondition(false);
-                        setDeliveryNotes((prev) => {
-                          const trimmed = prev.trim();
-                          if (!trimmed) return chip;
-                          if (trimmed.includes(chip)) return trimmed;
-                          return `${trimmed}, ${chip}`;
-                        });
-                      }}
-                    >
-                      <MaterialIcons name="add" size={14} color={theme.color.navy} />
-                      <Text style={styles.chipText}>{chip}</Text>
-                    </Pressable>
-                  ))}
+              {/* Lista interactiva de observaciones rápidas estilo Image 2 */}
+              <View style={styles.quickPickerSection}>
+                <View style={styles.quickPickerHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.quickPickerTitle}>Observaciones del estado</Text>
+                    <Text style={styles.quickPickerSubtitle}>
+                      Toca un concepto para agregarlo o quitarlo de las notas
+                    </Text>
+                  </View>
+                  <View style={styles.quickPickerCountBadge}>
+                    <Text style={styles.quickPickerCountText}>
+                      {DELIVERY_QUICK_OBSERVATIONS.filter((o) => hasNoteItem(deliveryNotes, o.title)).length} selecc.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.quickPickerCard}>
+                  {DELIVERY_QUICK_OBSERVATIONS.map((item, idx) => {
+                    const isAdded = hasNoteItem(deliveryNotes, item.title);
+                    const isLast = idx === DELIVERY_QUICK_OBSERVATIONS.length - 1;
+                    return (
+                      <Pressable
+                        key={item.id}
+                        onPress={() => {
+                          setIsPerfectCondition(false);
+                          setDeliveryNotes((prev) => toggleNoteItem(prev, item.title));
+                        }}
+                        style={({ pressed }) => [
+                          styles.quickPickerItemRow,
+                          isLast && { borderBottomWidth: 0 },
+                          isAdded && styles.quickPickerItemRowActive,
+                          pressed && { backgroundColor: theme.color.infoSoft },
+                        ]}
+                      >
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={[
+                              styles.quickPickerItemName,
+                              isAdded && { color: theme.color.navy, fontWeight: '800' },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text style={styles.quickPickerItemMeta} numberOfLines={1}>
+                            {item.meta}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.quickPickerBadge,
+                            isAdded
+                              ? styles.badgeAdded
+                              : item.badgeTone === 'warning'
+                                ? styles.badgeWarning
+                                : item.badgeTone === 'info'
+                                  ? styles.badgeInfo
+                                  : styles.badgeNeutral,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.quickPickerBadgeText,
+                              isAdded
+                                ? styles.badgeTextAdded
+                                : item.badgeTone === 'warning'
+                                  ? styles.badgeTextWarning
+                                  : item.badgeTone === 'info'
+                                    ? styles.badgeTextInfo
+                                    : styles.badgeTextNeutral,
+                            ]}
+                          >
+                            {isAdded ? 'Añadido' : item.badge}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.quickPickerAddBtn,
+                            isAdded && styles.quickPickerAddBtnAdded,
+                          ]}
+                        >
+                          <MaterialIcons
+                            name={isAdded ? 'check' : 'add'}
+                            size={18}
+                            color={isAdded ? theme.color.success : theme.color.navy}
+                          />
+                        </View>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -1216,38 +1396,109 @@ export function RequestsPage() {
                 </View>
               </Pressable>
 
-              {/* Quick chips para observaciones comunes de devolución */}
+              {/* Lista interactiva de averías y daños frecuentes estilo Image 2 */}
               {!isReturnGoodCondition && (
-                <View style={styles.quickChipsSection}>
-                  <Text style={styles.quickChipsTitle}>
-                    Selecciona daños comunes o averías frecuentes:
-                  </Text>
-                  <View style={styles.chipsRow}>
-                    {[
-                      'Golpe o caída',
-                      'Lente o display rayado',
-                      'Tornillo o perilla rota',
-                      'Falta pieza o accesorio',
-                      'Estuche o maletín roto',
-                      'Equipo descalibrado',
-                      'Humedad o suciedad severa',
-                    ].map((chip) => (
-                      <Pressable
-                        key={chip}
-                        style={styles.chip}
-                        onPress={() => {
-                          setReturnDamageNotes((prev) => {
-                            const trimmed = prev.trim();
-                            if (!trimmed) return chip;
-                            if (trimmed.includes(chip)) return trimmed;
-                            return `${trimmed}, ${chip}`;
-                          });
-                        }}
+                <View style={styles.quickPickerSection}>
+                  <View style={styles.quickPickerHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.quickPickerTitle}>Catálogo de daños y averías frecuentes</Text>
+                      <Text style={styles.quickPickerSubtitle}>
+                        Toca una avería para añadirla a la especificación
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.quickPickerCountBadge,
+                        { backgroundColor: 'rgba(217, 4, 41, 0.08)' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.quickPickerCountText,
+                          { color: theme.color.red },
+                        ]}
                       >
-                        <MaterialIcons name="add" size={14} color={theme.color.navy} />
-                        <Text style={styles.chipText}>{chip}</Text>
-                      </Pressable>
-                    ))}
+                        {RETURN_DAMAGE_CATALOG.filter((d) => hasNoteItem(returnDamageNotes, d.title)).length} selecc.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.quickPickerCard}>
+                    {RETURN_DAMAGE_CATALOG.map((item, idx) => {
+                      const isAdded = hasNoteItem(returnDamageNotes, item.title);
+                      const isLast = idx === RETURN_DAMAGE_CATALOG.length - 1;
+                      return (
+                        <Pressable
+                          key={item.id}
+                          onPress={() => {
+                            setReturnDamageNotes((prev) => toggleNoteItem(prev, item.title));
+                            setReturnError(null);
+                          }}
+                          style={({ pressed }) => [
+                            styles.quickPickerItemRow,
+                            isLast && { borderBottomWidth: 0 },
+                            isAdded && styles.quickPickerItemRowActive,
+                            pressed && { backgroundColor: theme.color.infoSoft },
+                          ]}
+                        >
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text
+                              style={[
+                                styles.quickPickerItemName,
+                                isAdded && { color: theme.color.navy, fontWeight: '800' },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.title}
+                            </Text>
+                            <Text style={styles.quickPickerItemMeta} numberOfLines={1}>
+                              {item.meta}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={[
+                              styles.quickPickerBadge,
+                              isAdded
+                                ? styles.badgeAdded
+                                : item.badgeTone === 'danger'
+                                  ? styles.badgeDanger
+                                  : item.badgeTone === 'warning'
+                                    ? styles.badgeWarning
+                                    : styles.badgeInfo,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.quickPickerBadgeText,
+                                isAdded
+                                  ? styles.badgeTextAdded
+                                  : item.badgeTone === 'danger'
+                                    ? styles.badgeTextDanger
+                                    : item.badgeTone === 'warning'
+                                      ? styles.badgeTextWarning
+                                      : styles.badgeTextInfo,
+                              ]}
+                            >
+                              {isAdded ? 'Añadido' : item.badge}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={[
+                              styles.quickPickerAddBtn,
+                              isAdded && styles.quickPickerAddBtnAdded,
+                            ]}
+                          >
+                            <MaterialIcons
+                              name={isAdded ? 'check' : 'add'}
+                              size={18}
+                              color={isAdded ? theme.color.success : theme.color.navy}
+                            />
+                          </View>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 </View>
               )}
@@ -1996,35 +2247,121 @@ const styles = StyleSheet.create({
     fontSize: theme.font.size.xs,
     marginTop: 2,
   },
-  quickChipsSection: {
-    marginBottom: 12,
+  quickPickerSection: {
+    marginBottom: 14,
   },
-  quickChipsTitle: {
-    color: theme.color.muted,
-    fontSize: theme.font.size.xs,
-    fontWeight: '700',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  chip: {
+  quickPickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EDF2F7',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 8,
   },
-  chipText: {
+  quickPickerTitle: {
     color: theme.color.navy,
-    fontSize: theme.font.size.xs,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  quickPickerSubtitle: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  quickPickerCountBadge: {
+    backgroundColor: theme.color.infoSoft,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  quickPickerCountText: {
+    color: theme.color.navy,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  quickPickerCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    ...theme.shadow.soft,
+  },
+  quickPickerItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  quickPickerItemRowActive: {
+    backgroundColor: 'rgba(34, 102, 216, 0.04)',
+  },
+  quickPickerItemName: {
+    color: theme.color.navy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  quickPickerItemMeta: {
+    color: theme.color.muted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  quickPickerBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  quickPickerBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  badgeNeutral: {
+    backgroundColor: '#F1F5F9',
+  },
+  badgeTextNeutral: {
+    color: '#475569',
+  },
+  badgeInfo: {
+    backgroundColor: theme.color.infoSoft,
+  },
+  badgeTextInfo: {
+    color: theme.color.navy,
+  },
+  badgeWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  badgeTextWarning: {
+    color: '#92400E',
+  },
+  badgeDanger: {
+    backgroundColor: '#FEE2E2',
+  },
+  badgeTextDanger: {
+    color: '#991B1B',
+  },
+  badgeAdded: {
+    backgroundColor: theme.color.successSoft,
+  },
+  badgeTextAdded: {
+    color: theme.color.success,
+  },
+  quickPickerAddBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.color.infoSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  quickPickerAddBtnAdded: {
+    backgroundColor: theme.color.successSoft,
   },
   notesBlock: {
     marginBottom: 16,
