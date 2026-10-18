@@ -35,11 +35,14 @@ export {
   setTeacherActiveStatus,
   assignStudentAcademicGroup,
   syncPendingStudentsForTeacher,
+  setEquipmentEditPermission,
+  watchUser,
 } from './userService';
 export type {
   CreateTeacherInput,
   UpdateTeacherInput,
   AssignStudentGroupResult,
+  SetEquipmentEditPermissionInput,
 } from './userService';
 export { listGroups, ensureDefaultGroups, watchGroups } from './groupService';
 export {
