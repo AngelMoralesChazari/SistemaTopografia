@@ -225,14 +225,14 @@ export function EquipmentPage() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={[styles.content, isMobile && styles.contentMobile]} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.title}>Catálogo de equipos</Text>
+        <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
+          <View style={[styles.headerTitleWrap, isMobile && styles.headerTitleWrapMobile]}>
+            <Text style={[styles.title, isMobile && styles.titleMobile]}>Catálogo de equipos</Text>
             <Text style={styles.subtitle}>Inventario activo del laboratorio de topografía.</Text>
           </View>
           {canWrite ? (
             <Pressable
-              style={styles.primaryBtn}
+              style={[styles.primaryBtn, isMobile && styles.primaryBtnMobile]}
               onPress={() => {
                 setFormError(null);
                 setShowForm(true);
@@ -605,11 +605,30 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 18,
   },
+  headerRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 240,
+  },
+  headerTitleWrapMobile: {
+    flex: 0,
+    width: '100%',
+    minWidth: '100%',
+  },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
+  },
+  titleMobile: {
+    fontSize: 24,
+    lineHeight: 30,
   },
   subtitle: { marginTop: 8, color: theme.color.muted, fontSize: theme.font.size.md },
   primaryBtn: {
@@ -619,6 +638,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  primaryBtnMobile: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingVertical: 11,
   },
   primaryBtnText: { color: '#fff', fontSize: theme.font.size.md, fontWeight: '800' },
   kpis: {
