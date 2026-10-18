@@ -706,7 +706,7 @@ export function ManageEquipmentPage() {
           </View>
           <View style={styles.kpi}>
             <Text style={styles.kpiLabel}>En préstamo</Text>
-            <Text style={[styles.kpiValue, { color: theme.color.delivered }]}>{kpis.loaned}</Text>
+            <Text style={[styles.kpiValue, { color: '#2563EB' }]}>{kpis.loaned}</Text>
             <Text style={styles.kpiSub}>Con alumnos o terceros</Text>
           </View>
           <View style={styles.kpi}>
