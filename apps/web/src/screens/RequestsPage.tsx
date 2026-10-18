@@ -93,6 +93,11 @@ export function RequestsPage() {
   const [deliverError, setDeliverError] = useState<string | null>(null);
   const [materialsExpanded, setMaterialsExpanded] = useState(false);
   const [deliverListExpanded, setDeliverListExpanded] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [isReturnGoodCondition, setIsReturnGoodCondition] = useState(true);
+  const [returnDamageNotes, setReturnDamageNotes] = useState('');
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [returnListExpanded, setReturnListExpanded] = useState(false);
 
   useEffect(() => {
     setMaterialsExpanded(false);
@@ -607,34 +612,20 @@ export function RequestsPage() {
                     }
                     loading={busy}
                     onPress={() => {
-                      const late = selectedBatch.dueAt
-                        ? new Date(selectedBatch.dueAt).getTime() < Date.now()
-                        : false;
-                      return runManagedAction(
-                        async () => {
-                          for (const loan of selectedBatch.loans) {
-                            await returnLoan(loan.id, user!.uid, { late });
-                          }
-                        },
-                        late
-                          ? 'Materiales devueltos con retraso.'
-                          : 'Devolución de materiales registrada.',
-                        {
-                          action: 'loan.return_batch',
-                          summary: `Devolvió pedido de ${selectedBatch.studentName} (${selectedBatch.loans.map((l) => '#' + l.folio).join(', ')})`,
-                          before: 'delivered',
-                          after: late ? 'returned_late' : 'returned',
-                        }
-                      );
+                      setReturnModalOpen(true);
+                      setIsReturnGoodCondition(true);
+                      setReturnDamageNotes('');
+                      setReturnError(null);
+                      setReturnListExpanded(false);
                     }}
                   />
                 </View>
               ) : null}
 
               {canOverride &&
-              (selectedBatch.status === 'pending' ||
-                selectedBatch.status === 'approved' ||
-                selectedBatch.status === 'rejected') ? (
+                (selectedBatch.status === 'pending' ||
+                  selectedBatch.status === 'approved' ||
+                  selectedBatch.status === 'rejected') ? (
                 <View style={styles.actions}>
                   <Text style={styles.fieldLabel}>Corrección administrativa</Text>
                   <Text style={styles.overrideHint}>
@@ -984,6 +975,372 @@ export function RequestsPage() {
                     }
                   );
                   setDeliverModalOpen(false);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Verificación y Recepción de Devolución */}
+      <Modal
+        visible={returnModalOpen && !!selectedBatch}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReturnModalOpen(false)}
+      >
+        <View style={[styles.modalBackdrop, isMobile && { padding: 12 }]}>
+          <View
+            style={[
+              styles.modalCard,
+              isMobile && styles.modalCardMobile,
+              { maxHeight: Math.min(680, height - (isMobile ? 24 : 48)) },
+            ]}
+          >
+            {/* Header fijo */}
+            <View style={styles.modalHeaderRow}>
+              <View style={[styles.modalIconWrap, { backgroundColor: 'rgba(34, 102, 216, 0.12)' }]}>
+                <MaterialIcons name="assignment-returned" size={24} color={theme.color.navy} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  Verificación de devolución
+                </Text>
+                <Text style={styles.modalSubtitle} numberOfLines={2}>
+                  Revisa el estado físico del equipo antes de ingresarlo nuevamente al inventario.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setReturnModalOpen(false)}
+                style={styles.modalCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar modal"
+              >
+                <MaterialIcons name="close" size={20} color={theme.color.muted} />
+              </Pressable>
+            </View>
+
+            {/* Cuerpo con scroll independiente */}
+            <ScrollView
+              style={styles.modalScrollBody}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {selectedBatch ? (
+                <View style={styles.summaryBox}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Alumno / Solicitante</Text>
+                    <Text style={styles.summaryValue}>
+                      {selectedBatch.studentName}
+                      {selectedBatch.studentNumber ? ` (${selectedBatch.studentNumber})` : ''}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Profesor</Text>
+                    <Text style={styles.summaryValue}>{selectedBatch.teacherName}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Total materiales</Text>
+                    <Text style={[styles.summaryValue, { color: theme.color.navy, fontWeight: '800' }]}>
+                      {selectedBatch.loans.length}{' '}
+                      {selectedBatch.loans.length === 1 ? 'material' : 'materiales'}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Fecha límite</Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        selectedBatch.dueAt && new Date(selectedBatch.dueAt).getTime() < Date.now()
+                          ? { color: theme.color.red, fontWeight: '700' }
+                          : null,
+                      ]}
+                    >
+                      {formatDate(selectedBatch.dueAt)}
+                      {selectedBatch.dueAt && new Date(selectedBatch.dueAt).getTime() < Date.now()
+                        ? ' · Con retraso'
+                        : ''}
+                    </Text>
+                  </View>
+
+                  {/* Notas previas al momento de entrega si existieron */}
+                  {selectedBatch.loans.some((l) => !!l.deliveryNotes) && (
+                    <View
+                      style={{
+                        marginTop: 8,
+                        padding: 8,
+                        backgroundColor: '#FEF3C7',
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: '#FDE68A',
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E', marginBottom: 2 }}>
+                        Observaciones registradas al entregar el equipo:
+                      </Text>
+                      {selectedBatch.loans.map((l) =>
+                        l.deliveryNotes ? (
+                          <Text key={l.id} style={{ fontSize: 11, color: '#78350F' }}>
+                            • {l.equipmentName}: {l.deliveryNotes}
+                          </Text>
+                        ) : null
+                      )}
+                    </View>
+                  )}
+
+                  {/* Lista de equipos desplegable */}
+                  <Pressable
+                    onPress={() => setReturnListExpanded((v) => !v)}
+                    style={[
+                      styles.summaryRow,
+                      !returnListExpanded && styles.summaryRowLast,
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 10,
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={styles.summaryLabel}>Lista de equipos:</Text>
+                      <Text
+                        style={{ fontSize: 12, color: theme.color.ink, fontWeight: '600', marginTop: 2 }}
+                        numberOfLines={1}
+                      >
+                        {selectedBatch.loans.length} equipos · {selectedBatch.loans[0].equipmentName}
+                        {selectedBatch.loans.length > 1 ? ` (+${selectedBatch.loans.length - 1} más)` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.modalListToggleBadge}>
+                      <Text style={styles.modalListToggleBadgeText}>
+                        {returnListExpanded ? 'Ocultar' : 'Ver lista'}
+                      </Text>
+                      <MaterialIcons
+                        name={returnListExpanded ? 'expand-less' : 'expand-more'}
+                        size={16}
+                        color={theme.color.navy}
+                      />
+                    </View>
+                  </Pressable>
+
+                  {returnListExpanded && (
+                    <View style={styles.modalExpandedListContainer}>
+                      {selectedBatch.loans.map((loan, idx) => (
+                        <View key={loan.id} style={styles.modalExpandedListRow}>
+                          <Text style={styles.modalExpandedListNum}>{idx + 1}.</Text>
+                          <Text style={styles.modalExpandedListText}>
+                            <Text style={{ fontWeight: '700', color: theme.color.ink }}>
+                              {loan.equipmentName}
+                            </Text>{' '}
+                            <Text style={{ color: theme.color.muted, fontSize: 11 }}>
+                              ({loan.equipmentCode}) · #{loan.folio}
+                            </Text>
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
+              {returnError ? (
+                <View style={{ marginBottom: 12 }}>
+                  <Notice tone="danger" title="Atención" description={returnError} />
+                </View>
+              ) : null}
+
+              <Text style={[styles.fieldLabel, { marginBottom: 10 }]}>
+                Condición de entrega del material:
+              </Text>
+
+              {/* Opción 1: En buen estado / Igual como salió */}
+              <Pressable
+                onPress={() => {
+                  setIsReturnGoodCondition(true);
+                  setReturnError(null);
+                }}
+                style={[styles.checkRow, isReturnGoodCondition && styles.checkRowActive]}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isReturnGoodCondition }}
+              >
+                <MaterialIcons
+                  name={isReturnGoodCondition ? 'radio-button-checked' : 'radio-button-unchecked'}
+                  size={24}
+                  color={isReturnGoodCondition ? theme.color.success : theme.color.muted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.checkLabel, isReturnGoodCondition && styles.checkLabelActive]}>
+                    El equipo se entrega en buenas condiciones.
+                  </Text>
+                  <Text style={styles.checkHint}>
+                    Sin daños adicionales, accesorios completos y kits completos.
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Opción 2: Peor condición o presenta daños nuevos */}
+              <Pressable
+                onPress={() => {
+                  setIsReturnGoodCondition(false);
+                  setReturnError(null);
+                }}
+                style={[
+                  styles.checkRow,
+                  !isReturnGoodCondition && [
+                    styles.checkRowActive,
+                    { borderColor: theme.color.red, backgroundColor: 'rgba(217, 4, 41, 0.05)' },
+                  ],
+                ]}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: !isReturnGoodCondition }}
+              >
+                <MaterialIcons
+                  name={!isReturnGoodCondition ? 'radio-button-checked' : 'radio-button-unchecked'}
+                  size={24}
+                  color={!isReturnGoodCondition ? theme.color.red : theme.color.muted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.checkLabel,
+                      !isReturnGoodCondition && { color: theme.color.red, fontWeight: '700' },
+                    ]}
+                  >
+                    El equipo se entrega con daños adicionales.
+                  </Text>
+                  <Text style={styles.checkHint}>
+                    Presenta roturas, golpes, faltantes o desperfectos no registrados al entregarlo.
+                  </Text>
+                </View>
+              </Pressable>
+
+              {/* Quick chips para observaciones comunes de devolución */}
+              {!isReturnGoodCondition && (
+                <View style={styles.quickChipsSection}>
+                  <Text style={styles.quickChipsTitle}>
+                    Selecciona daños comunes o averías frecuentes:
+                  </Text>
+                  <View style={styles.chipsRow}>
+                    {[
+                      'Golpe o caída',
+                      'Lente o display rayado',
+                      'Tornillo o perilla rota',
+                      'Falta pieza o accesorio',
+                      'Estuche o maletín roto',
+                      'Equipo descalibrado',
+                      'Humedad o suciedad severa',
+                    ].map((chip) => (
+                      <Pressable
+                        key={chip}
+                        style={styles.chip}
+                        onPress={() => {
+                          setReturnDamageNotes((prev) => {
+                            const trimmed = prev.trim();
+                            if (!trimmed) return chip;
+                            if (trimmed.includes(chip)) return trimmed;
+                            return `${trimmed}, ${chip}`;
+                          });
+                        }}
+                      >
+                        <MaterialIcons name="add" size={14} color={theme.color.navy} />
+                        <Text style={styles.chipText}>{chip}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Textarea para especificar daños */}
+              <View style={styles.notesBlock}>
+                <Text style={styles.fieldLabel}>
+                  Especificación de daños {!isReturnGoodCondition ? '(requerido)' : '(opcional)'}
+                </Text>
+                <TextInput
+                  value={returnDamageNotes}
+                  onChangeText={(text) => {
+                    setReturnDamageNotes(text);
+                    if (text.trim().length > 0) {
+                      setIsReturnGoodCondition(false);
+                    }
+                  }}
+                  placeholder={
+                    isReturnGoodCondition
+                      ? 'Opcional: notas adicionales sobre la devolución...'
+                      : 'Especifica detalladamente los daños encontrados, piezas faltantes o condición en que se recibe...'
+                  }
+                  placeholderTextColor={theme.color.muted}
+                  multiline
+                  numberOfLines={3}
+                  style={styles.textArea}
+                />
+              </View>
+            </ScrollView>
+
+            {/* Footer fijo con botones */}
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                fullWidth={false}
+                style={styles.modalBtn}
+                disabled={busy}
+                onPress={() => setReturnModalOpen(false)}
+              />
+              <Button
+                title={
+                  !isReturnGoodCondition
+                    ? 'Confirmar devolución con daño'
+                    : (selectedBatch?.loans?.length ?? 0) > 1
+                      ? `Confirmar devolución (${selectedBatch?.loans?.length})`
+                      : 'Confirmar devolución'
+                }
+                loading={busy}
+                disabled={busy || !selectedBatch}
+                fullWidth={false}
+                style={styles.modalBtn}
+                onPress={async () => {
+                  if (!selectedBatch || !user) return;
+                  if (!isReturnGoodCondition && !returnDamageNotes.trim()) {
+                    setReturnError(
+                      'Por favor especifica detalladamente los daños encontrados en el equipo o marca que se entrega en buenas condiciones.'
+                    );
+                    return;
+                  }
+                  setReturnError(null);
+
+                  const late = selectedBatch.dueAt
+                    ? new Date(selectedBatch.dueAt).getTime() < Date.now()
+                    : false;
+                  const isDamaged = !isReturnGoodCondition;
+                  const damageNotes = isDamaged ? returnDamageNotes.trim() : null;
+
+                  await runManagedAction(
+                    async () => {
+                      for (const loan of selectedBatch.loans) {
+                        await returnLoan(loan.id, user.uid, {
+                          late,
+                          condition: isDamaged ? 'damaged' : 'ok',
+                          damageNotes,
+                        });
+                      }
+                    },
+                    isDamaged
+                      ? 'Devolución registrada con reporte de daños.'
+                      : late
+                        ? 'Materiales devueltos con retraso.'
+                        : 'Devolución de materiales registrada exitosamente.',
+                    {
+                      action: 'loan.return_batch',
+                      summary: `Registró devolución de ${selectedBatch.studentName} (${selectedBatch.loans.map((l) => '#' + l.folio).join(', ')})${isDamaged ? ` [DAÑADO: ${damageNotes}]` : ''
+                        }`,
+                      before: 'delivered',
+                      after: isDamaged ? 'damaged' : late ? 'returned_late' : 'returned',
+                    }
+                  );
+
+                  setReturnModalOpen(false);
                 }}
               />
             </View>
