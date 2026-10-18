@@ -22,6 +22,86 @@ function formatDate(value: string | null): string {
   });
 }
 
+function formatFriendlyAction(action: string): string {
+  switch (action) {
+    case 'PERMISSION_GRANT_EQUIPMENT_EDIT':
+      return 'Permiso de edición al encargado de laboratorio';
+    case 'PERMISSION_REVOKE_EQUIPMENT_EDIT':
+      return 'Revocación de permiso de edición al encargado';
+    case 'loan.return_batch':
+    case 'loan.return':
+      return 'Retorno / devolución de material';
+    case 'loan.deliver_batch':
+    case 'loan.deliver':
+      return 'Entrega de material en préstamo';
+    case 'loan.reject_batch':
+    case 'loan.reject':
+      return 'Rechazo de solicitud de material';
+    case 'loan.approve':
+      return 'Aprobación de solicitud de material';
+    case 'loan.cancel':
+      return 'Cancelación de solicitud de material';
+    case 'loan.override':
+      return 'Modificación manual de estado de préstamo';
+    case 'equipment.create':
+    case 'EQUIPMENT_CREATE':
+      return 'Alta de equipo en catálogo';
+    case 'equipment.update':
+    case 'EQUIPMENT_UPDATE':
+      return 'Modificación de equipo en catálogo';
+    case 'equipment.delete':
+    case 'EQUIPMENT_DELETE':
+      return 'Baja de equipo del catálogo';
+    case 'equipment.stock_adjust':
+    case 'EQUIPMENT_STOCK_ADJUST':
+      return 'Ajuste de inventario / stock';
+    case 'USER_CREATE':
+      return 'Alta de usuario en el sistema';
+    case 'USER_UPDATE':
+      return 'Actualización de usuario';
+    case 'USER_DELETE':
+      return 'Baja de usuario del sistema';
+    default:
+      return action
+        .replace(/[._]/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+function formatFriendlyState(state: string | null | undefined): string {
+  if (!state || state === '—') return '—';
+  if (/^\d{4}-\d{2}-\d{2}/.test(state)) {
+    const d = new Date(state);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
+
+  const map: Record<string, string> = {
+    pending: 'Pendiente',
+    approved: 'Aprobada',
+    rejected: 'Rechazada',
+    delivered: 'En préstamo',
+    returned: 'Devuelto',
+    overdue: 'Con retraso',
+    cancelled: 'Cancelado',
+    active: 'Activo',
+    inactive: 'Inactivo',
+    available: 'Disponible',
+    maintenance: 'En mantenimiento',
+    loaned: 'Prestado',
+    damaged: 'Dañado',
+    lost: 'Perdido',
+    out_of_service: 'Fuera de servicio',
+  };
+
+  return map[state.toLowerCase()] ?? state;
+}
+
 type AuditFilterMode = 'all' | 'permissions' | 'others';
 
 export function AdminAuditPage() {
@@ -198,12 +278,23 @@ export function AdminAuditPage() {
 
                   <Text style={styles.metaRow}>
                     <Text style={styles.metaLabel}>Acción: </Text>
-                    <Text style={styles.metaCode}>{entry.action}</Text> · {entry.targetType}/
-                    {entry.targetId}
-                    {entry.before || entry.after
-                      ? ` · ${entry.before ?? '—'} → ${entry.after ?? '—'}`
-                      : ''}
+                    <Text style={styles.metaActionFriendly}>{formatFriendlyAction(entry.action)}</Text>
                   </Text>
+
+                  {(entry.before || entry.after) && (
+                    <Text style={styles.metaRow}>
+                      <Text style={styles.metaLabel}>
+                        {entry.action.startsWith('PERMISSION_') ? 'Vigencia asignada: ' : 'Cambio de estado: '}
+                      </Text>
+                      <Text style={styles.metaTransition}>
+                        {entry.action === 'PERMISSION_GRANT_EQUIPMENT_EDIT'
+                          ? `Hasta el ${formatFriendlyState(entry.after)}`
+                          : entry.action === 'PERMISSION_REVOKE_EQUIPMENT_EDIT'
+                          ? 'Permiso revocado (acceso bloqueado)'
+                          : `${formatFriendlyState(entry.before)} → ${formatFriendlyState(entry.after)}`}
+                      </Text>
+                    </Text>
+                  )}
                 </View>
               </View>
             );
@@ -360,5 +451,15 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontWeight: '600',
     color: theme.color.ink,
+  },
+  metaActionFriendly: {
+    fontWeight: '700',
+    color: theme.color.navy,
+    fontSize: 12,
+  },
+  metaTransition: {
+    fontWeight: '700',
+    color: '#2563EB',
+    fontSize: 12,
   },
 });
