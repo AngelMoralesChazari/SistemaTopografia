@@ -7,6 +7,7 @@ import {
   signInWithGoogle,
   signOut,
   watchAuth,
+  watchUser,
 } from '@lab-topo/services';
 
 type AuthContextValue = {
@@ -50,6 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return unsubscribe;
   }, [ready.ok]);
+
+  // Sincronización en tiempo real del documento de usuario (p. ej. cambios de permisos o estatus)
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = watchUser(user.uid, (updated) => {
+      if (updated) {
+        setUser((prev) => (prev ? { ...prev, ...updated } : updated));
+      }
+    });
+    return unsub;
+  }, [user?.uid]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
