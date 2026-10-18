@@ -645,17 +645,17 @@ export function ManageEquipmentPage() {
         )}
 
         {/* Encabezado */}
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.title}>Gestión de equipos</Text>
+        <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
+          <View style={[styles.headerTitleWrap, isMobile && styles.headerTitleWrapMobile]}>
+            <Text style={[styles.title, isMobile && styles.titleMobile]}>Gestión de equipos</Text>
             <Text style={styles.subtitle}>
               Administración directa del catálogo: modifica nombres, stock, categorías y estatus.
             </Text>
           </View>
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, isMobile && styles.headerActionsMobile]}>
             {Boolean(user && isAdminRole(user.role)) && (
               <Pressable
-                style={styles.adminPermHeaderBtn}
+                style={[styles.adminPermHeaderBtn, isMobile && styles.adminPermHeaderBtnMobile]}
                 onPress={() => {
                   if (labManagers.length === 0) {
                     showToast('No hay encargados de laboratorio registrados en este momento.');
@@ -667,15 +667,15 @@ export function ManageEquipmentPage() {
                 }}
               >
                 <MaterialIcons name="security" size={18} color="#0D9488" style={{ marginRight: 6 }} />
-                <Text style={styles.adminPermHeaderBtnText}>
+                <Text style={styles.adminPermHeaderBtnText} numberOfLines={1}>
                   {labManagers.length > 1
-                    ? `Permisos de encargados (${labManagers.length})`
+                    ? `Permisos (${labManagers.length})`
                     : 'Permiso de encargado'}
                 </Text>
               </Pressable>
             )}
             <Pressable
-              style={styles.primaryBtn}
+              style={[styles.primaryBtn, isMobile && styles.primaryBtnMobile]}
               onPress={() => {
                 setCreateError(null);
                 setShowCreateForm(true);
@@ -1670,11 +1670,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     flexWrap: 'wrap',
   },
+  headerRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 260,
+  },
+  headerTitleWrapMobile: {
+    flex: 0,
+    width: '100%',
+    minWidth: '100%',
+  },
   title: {
     color: theme.color.navy,
     fontSize: theme.font.size.display,
     fontWeight: '800',
     letterSpacing: -0.8,
+  },
+  titleMobile: {
+    fontSize: 24,
+    lineHeight: 30,
   },
   subtitle: {
     marginTop: 6,
@@ -1689,6 +1708,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  primaryBtnMobile: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 11,
   },
   primaryBtnText: {
     color: '#fff',
@@ -2468,6 +2493,12 @@ const styles = StyleSheet.create({
     gap: 10,
     flexWrap: 'wrap',
   },
+  headerActionsMobile: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   adminPermHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2478,6 +2509,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     ...theme.shadow.soft,
+  },
+  adminPermHeaderBtnMobile: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 11,
   },
   adminPermHeaderBtnText: {
     color: '#0F766E',
