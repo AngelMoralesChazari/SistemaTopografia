@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@lab-topo/config';
 import { formatRole, isSuperAdminRole, type UserRole } from '@lab-topo/domain';
 import { watchAuditLogs, type AuditLogEntry } from '@lab-topo/services';
@@ -21,12 +22,14 @@ function formatDate(value: string | null): string {
   });
 }
 
+type AuditFilterMode = 'all' | 'permissions' | 'others';
+
 export function AdminAuditPage() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [onlyOtherAdmins, setOnlyOtherAdmins] = useState(true);
+  const [filterMode, setFilterMode] = useState<AuditFilterMode>('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -51,14 +54,20 @@ export function AdminAuditPage() {
     return entries.filter((e) => {
       const isAdminActor = e.actorRole === 'admin' || e.actorRole === 'super_admin';
       if (!isAdminActor) return false;
-      if (onlyOtherAdmins && e.actorId === user.uid) return false;
+
+      if (filterMode === 'permissions') {
+        return e.action.startsWith('PERMISSION_');
+      }
+      if (filterMode === 'others') {
+        return e.actorId !== user.uid;
+      }
       return true;
     });
-  }, [entries, onlyOtherAdmins, user]);
+  }, [entries, filterMode, user]);
 
   useEffect(() => {
     setPage(1);
-  }, [onlyOtherAdmins]);
+  }, [filterMode]);
 
   const paging = useMemo(() => paginate(visible, page), [visible, page]);
 
@@ -78,19 +87,61 @@ export function AdminAuditPage() {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Auditoría de administradores</Text>
       <Text style={styles.subtitle}>
-        Movimientos del administrador operativo (y otros admins) para supervisión y control.
+        Supervisión de movimientos administrativos: asignación de permisos temporales a encargados,
+        cambios de estatus y decisiones operativas de 19258@uagro.mx y 17651@uagro.mx.
       </Text>
 
-      <Pressable
-        onPress={() => setOnlyOtherAdmins((v) => !v)}
-        style={[styles.toggle, onlyOtherAdmins && styles.toggleOn]}
-      >
-        <Text style={[styles.toggleText, onlyOtherAdmins && styles.toggleTextOn]}>
-          {onlyOtherAdmins
-            ? 'Mostrando acciones de otros administradores'
-            : 'Mostrando todas las acciones de admins (incluyéndote)'}
-        </Text>
-      </Pressable>
+      {/* Filtros de auditoría */}
+      <View style={styles.filtersRow}>
+        <Pressable
+          onPress={() => setFilterMode('all')}
+          style={[styles.filterChip, filterMode === 'all' && styles.filterChipActive]}
+        >
+          <MaterialIcons
+            name="list-alt"
+            size={16}
+            color={filterMode === 'all' ? theme.color.navy : theme.color.muted}
+          />
+          <Text style={[styles.filterChipText, filterMode === 'all' && styles.filterChipTextActive]}>
+            Todas las acciones
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setFilterMode('permissions')}
+          style={[styles.filterChip, filterMode === 'permissions' && styles.filterChipActive]}
+        >
+          <MaterialIcons
+            name="verified-user"
+            size={16}
+            color={filterMode === 'permissions' ? '#166534' : theme.color.muted}
+          />
+          <Text
+            style={[
+              styles.filterChipText,
+              filterMode === 'permissions' && [styles.filterChipTextActive, { color: '#166534' }],
+            ]}
+          >
+            Permisos de encargado
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setFilterMode('others')}
+          style={[styles.filterChip, filterMode === 'others' && styles.filterChipActive]}
+        >
+          <MaterialIcons
+            name="supervised-user-circle"
+            size={16}
+            color={filterMode === 'others' ? theme.color.navy : theme.color.muted}
+          />
+          <Text
+            style={[styles.filterChipText, filterMode === 'others' && styles.filterChipTextActive]}
+          >
+            Solo otro administrador
+          </Text>
+        </Pressable>
+      </View>
 
       {error ? <Notice tone="danger" title={error} /> : null}
       {loading ? (
@@ -98,26 +149,65 @@ export function AdminAuditPage() {
       ) : visible.length === 0 ? (
         <Notice
           title="Sin registros"
-          description="Cuando un administrador cambie una decisión o gestione préstamos, aparecerán aquí."
+          description={
+            filterMode === 'permissions'
+              ? 'Aún no se han registrado asignaciones o revocaciones de permisos a encargados.'
+              : 'Cuando un administrador realice una acción operativa o asigne permisos, aparecerán aquí.'
+          }
         />
       ) : (
         <>
-          {paging.pageItems.map((entry) => (
-            <View key={entry.id} style={styles.card}>
-              <Text style={styles.when}>{formatDate(entry.createdAt)}</Text>
-              <Text style={styles.summary}>{entry.summary}</Text>
-              <Text style={styles.meta}>
-                {entry.actorName} · {entry.actorEmail} ·{' '}
-                {formatRole(entry.actorRole as UserRole)}
-              </Text>
-              <Text style={styles.meta}>
-                {entry.action} · {entry.targetType}/{entry.targetId}
-                {entry.before || entry.after
-                  ? ` · ${entry.before ?? '—'} → ${entry.after ?? '—'}`
-                  : ''}
-              </Text>
-            </View>
-          ))}
+          {paging.pageItems.map((entry) => {
+            const isGrant = entry.action === 'PERMISSION_GRANT_EQUIPMENT_EDIT';
+            const isRevoke = entry.action === 'PERMISSION_REVOKE_EQUIPMENT_EDIT';
+            const isPermissionAction = isGrant || isRevoke;
+
+            return (
+              <View
+                key={entry.id}
+                style={[
+                  styles.card,
+                  isGrant && styles.cardGrant,
+                  isRevoke && styles.cardRevoke,
+                ]}
+              >
+                <View style={styles.cardTopRow}>
+                  <Text style={styles.when}>{formatDate(entry.createdAt)}</Text>
+                  {isGrant && (
+                    <View style={styles.grantBadge}>
+                      <MaterialIcons name="vpn-key" size={13} color="#166534" />
+                      <Text style={styles.grantBadgeText}>Permiso concedido</Text>
+                    </View>
+                  )}
+                  {isRevoke && (
+                    <View style={styles.revokeBadge}>
+                      <MaterialIcons name="block" size={13} color="#991B1B" />
+                      <Text style={styles.revokeBadgeText}>Permiso revocado</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.summary}>{entry.summary}</Text>
+
+                <View style={styles.metaBox}>
+                  <Text style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>Ejecutado por: </Text>
+                    <Text style={styles.metaActor}>{entry.actorName}</Text> ({entry.actorEmail}) ·{' '}
+                    {formatRole(entry.actorRole as UserRole)}
+                  </Text>
+
+                  <Text style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>Acción: </Text>
+                    <Text style={styles.metaCode}>{entry.action}</Text> · {entry.targetType}/
+                    {entry.targetId}
+                    {entry.before || entry.after
+                      ? ` · ${entry.before ?? '—'} → ${entry.after ?? '—'}`
+                      : ''}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
           <ListPagination
             page={paging.page}
             totalPages={paging.totalPages}
@@ -142,28 +232,133 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.8,
   },
-  subtitle: { marginTop: 8, marginBottom: 14, color: theme.color.muted, fontSize: theme.font.size.md },
-  toggle: {
-    padding: 12,
+  subtitle: {
+    marginTop: 8,
+    marginBottom: 16,
+    color: theme.color.muted,
+    fontSize: theme.font.size.md,
+    lineHeight: 20,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface,
-    marginBottom: 16,
   },
-  toggleOn: { backgroundColor: theme.color.infoSoft, borderColor: theme.color.navy },
-  toggleText: { color: theme.color.muted, fontWeight: '700', fontSize: 13 },
-  toggleTextOn: { color: theme.color.navy },
+  filterChipActive: {
+    borderColor: theme.color.navy,
+    backgroundColor: '#EEF2FF',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.color.muted,
+  },
+  filterChipTextActive: {
+    color: theme.color.navy,
+    fontWeight: '800',
+  },
   card: {
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.lg,
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 12,
     ...theme.shadow.soft,
   },
+  cardGrant: {
+    borderColor: '#BBF7D0',
+    backgroundColor: '#FAFCF8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#16A34A',
+  },
+  cardRevoke: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FCF8F8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC2626',
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   when: { color: theme.color.muted, fontSize: 11, fontWeight: '700' },
-  summary: { marginTop: 6, color: theme.color.navy, fontWeight: '800', fontSize: theme.font.size.md },
-  meta: { marginTop: 4, color: theme.color.muted, fontSize: 12 },
+  grantBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  grantBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#166534',
+  },
+  revokeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  revokeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  summary: {
+    marginTop: 8,
+    color: theme.color.navy,
+    fontWeight: '800',
+    fontSize: theme.font.size.md,
+    lineHeight: 22,
+  },
+  metaBox: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 4,
+  },
+  metaRow: {
+    fontSize: 12,
+    color: theme.color.muted,
+  },
+  metaLabel: {
+    fontWeight: '600',
+    color: theme.color.ink,
+  },
+  metaActor: {
+    fontWeight: '700',
+    color: theme.color.navy,
+  },
+  metaCode: {
+    fontFamily: 'monospace',
+    fontWeight: '600',
+    color: theme.color.ink,
+  },
 });
