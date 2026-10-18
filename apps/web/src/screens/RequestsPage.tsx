@@ -335,10 +335,15 @@ export function RequestsPage() {
 
       <View style={[styles.kpis, isMobile && styles.kpisMobile]}>
         {[
-          { label: 'Pendientes', value: String(kpis.pending) },
-          { label: 'En préstamo', value: String(kpis.delivered) },
-          { label: 'Activas', value: String(kpis.total) },
-          { label: 'Con retraso', value: String(kpis.overdue), alert: kpis.overdue > 0 },
+          { label: 'Pendientes', value: String(kpis.pending), color: theme.color.warning },
+          { label: 'En préstamo', value: String(kpis.delivered), color: '#2563EB' },
+          { label: 'Activas', value: String(kpis.total), color: theme.color.navy },
+          {
+            label: 'Con retraso',
+            value: String(kpis.overdue),
+            alert: kpis.overdue > 0,
+            color: theme.color.red,
+          },
         ].map((kpi) => (
           <View
             key={kpi.label}
@@ -353,6 +358,7 @@ export function RequestsPage() {
               style={[
                 styles.kpiValue,
                 isMobile && styles.kpiValueMobile,
+                Boolean(kpi.color) && !kpi.alert && { color: kpi.color },
                 kpi.alert && styles.kpiValueAlert,
               ]}
             >
