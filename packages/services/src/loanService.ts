@@ -17,9 +17,11 @@ import {
   generateLoanFolio,
   loanStatusLabel,
   type CreateLoanInput,
+  type EquipmentStatus,
   type Loan,
   type LoanExtraItem,
   type LoanStatus,
+  type ReturnCondition,
   type UserRole,
 } from '@lab-topo/domain';
 import { getLabId } from '@lab-topo/config';
@@ -457,7 +459,12 @@ export async function deliverLoan(
 export async function returnLoan(
   loanId: string,
   actorId: string,
-  options?: { late?: boolean; notes?: string }
+  options?: {
+    late?: boolean;
+    condition?: ReturnCondition;
+    damageNotes?: string | null;
+    notes?: string;
+  }
 ): Promise<void> {
   const db = getDb();
   const loanRef = doc(db, 'loans', loanId);
@@ -470,7 +477,14 @@ export async function returnLoan(
       throw new Error('Solo se puede devolver material entregado.');
     }
 
-    const nextStatus: LoanStatus = options?.late || loan.isOverdue ? 'returned_late' : 'returned';
+    const condition: ReturnCondition = options?.condition ?? 'ok';
+    const isDamaged = condition === 'damaged';
+    const nextStatus: LoanStatus = isDamaged
+      ? 'damaged'
+      : options?.late || loan.isOverdue
+        ? 'returned_late'
+        : 'returned';
+
     const equipmentRef = doc(db, 'equipment', loan.equipmentId);
     const equipmentSnap = await tx.get(equipmentRef);
     if (!equipmentSnap.exists()) throw new Error('Equipo no encontrado.');
@@ -482,16 +496,19 @@ export async function returnLoan(
       status: nextStatus,
       returnedAt: serverTimestamp(),
       returnedBy: actorId,
-      returnCondition: 'ok',
+      returnCondition: condition,
+      damageNotes: isDamaged ? (options?.damageNotes ?? null) : null,
       notes: options?.notes ?? loan.notes,
       isOverdue: false,
       updatedAt: serverTimestamp(),
     });
 
+    const equipStatus: EquipmentStatus = isDamaged ? 'damaged' : 'available';
+
     tx.update(equipmentRef, {
-      qtyAvailable: qtyAvailable + 1,
+      qtyAvailable: isDamaged ? qtyAvailable : qtyAvailable + 1,
       qtyLoaned,
-      status: 'available',
+      status: equipStatus,
       updatedAt: serverTimestamp(),
     });
 
